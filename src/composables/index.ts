@@ -1,8 +1,10 @@
 /**
- * Re-exports every composable. Composables are added in later phases:
- *   - Phase 4: useFullscreen
- *   - Phase 5: useCesium, useMapLibre
+ * Re-exports every composable. Composables are added in phases:
+ *   - Phase 3: useTheme
+ *   - Phase 5: useCesium, useMapLibre (this commit)
  *   - Phase 6: useWebSocketClient
- *   - Phase 7: useToolRegistry, useKeyboardShortcuts
+ *   - Phase 7: useToolRegistry, useKeyboardShortcuts, useFullscreen
  */
+export { useCesium } from "./useCesium";
+export { useMapLibre } from "./useMapLibre";
 export { useTheme } from "./useTheme";
