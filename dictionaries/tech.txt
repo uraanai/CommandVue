@@ -154,3 +154,11 @@ mapbox
 basemap
 renderable
 textareas
+nosniff
+healthz
+mypanel
+distroless
+Distroless
+buildx
+rebrands
+emphasised
