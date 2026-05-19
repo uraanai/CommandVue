@@ -1,0 +1,81 @@
+{
+  "name": "commandvue",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A production-grade Vue 3 template for operations dashboards — command-and-control, fleet monitoring, geospatial operations, and real-time telemetry. Cesium 3D globe, MapLibre 2D maps, Dockview panels, PrimeVue + Tailwind, standardized operational symbology, batteries included.",
+  "keywords": [
+    "vue",
+    "vue3",
+    "template",
+    "boilerplate",
+    "cesium",
+    "maplibre",
+    "dockview",
+    "primevue",
+    "tailwindcss",
+    "echarts",
+    "milsymbol",
+    "command-and-control",
+    "command-center",
+    "operations",
+    "mission-critical",
+    "geospatial",
+    "fleet-monitoring",
+    "telemetry",
+    "typescript"
+  ],
+  "license": "Apache-2.0",
+  "author": "Uraan AI <hello@uraanai.com>",
+  "homepage": "https://github.com/uraanai/CommandVue#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uraanai/CommandVue.git"
+  },
+  "bugs": {
+    "url": "https://github.com/uraanai/CommandVue/issues"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "packageManager": "pnpm@10.15.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "run-p type-check \"build-only {@}\" --",
+    "build-only": "vite build",
+    "preview": "vite preview",
+    "type-check": "vue-tsc --build",
+    "lint": "eslint . --fix --cache",
+    "format": "prettier --write src/",
+    "format:check": "prettier --check src/",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "spell": "cspell \"**/*.{ts,vue,md,json}\" --no-progress",
+    "docker:build": "docker build -t commandvue:local .",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down"
+  },
+  "dependencies": {
+    "pinia": "^2.3.0",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@tsconfig/node22": "^22.0.0",
+    "@types/node": "^22.10.5",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "@vue/tsconfig": "^0.7.0",
+    "npm-run-all2": "^7.0.2",
+    "prettier": "^3.4.2",
+    "prettier-plugin-tailwindcss": "^0.6.9",
+    "tailwindcss": "^4.0.0",
+    "typescript": "~5.7.3",
+    "vite": "^6.0.7",
+    "vue-tsc": "^2.2.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}

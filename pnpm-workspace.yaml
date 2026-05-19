@@ -1,0 +1,3 @@
+packages:
+  - '.'
+  # Add additional packages under e.g. ./packages/* when CommandVue grows into a monorepo.

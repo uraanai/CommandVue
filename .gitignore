@@ -1,0 +1,152 @@
+# =============================================================================
+# Node.js — based on https://github.com/github/gitignore/blob/main/Node.gitignore
+# (Public domain via CC0 1.0 Universal).
+# =============================================================================
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Diagnostic reports (https://nodejs.org/api/report.html)
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage / test output
+lib-cov
+coverage
+*.lcov
+.nyc_output
+
+# Grunt intermediate storage
+.grunt
+
+# Bower dependency directory
+bower_components
+
+# node-waf configuration
+.lock-wscript
+
+# Compiled binary addons
+build/Release
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional stylelint cache
+.stylelintcache
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv files — `.env.example` is committed; everything else is ignored.
+.env
+.env.*
+!.env.example
+
+# Bundler caches
+.cache
+.parcel-cache
+
+# Cache for various meta-frameworks
+.next
+out
+.nuxt
+.output
+.vuepress/dist
+.temp
+.docusaurus
+
+# Serverless directories
+.serverless/
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# Firebase cache
+.firebase/
+
+# TernJS port file
+.tern-port
+
+# pnpm store
+.pnpm-store
+
+# yarn v3
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# =============================================================================
+# Vite
+# =============================================================================
+dist/
+dist-ssr/
+.vite/
+*.local
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# =============================================================================
+# IDE / editor
+# =============================================================================
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.vscode-test
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# =============================================================================
+# OS
+# =============================================================================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =============================================================================
+# CommandVue project-specific
+# =============================================================================
+
+# Cesium runtime assets are copied here by the Vite static-copy plugin at
+# dev/build time. They live under node_modules/cesium and must not be committed.
+public/cesium/
+
+# Husky internals (hooks themselves are committed; only the runtime cache is ignored)
+.husky/_

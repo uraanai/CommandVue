@@ -1,0 +1,93 @@
+# Contributing to CommandVue
+
+Thanks for your interest. CommandVue is a **template repository** — its job is to give downstream teams a clean, opinionated, batteries-included starting point for operations dashboards: command-and-control, fleet monitoring, geospatial operations, mission planning, and real-time telemetry. We accept contributions that improve the template itself (better defaults, missing wiring, doc clarity, dependency bumps, accessibility fixes). We do not accept product-specific features.
+
+## Quick start for contributors
+
+```bash
+git clone https://github.com/uraanai/CommandVue.git
+cd CommandVue
+pnpm install
+pnpm dev
+```
+
+Required: Node ≥ 22.12, pnpm 10.x.
+
+## Quality gates
+
+Before opening a PR, all of these must pass:
+
+```bash
+pnpm lint
+pnpm type-check
+pnpm test
+pnpm spell
+pnpm build
+```
+
+CI runs them automatically on every PR. The `pnpm spell` step uses the dictionaries under `dictionaries/`. If you introduce a new term, add it to the appropriate dictionary file rather than to `cspell.json`.
+
+## Commit conventions
+
+We use [Conventional Commits](https://www.conventionalcommits.org/), enforced by `@commitlint/config-conventional` via the `commit-msg` Husky hook:
+
+- `feat:` a new feature
+- `fix:` a bug fix
+- `chore:` tooling / housekeeping
+- `docs:` documentation only
+- `refactor:` code change with no functional difference
+- `test:` test-only change
+- `build:` build system or external dependencies
+- `ci:` CI configuration
+- `perf:` performance improvement
+- `style:` formatting only
+
+Example: `feat(panels): add markdown briefing panel`.
+
+## Branching
+
+- `main` is always shippable. CI must be green on every push.
+- Open PRs from a feature branch (`feat/<short-name>`, `fix/<short-name>`, etc.).
+- Squash on merge unless a per-commit history is meaningful.
+
+## Coding rules
+
+The full project guidelines live in [`CLAUDE.md`](./CLAUDE.md) — read that first. Highlights:
+
+- **No `any` types.** Use proper generics or `unknown` + narrowing.
+- **No `console.log` in committed code.** Use the logger utility if needed.
+- **All composables clean up on unmount.** No leaked listeners, no leaked viewers.
+- **Cesium/MapLibre instances live in `shallowRef`, never reactive state.**
+- **Pinia stores hold serializable state only** — no DOM refs, no Cesium objects.
+- **Tailwind utilities for layout/spacing** — no scoped styles for these concerns.
+- **Tokens in `src/assets/styles/tokens.css`** — do not hardcode hex values in components.
+
+## Terminology guidance
+
+CommandVue is a civilian-friendly operations-dashboard template. Keep user-facing copy (docs, comments, README, panel labels) neutral and operations-focused. The active phrasing is:
+
+- "operations" / "mission-critical" / "command-and-control" — preferred descriptors
+- "operator" — preferred over military-specific roles
+- "operational symbology" — for milsymbol/SIDC rendering
+- "assets" — preferred over hardware-specific terms
+- "operational environment" — preferred over field-specific terms
+
+Standards names (MIL-STD-2525, APP-6, MGRS, UTM) and library names (milsymbol, @orbat-mapper/convert-symbology) are technical references and may appear unchanged. They are noted in `dictionaries/operations.txt`.
+
+## Reporting bugs / requesting features
+
+Use the GitHub issue templates under [`.github/ISSUE_TEMPLATE/`](./.github/ISSUE_TEMPLATE/). Include repro steps, expected vs actual behavior, and the output of `pnpm --version && node --version`.
+
+## Security
+
+Do not file security issues on the public tracker. See [`SECURITY.md`](./SECURITY.md) for the reporting address and our handling commitment.
+
+## Code of conduct
+
+Participation in this project is governed by the [Contributor Covenant 3.0](./CODE_OF_CONDUCT.md). Be kind; assume good faith; report violations to conduct@uraanai.com (see [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md) for the full reporting and enforcement process).
+
+## License of contributions
+
+CommandVue is licensed under the [Apache License, Version 2.0](./LICENSE). By submitting a pull request or any other contribution to this repository, you agree that your contribution is provided under the same Apache 2.0 terms (as described in Section 5, "Submission of Contributions" of the license). No separate Contributor License Agreement (CLA) is required — the Apache 2.0 inbound-equals-outbound model applies.
+
+If your contribution includes third-party code, ensure it is compatible with Apache 2.0 (e.g., MIT, BSD, ISC, Apache 2.0). Call out any such inclusions explicitly in your PR description and preserve their original copyright and license notices.
