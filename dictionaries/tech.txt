@@ -131,3 +131,5 @@ Markdown
 fuzzysort
 cooldown
 dockable
+keyval
+shallowref

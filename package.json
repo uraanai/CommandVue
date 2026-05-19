@@ -66,6 +66,8 @@
     "@vueuse/integrations": "^12.4.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dockview-vue": "^4.5.0",
+    "idb": "^8.0.1",
     "pinia": "^2.3.0",
     "primevue": "^4.2.5",
     "tailwind-merge": "^2.6.0",

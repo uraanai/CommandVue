@@ -1,38 +1,79 @@
 <script setup lang="ts">
-import { computed } from "vue";
-import { useRoute, RouterLink } from "vue-router";
+import { computed, defineAsyncComponent, type Component } from "vue";
+import { useRoute } from "vue-router";
 
 const route = useRoute();
-const selectedPanel = computed(() => {
+
+const panelKey = computed(() => {
   const raw = route.query.panel;
   return typeof raw === "string" ? raw : null;
 });
+
+const panel = computed<Component | null>(() => {
+  switch (panelKey.value) {
+    case "cesium":
+      return defineAsyncComponent(() => import("@/components/panels/CesiumPanel.vue"));
+    case "maplibre":
+      return defineAsyncComponent(() => import("@/components/panels/MapLibrePanel.vue"));
+    case "entities":
+      return defineAsyncComponent(() => import("@/components/panels/EntityListPanel.vue"));
+    case "chart":
+      return defineAsyncComponent(() => import("@/components/panels/ChartPanel.vue"));
+    case "telemetry":
+      return defineAsyncComponent(() => import("@/components/panels/TelemetryPanel.vue"));
+    case "symbology":
+      return defineAsyncComponent(() => import("@/components/panels/SymbologyPanel.vue"));
+    case "markdown":
+      return defineAsyncComponent(() => import("@/components/panels/MarkdownPanel.vue"));
+    default:
+      return null;
+  }
+});
+
+const panels = [
+  { key: "cesium", label: "Cesium 3D" },
+  { key: "maplibre", label: "MapLibre 2D" },
+  { key: "entities", label: "Entities" },
+  { key: "chart", label: "Chart" },
+  { key: "telemetry", label: "Telemetry" },
+  { key: "symbology", label: "Symbology" },
+  { key: "markdown", label: "Markdown" },
+];
 </script>
 
 <template>
-  <main class="flex min-h-screen flex-col gap-6 p-8">
-    <header class="space-y-2">
-      <p class="text-xs tracking-[0.3em] text-slate-400 uppercase">CommandVue · Demo</p>
-      <h1 class="text-2xl font-semibold text-slate-50">Panel showcase</h1>
-      <p class="text-sm text-slate-400">
-        Individual panels can be loaded in isolation via the
-        <code class="rounded bg-slate-800 px-1 py-0.5 text-xs">?panel=</code> query parameter — for
-        example <code class="rounded bg-slate-800 px-1 py-0.5 text-xs">/demo?panel=cesium</code>.
-        Panels are wired in Phase 5 and Phase 6.
-      </p>
+  <div class="flex h-full flex-col gap-3 p-4">
+    <header class="flex flex-wrap items-center gap-2 text-xs">
+      <span class="text-foreground font-medium">Panel showcase</span>
+      <span v-if="panelKey" class="text-muted">· {{ panelKey }}</span>
+      <span v-else class="text-muted">· no panel selected</span>
+
+      <div class="ml-auto flex flex-wrap items-center gap-1">
+        <RouterLink
+          v-for="p in panels"
+          :key="p.key"
+          :to="{ name: 'demo', query: { panel: p.key } }"
+          active-class="bg-surface-sunken text-foreground"
+          class="text-muted hover:text-foreground hover:bg-surface-sunken rounded px-2 py-1"
+        >
+          {{ p.label }}
+        </RouterLink>
+      </div>
     </header>
 
-    <section
-      class="flex-1 rounded-lg border border-dashed border-slate-700 bg-slate-900/40 p-8 text-sm text-slate-300"
-    >
-      <p v-if="selectedPanel">
-        Requested panel: <code class="rounded bg-slate-800 px-1 py-0.5">{{ selectedPanel }}</code>
-      </p>
-      <p v-else>
-        No panel selected. Pass <code>?panel=cesium</code> (or another key) to mount one.
-      </p>
-    </section>
-
-    <RouterLink to="/" class="text-sm text-slate-400 hover:text-slate-200">← Back home</RouterLink>
-  </main>
+    <div class="border-border min-h-0 flex-1 overflow-hidden rounded-md border">
+      <component :is="panel" v-if="panel" />
+      <div
+        v-else
+        class="text-muted flex h-full w-full flex-col items-center justify-center gap-2 text-sm"
+      >
+        <p>No panel selected.</p>
+        <p class="text-xs">
+          Try
+          <code class="bg-surface-sunken rounded px-1 py-0.5">/demo?panel=cesium</code>
+          or pick a tab above.
+        </p>
+      </div>
+    </div>
+  </div>
 </template>
