@@ -1,0 +1,37 @@
+/*
+ * Dockview theme overrides for CommandVue.
+ *
+ * Phase 4 imports this file from `main.css` alongside the Dockview package
+ * itself. The variables below follow Dockview's public theme API
+ * (see https://dockview.dev/docs/theme/). Values reference the semantic
+ * tokens from `main.css` so dark mode "just works".
+ */
+
+.dv-theme-light,
+.dv-theme-dark,
+.dv-default-theme {
+  --dv-background-color: var(--color-surface);
+  --dv-paneview-background-color: var(--color-surface);
+  --dv-tabs-and-actions-container-background-color: var(--color-surface-raised);
+  --dv-tabs-and-actions-container-font-size: 0.8125rem;
+  --dv-tabs-container-scrollbar-color: var(--color-border);
+
+  --dv-tab-active-background-color: var(--color-surface);
+  --dv-tab-inactive-background-color: var(--color-surface-raised);
+  --dv-activegroup-visiblepanel-tab-background-color: var(--color-surface);
+  --dv-activegroup-hiddenpanel-tab-background-color: var(--color-surface-raised);
+  --dv-inactivegroup-visiblepanel-tab-background-color: var(--color-surface);
+  --dv-inactivegroup-hiddenpanel-tab-background-color: var(--color-surface-raised);
+
+  --dv-activegroup-visiblepanel-tab-color: var(--color-foreground);
+  --dv-activegroup-hiddenpanel-tab-color: var(--color-muted);
+  --dv-inactivegroup-visiblepanel-tab-color: var(--color-foreground);
+  --dv-inactivegroup-hiddenpanel-tab-color: var(--color-muted);
+
+  --dv-separator-border: var(--color-border);
+  --dv-paneview-active-outline-color: var(--color-accent-500);
+  --dv-drag-over-background-color: color-mix(in srgb, var(--color-accent-500) 15%, transparent);
+  --dv-drag-over-border-color: var(--color-accent-500);
+
+  --dv-icon-hover-background-color: var(--color-surface-sunken);
+}

@@ -1,0 +1,35 @@
+/*
+ * CommandVue runtime theme overrides.
+ *
+ * Light-theme defaults are defined in `main.css` inside the `@theme` block.
+ * Dark-theme overrides live below and use `html[data-theme="dark"]` so they
+ * win over `:root` declarations regardless of @import source order.
+ *
+ * To re-brand:
+ *   1. Edit the `@theme` block in `main.css` for light-theme defaults and the
+ *      shared palette (brand-50…brand-950 + accent-50…accent-900).
+ *   2. Edit the `html[data-theme="dark"]` block below for dark-theme overrides.
+ *
+ * Brand override example — Uraan AI navy / teal:
+ *
+ *   @theme {
+ *     --color-accent-500: #10C4A2;
+ *     --color-accent-600: #0AA78A;
+ *   }
+ *   html[data-theme="dark"] {
+ *     --color-surface: #0B1120;
+ *   }
+ *
+ * See docs/theming.md for the full walkthrough.
+ */
+
+html[data-theme="dark"] {
+  --color-surface: #0b1120;
+  --color-surface-raised: #0f172a;
+  --color-surface-sunken: #050810;
+  --color-foreground: #f8fafc;
+  --color-muted: #cbd5e1;
+  --color-faint: #64748b;
+  --color-border: #1e293b;
+  --color-border-strong: #334155;
+}

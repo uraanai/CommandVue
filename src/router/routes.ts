@@ -1,4 +1,4 @@
-import type { RouteRecordRaw } from 'vue-router'
+import type { RouteRecordRaw } from "vue-router";
 
 /**
  * Application route table.
@@ -9,25 +9,25 @@ import type { RouteRecordRaw } from 'vue-router'
  */
 export const routes: RouteRecordRaw[] = [
   {
-    path: '/',
-    name: 'home',
-    component: () => import('@/views/HomeView.vue'),
-    meta: { title: 'CommandVue' },
+    path: "/",
+    name: "home",
+    component: () => import("@/views/HomeView.vue"),
+    meta: { title: "CommandVue" },
   },
   {
-    path: '/demo',
-    name: 'demo',
-    component: () => import('@/views/DemoView.vue'),
-    meta: { title: 'Demo' },
+    path: "/demo",
+    name: "demo",
+    component: () => import("@/views/DemoView.vue"),
+    meta: { title: "Demo" },
   },
   {
-    path: '/about',
-    name: 'about',
-    component: () => import('@/views/AboutView.vue'),
-    meta: { title: 'About' },
+    path: "/about",
+    name: "about",
+    component: () => import("@/views/AboutView.vue"),
+    meta: { title: "About" },
   },
   {
-    path: '/:pathMatch(.*)*',
-    redirect: { name: 'home' },
+    path: "/:pathMatch(.*)*",
+    redirect: { name: "home" },
   },
-]
+];

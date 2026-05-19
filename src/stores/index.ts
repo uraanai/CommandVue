@@ -6,4 +6,4 @@
  *
  * Keep the export list flat so consumers can `import { useUi } from '@/stores'`.
  */
-export {}
+export {};

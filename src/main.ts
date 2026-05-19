@@ -1,12 +1,22 @@
-import { createPinia } from 'pinia'
-import { createApp } from 'vue'
+import "@fontsource-variable/inter";
 
-import App from './App.vue'
-import { router } from './router'
+import "@/assets/styles/main.css";
 
-const app = createApp(App)
+import { createPinia } from "pinia";
+import PrimeVue from "primevue/config";
+import { createApp } from "vue";
 
-app.use(createPinia())
-app.use(router)
+import App from "./App.vue";
+import { router } from "./router";
 
-app.mount('#app')
+const app = createApp(App);
+
+app.use(createPinia());
+app.use(router);
+
+// PrimeVue is registered in unstyled mode — all visual styling comes from
+// the wrappers in `@/components/ui/*` using Tailwind classes via the
+// passthrough (pt) API.
+app.use(PrimeVue, { unstyled: true });
+
+app.mount("#app");
