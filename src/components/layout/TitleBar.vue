@@ -1,15 +1,24 @@
 <script setup lang="ts">
-import { Moon, RotateCcw, Sun } from "@lucide/vue";
+import { Hexagon, Moon, Ruler, Search, RotateCcw, Sun } from "@lucide/vue";
 import { inject } from "vue";
 import { RouterLink } from "vue-router";
 
 import IconButton from "@/components/ui/IconButton.vue";
 import { useTheme } from "@/composables/useTheme";
+import { formatCombo, SHORTCUTS } from "@/modules/shortcuts/catalog";
+import { useToolsStore } from "@/stores/tools";
+import { useUiStore } from "@/stores/ui";
 
 import { resetLayoutKey } from "./keys";
 
 const { isDark, toggle } = useTheme();
+const tools = useToolsStore();
+const ui = useUiStore();
 const resetLayout = inject(resetLayoutKey, null);
+
+const paletteHint = formatCombo(
+  SHORTCUTS.find((s) => s.action === "palette.open")?.keys[0] ?? "mod+k",
+);
 </script>
 
 <template>
@@ -45,7 +54,35 @@ const resetLayout = inject(resetLayoutKey, null);
       </RouterLink>
     </nav>
 
+    <div class="flex items-center gap-1">
+      <IconButton
+        label="Measure distance (M)"
+        :variant="tools.activeId === 'measure-distance' ? 'solid' : 'ghost'"
+        size="sm"
+        @click="tools.toggle('measure-distance')"
+      >
+        <Ruler />
+      </IconButton>
+      <IconButton
+        label="Draw polygon (P)"
+        :variant="tools.activeId === 'draw-polygon' ? 'solid' : 'ghost'"
+        size="sm"
+        @click="tools.toggle('draw-polygon')"
+      >
+        <Hexagon />
+      </IconButton>
+    </div>
+
     <div class="ml-auto flex items-center gap-1">
+      <button
+        type="button"
+        class="text-muted hover:text-foreground hover:bg-surface-sunken flex items-center gap-1.5 rounded px-2 py-1 text-xs transition-colors"
+        :aria-label="`Open command palette (${paletteHint})`"
+        @click="ui.openCommandPalette()"
+      >
+        <Search class="size-3.5" />
+        <span class="font-mono text-[10px]">{{ paletteHint }}</span>
+      </button>
       <IconButton
         v-if="resetLayout"
         label="Reset dock layout"
