@@ -1,0 +1,62 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels:
+      - "dependencies"
+    groups:
+      vue:
+        patterns:
+          - "vue"
+          - "vue-*"
+          - "@vue/*"
+          - "@vitejs/plugin-vue"
+      vite:
+        patterns:
+          - "vite"
+          - "vite-plugin-*"
+          - "@vitejs/*"
+      cesium:
+        patterns:
+          - "cesium"
+          - "vite-plugin-static-copy"
+      maplibre:
+        patterns:
+          - "maplibre-*"
+      turf:
+        patterns:
+          - "@turf/*"
+      tanstack:
+        patterns:
+          - "@tanstack/*"
+      eslint:
+        patterns:
+          - "eslint"
+          - "eslint-*"
+          - "@vue/eslint-config-*"
+      commitlint:
+        patterns:
+          - "@commitlint/*"
+      types:
+        patterns:
+          - "@types/*"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "dependencies"
+      - "github-actions"
