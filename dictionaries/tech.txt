@@ -144,3 +144,12 @@ autoresize
 linkify
 callsign
 Callsign
+Reka
+hitbox
+Atlaskit
+geocoder
+lonlat
+lonlatalt
+mapbox
+basemap
+renderable
