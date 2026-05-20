@@ -19,6 +19,19 @@ The "Quality gates" in [`CONTRIBUTING.md`](../../CONTRIBUTING.md#quality-gates) 
 
 ## Triggers and required updates
 
+### Library integration (read this first)
+
+> **MANDATORY:** Before writing, modifying, or debugging any code that integrates a third-party library, framework, SDK, CLI tool, or cloud service, **fetch current documentation via the Context7 MCP server**. Use `mcp__context7__resolve-library-id` to find the right package, then `mcp__context7__query-docs`. **Never** rely on training-data knowledge or a blog post older than ~6 months — the 2026-05-20 Cesium-on-Vite session wedged for hours because we anchored on a stale blog and didn't notice that `vite-plugin-static-copy@4`'s dev middleware had regressed.
+
+| Trigger                                                                                                   | Required action                                                                                                                                                                 |
+| --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Adding a new dependency that needs **build/runtime configuration** (Cesium, MapLibre, Vite plugins, etc.) | Pull current docs via Context7 **before** editing `vite.config.ts`, `tsconfig.*`, or the library's runtime init. Quote the relevant section in the PR description.              |
+| **Bumping a major version** of any package with non-trivial config or runtime API                         | Pull docs for the **target** version (not just the changelog) via Context7. Confirm the public API our code uses still matches.                                                 |
+| Runtime error names a library (e.g. `cesium.js:...`, `[ECharts]`, `<Lucide Icon>`)                        | Pull that library's current docs via Context7 before guessing at the fix. Library packaging breaks (CJS↔ESM, peer-dep changes, factory-method rewrites) are the usual culprits. |
+| User shares a tutorial / blog link older than ~6 months                                                   | Use it as orientation, but cross-check the current Context7 docs before applying any config from it.                                                                            |
+
+**Do not** call Context7 for refactoring our own code, writing scripts from scratch, debugging business logic, general programming concepts, or anything that doesn't involve a specific named library.
+
 ### Code & dependency changes
 
 | Trigger                                                   | Update these                                                                                                                         |
