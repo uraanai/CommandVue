@@ -32,6 +32,9 @@ export default defineConfigWithVueTs(
       "dictionaries/**",
       ".husky/_/**",
       "eslint.config.ts",
+      // VitePress config is standalone (loaded by `vitepress` CLI via its own
+      // bundler); it's not part of the app's project-references graph.
+      "docs/.vitepress/**",
     ],
   },
   {

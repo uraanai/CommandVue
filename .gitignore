@@ -150,3 +150,7 @@ public/cesium/
 
 # Husky internals (hooks themselves are committed; only the runtime cache is ignored)
 .husky/_
+
+# VitePress runtime + build output (the .vitepress/config.ts itself IS committed)
+docs/.vitepress/cache/
+docs/.vitepress/dist/
