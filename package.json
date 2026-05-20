@@ -79,7 +79,7 @@
     "@turf/helpers": "^7.0.0",
     "@turf/length": "^7.0.0",
     "@turf/midpoint": "^7.0.0",
-    "@vueuse/components": "^12.4.0",
+    "@vueuse/components": "^14.3.0",
     "@vueuse/core": "^14.3.0",
     "@vueuse/integrations": "^14.3.0",
     "cesium": "^1.124.0",
