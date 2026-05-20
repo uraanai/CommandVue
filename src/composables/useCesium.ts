@@ -1,10 +1,18 @@
 // `@/modules/cesium/init` must be the FIRST import — it sets
-// `window.CESIUM_BASE_URL` before any Cesium module loads.
+// `window.CESIUM_BASE_URL` + clears the Ion access token before any other
+// Cesium module loads.
 import "@/modules/cesium/init";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 import type { ViewerOptions } from "@/modules/cesium/types";
 
-import { Viewer, type Viewer as ViewerType } from "cesium";
+import {
+  buildModuleUrl,
+  EllipsoidTerrainProvider,
+  ImageryLayer,
+  TileMapServiceImageryProvider,
+  Viewer,
+  type Viewer as ViewerType,
+} from "cesium";
 import { onBeforeUnmount, shallowRef } from "vue";
 
 /**
@@ -27,6 +35,13 @@ export function useCesium() {
     if (viewer.value) {
       throw new Error("useCesium: viewer is already mounted on a container.");
     }
+    // Defaults below replace Cesium's Ion-backed base layer and terrain
+    // with offline-safe equivalents that ship with the cesium package:
+    //   - `NaturalEarthII` low-res world tiles (under `Assets/Textures/`)
+    //   - `EllipsoidTerrainProvider` (no terrain network requests)
+    // Consumers wanting Ion-backed imagery / terrain can override either by
+    // passing `baseLayer` or `terrainProvider` in `options` and setting a
+    // valid `Ion.defaultAccessToken` earlier in their bootstrap.
     const instance = new Viewer(container, {
       timeline: false,
       animation: false,
@@ -38,6 +53,11 @@ export function useCesium() {
       fullscreenButton: false,
       infoBox: false,
       selectionIndicator: false,
+      baseLayer: ImageryLayer.fromProviderAsync(
+        TileMapServiceImageryProvider.fromUrl(buildModuleUrl("Assets/Textures/NaturalEarthII")),
+        {},
+      ),
+      terrainProvider: new EllipsoidTerrainProvider(),
       ...options,
     });
     viewer.value = instance;
