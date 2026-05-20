@@ -124,7 +124,7 @@
     "@vue/test-utils": "^2.4.6",
     "@vue/tsconfig": "^0.9.1",
     "cspell": "^10.0.0",
-    "eslint": "^9.18.0",
+    "eslint": "^10.4.0",
     "eslint-plugin-perfectionist": "^4.6.0",
     "eslint-plugin-vue": "^10.9.1",
     "husky": "^9.1.7",
