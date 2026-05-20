@@ -139,7 +139,7 @@
     "vite": "^8.0.13",
     "vite-plugin-static-copy": "^2.2.0",
     "vitepress": "^1.6.4",
-    "vitest": "^3.0.0",
+    "vitest": "^4.1.7",
     "vue-tsc": "^2.2.0"
   },
   "pnpm": {
