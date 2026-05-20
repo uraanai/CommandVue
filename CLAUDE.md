@@ -139,12 +139,23 @@ These are documented in `docs/theming.md` as an example override.
 
 ---
 
+## Library integration — Context7 first
+
+**Mandatory rule, no exceptions:** Before writing, modifying, or debugging any code that integrates a third-party library, framework, SDK, CLI tool, or cloud service, fetch current docs via the **Context7 MCP** server. Use `mcp__context7__resolve-library-id` then `mcp__context7__query-docs`. **Never** rely on training-data knowledge or blog posts older than ~6 months — anchoring on stale Cesium-on-Vite guidance cost us hours on 2026-05-20 because `vite-plugin-static-copy@4`'s dev middleware had silently regressed.
+
+This rule applies to: integrating a new package, bumping a major version of an existing one, debugging a runtime error that names a library (e.g. `cesium.js:...`, `[ECharts]`, `<Lucide Icon>`), and acting on any tutorial / blog link the user shares. It does **not** apply to refactoring our own code, writing scripts from scratch, or debugging business logic.
+
+Full rationale + decision matrix lives in [`.agent/workflows/documentation-sync.md`](./.agent/workflows/documentation-sync.md) under "Library integration".
+
+---
+
 ## Keeping documentation in sync
 
 The canonical reference for "when I change X, what else do I update" is [`.agent/workflows/documentation-sync.md`](./.agent/workflows/documentation-sync.md). Consult it before any non-trivial change and apply the relevant updates in the same PR.
 
 The short version, agents must obey:
 
+- **Integrating / bumping / debugging a library** → fetch current docs via Context7 MCP (see "Library integration — Context7 first" above).
 - **New / renamed / removed `pnpm` script** → update `README.md` Scripts table.
 - **New / removed dependency** → update `README.md` Stack table **and** the `Locked technology stack` table above.
 - **New environment variable** → update `README.md` Configuration table, `.env.example`, and `docs/deployment.md`.
