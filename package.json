@@ -40,7 +40,9 @@
   },
   "packageManager": "pnpm@10.15.0",
   "scripts": {
+    "predev": "node scripts/copy-cesium-assets.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/copy-cesium-assets.mjs",
     "build": "run-p type-check \"build-only {@}\" --",
     "build-only": "vite build",
     "preview": "vite preview",
