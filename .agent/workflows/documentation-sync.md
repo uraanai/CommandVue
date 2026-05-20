@@ -64,14 +64,16 @@ The "Quality gates" in [`CONTRIBUTING.md`](../../CONTRIBUTING.md#quality-gates) 
 
 ### Lifecycle events
 
-| Trigger                                                                                        | Update these                                                                                                                              |
-| ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| **Bug fix** that's user-visible                                                                | `CHANGELOG.md` [Unreleased] → Fixed                                                                                                       |
-| **Bug fix** that's internal-only (e.g., test harness, dev-tooling)                             | No doc updates required                                                                                                                   |
-| **Breaking change** (anything in `src/composables/`, `src/modules/`, `src/stores/` public API) | `CHANGELOG.md` [Unreleased] → Changed (label `BREAKING:`); update affected `docs/*.md`; mention in the PR description                     |
-| **Deprecate** a public API                                                                     | `CHANGELOG.md` [Unreleased] → Deprecated; add a `@deprecated` JSDoc tag in the code; keep working until next major                        |
-| **Cut a release**                                                                              | Update `[Unreleased]` → `[X.Y.Z] — YYYY-MM-DD` in `CHANGELOG.md`; bump `package.json` `version`; tag the commit; publish a GitHub Release |
-| **Security fix**                                                                               | `SECURITY.md` if the disclosure process changed; `CHANGELOG.md` Security; coordinated disclosure first                                    |
+> **CHANGELOG policy:** `CHANGELOG.md` is **release-only**. Do not modify it on bug-fix, feature, breaking-change, or deprecation PRs. The entry is written **once, at release time**, as a curated summary of everything since the last tag. The `[Unreleased]` section is a placeholder — leave it empty between releases. See "Cut a release" below for the only row that touches the file.
+
+| Trigger                                                                                        | Update these                                                                                                                                                                                                                                                                    |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Bug fix** that's user-visible                                                                | Update affected `docs/*.md` if behavior changed. **No `CHANGELOG.md` edit.** The PR description carries the rationale for the eventual release summary.                                                                                                                         |
+| **Bug fix** that's internal-only (e.g., test harness, dev-tooling)                             | No doc updates required.                                                                                                                                                                                                                                                        |
+| **Breaking change** (anything in `src/composables/`, `src/modules/`, `src/stores/` public API) | Update affected `docs/*.md`. Lead the PR title with `feat!:` / `fix!:` (or include a `BREAKING CHANGE:` footer) so the next release walk catches it. **No `CHANGELOG.md` edit.**                                                                                                |
+| **Deprecate** a public API                                                                     | Add a `@deprecated` JSDoc tag in the code; update affected `docs/*.md`; keep working until next major. **No `CHANGELOG.md` edit.**                                                                                                                                              |
+| **Cut a release**                                                                              | Walk `git log <last-tag>..HEAD`, group by Keep-a-Changelog section (Added / Changed / Deprecated / Removed / Fixed / Security), write a single `[X.Y.Z] — YYYY-MM-DD` summary block in `CHANGELOG.md`; bump `package.json` `version`; tag the commit; publish a GitHub Release. |
+| **Security fix**                                                                               | `SECURITY.md` if the disclosure process changed; coordinated disclosure first. The CHANGELOG entry is folded into the next release summary; do **not** write to `[Unreleased]` mid-cycle.                                                                                       |
 
 ### Repository identity
 
@@ -89,7 +91,7 @@ Things this workflow exists to **prevent**:
 
 - **Stealth additions.** "Just dropping a new script in `package.json`" — the README scripts table will silently rot until someone notices. Sync it in the same commit.
 - **Doc-only refactors that diverge from code.** Renaming a function in `src/` without grepping `docs/` for references leaves the docs lying. Always grep.
-- **Cosmetic CHANGELOG entries for internal churn.** The changelog is for users of the template. Internal test-harness fixes do not need an entry.
+- **Per-PR CHANGELOG drafts.** The CHANGELOG is **release-only and summary-style** — never write to `[Unreleased]` from a feature / fix / breaking-change PR. The release walk reads `git log` and the PR descriptions; that's the source material. Leaving the file alone between releases keeps it clean and prevents stale half-entries.
 - **Adding a new dependency without updating the stack table.** The stack table is a hard contract — `CLAUDE.md` instructs future agents to "not substitute libraries from this list without explicit instruction." If you add one without updating the table, the next agent doesn't know it's locked in.
 - **Inventing a new doc trigger without recording it here.** If you find yourself updating three files for the same change repeatedly, that's a missing row in this table.
 
