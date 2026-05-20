@@ -81,7 +81,7 @@
     "@turf/midpoint": "^7.0.0",
     "@vueuse/components": "^12.4.0",
     "@vueuse/core": "^12.4.0",
-    "@vueuse/integrations": "^12.4.0",
+    "@vueuse/integrations": "^14.3.0",
     "cesium": "^1.124.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
