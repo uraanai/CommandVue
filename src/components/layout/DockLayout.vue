@@ -4,7 +4,7 @@ import "dockview-vue/dist/styles/dockview.css";
 import "@/assets/styles/dockview.css";
 
 import { DockviewVue, type DockviewApi, type DockviewReadyEvent } from "dockview-vue";
-import { defineAsyncComponent, onUnmounted, provide, shallowRef } from "vue";
+import { onUnmounted, provide, shallowRef } from "vue";
 
 import { useLayoutStore } from "@/stores/layout";
 
@@ -12,15 +12,9 @@ import { resetLayoutKey } from "./keys";
 
 const layout = useLayoutStore();
 
-const components = {
-  cesium: defineAsyncComponent(() => import("@/components/panels/CesiumPanel.vue")),
-  maplibre: defineAsyncComponent(() => import("@/components/panels/MapLibrePanel.vue")),
-  entities: defineAsyncComponent(() => import("@/components/panels/EntityListPanel.vue")),
-  chart: defineAsyncComponent(() => import("@/components/panels/ChartPanel.vue")),
-  telemetry: defineAsyncComponent(() => import("@/components/panels/TelemetryPanel.vue")),
-  symbology: defineAsyncComponent(() => import("@/components/panels/SymbologyPanel.vue")),
-  markdown: defineAsyncComponent(() => import("@/components/panels/MarkdownPanel.vue")),
-};
+// Panel components are registered globally in `main.ts` via `app.component()`
+// because dockview-vue 6 dropped the v4 `:components` prop and instead resolves
+// each panel's `component` string by walking Vue's component registry.
 
 const apiRef = shallowRef<DockviewApi | null>(null);
 
@@ -109,9 +103,5 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <DockviewVue
-    :components="components"
-    class="dockview-theme-commandvue h-full w-full"
-    @ready="onReady"
-  />
+  <DockviewVue class="dockview-theme-commandvue h-full w-full" @ready="onReady" />
 </template>

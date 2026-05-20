@@ -1,7 +1,7 @@
-// Namespace import to keep Rollup's CJS interop happy — milsymbol publishes
-// its exports through `module.exports`, and the named-import form trips
-// Rollup's binding tracer on a production build.
-import * as milsymbol from "milsymbol";
+// milsymbol 3.x is ESM-only (`"type": "module"`) but exports only `ms` as
+// default. The class lives at `ms.Symbol` (the .d.ts file's `export class
+// Symbol` declaration is misleading — there is no top-level named export).
+import ms from "milsymbol";
 
 export interface RenderOptions {
   size?: number;
@@ -18,7 +18,7 @@ export interface RenderOptions {
  * when the SIDC input is trusted application data (not free-text user input).
  */
 export function renderSidcToSvg(sidc: string, options: RenderOptions = {}): string {
-  return new milsymbol.Symbol(sidc, {
+  return new ms.Symbol(sidc, {
     size: options.size ?? 32,
     fillColor: options.fillColor,
     iconColor: options.iconColor,
