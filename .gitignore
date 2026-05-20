@@ -154,3 +154,9 @@ public/cesium/
 # VitePress runtime + build output (the .vitepress/config.ts itself IS committed)
 docs/.vitepress/cache/
 docs/.vitepress/dist/
+
+# Playwright MCP writes per-interaction snapshots + console logs here
+.playwright-mcp/
+
+# Scratch / temp dirs used during agent sessions
+temp/

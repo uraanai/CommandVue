@@ -40,11 +40,13 @@ export default defineConfig({
     CESIUM_BASE_URL: JSON.stringify("/cesium/"),
   },
   optimizeDeps: {
-    exclude: ["cesium"],
-    // Cesium itself is excluded above, but a couple of its CJS subdeps need
-    // explicit pre-bundling because Vite serves them raw otherwise and ESM
-    // resolution chokes on the missing `default` export (e.g.
-    // `Math.js` imports mersenne-twister via default import).
+    // We used to exclude `cesium` here because esbuild's rewrites broke its
+    // module layout. Under Vite 8 + the current Cesium release, pre-bundling
+    // works correctly and — critically — drags Cesium's CJS subdeps like
+    // `mersenne-twister` into the same pre-bundle pass, so the browser
+    // receives valid ESM everywhere. If pre-bundling regresses on a future
+    // Cesium release, re-add the exclude and reach for a Vite plugin or
+    // `optimizeDeps.entries` to handle the transitive CJS.
     include: ["mersenne-twister"],
   },
   resolve: {
@@ -55,6 +57,11 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: false,
+    watch: {
+      // Playwright MCP writes per-interaction snapshots into `.playwright-mcp/`.
+      // Without this exclusion they trigger an infinite HMR reload loop.
+      ignored: ["**/.playwright-mcp/**", "**/temp/**"],
+    },
   },
   build: {
     target: "es2022",

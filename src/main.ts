@@ -2,6 +2,7 @@ import "@fontsource-variable/inter";
 
 import "@/assets/styles/main.css";
 
+import { LUCIDE_CONTEXT } from "@lucide/vue";
 import { createPinia } from "pinia";
 import PrimeVue from "primevue/config";
 import { createApp, defineAsyncComponent } from "vue";
@@ -10,6 +11,14 @@ import App from "./App.vue";
 import { router } from "./router";
 
 const app = createApp(App);
+
+// `@lucide/vue` 1.16's <Icon /> is a functional component that calls
+// `inject(LUCIDE_CONTEXT, {})` on render. Without a matching `provide()`
+// at the app root, the destructuring inside Icon throws
+// `Cannot destructure property 'size' of useLucideProps() as it is undefined`.
+// Providing an empty object globally satisfies the inject and lets icons
+// use their own per-instance props.
+app.provide(LUCIDE_CONTEXT, {});
 
 app.use(createPinia());
 app.use(router);
