@@ -7,3 +7,4 @@ The canonical agent guidance for CommandVue lives in [`../CLAUDE.md`](../CLAUDE.
 ## Contents
 
 - [`workflows/documentation-sync.md`](./workflows/documentation-sync.md) — the canonical "when I change X, what else do I update?" reference. Every agent must consult this before making non-trivial changes and apply the required updates in the same PR.
+- [`workflows/dependency-modernization-plan.md`](./workflows/dependency-modernization-plan.md) — **Active** multi-phase plan for bumping the last 6 outdated packages to latest (echarts, vue-echarts, vue-router, pinia, dockview-vue, typescript). Deleted when the final phase merges.
