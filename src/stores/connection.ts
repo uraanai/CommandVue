@@ -1,7 +1,7 @@
+import type { ConnectionStatus } from "@/modules/realtime/types";
+
 import { defineStore } from "pinia";
 import { ref } from "vue";
-
-import type { ConnectionStatus } from "@/modules/realtime/types";
 
 /**
  * Connection store — surfaces WebSocket lifecycle state for the StatusBar

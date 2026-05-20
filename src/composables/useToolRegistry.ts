@@ -1,9 +1,8 @@
+import type { Tool, ToolContext } from "@/modules/tools/types";
 import type { Feature } from "geojson";
 import type { Map as MapLibreMap } from "maplibre-gl";
 
 import { onBeforeUnmount, type ShallowRef, watch } from "vue";
-
-import type { Tool, ToolContext } from "@/modules/tools/types";
 
 import { useToolsStore } from "@/stores/tools";
 

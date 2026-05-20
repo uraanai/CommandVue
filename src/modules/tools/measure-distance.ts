@@ -1,9 +1,8 @@
+import type { Tool, ToolContext, ToolSetupResult } from "./types";
 import type { Feature, FeatureCollection, Position } from "geojson";
 import type { GeoJSONSource, MapMouseEvent } from "maplibre-gl";
 
 import { distanceMeters, lengthMeters, midpointBetween } from "@/modules/geo/measure";
-
-import type { Tool, ToolContext, ToolSetupResult } from "./types";
 
 const NS = "commandvue:measure-distance";
 const SRC_DRAFT = `${NS}:draft`;

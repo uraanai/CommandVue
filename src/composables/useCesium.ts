@@ -2,10 +2,10 @@
 // `window.CESIUM_BASE_URL` before any Cesium module loads.
 import "@/modules/cesium/init";
 import "cesium/Build/Cesium/Widgets/widgets.css";
+import type { ViewerOptions } from "@/modules/cesium/types";
+
 import { Viewer, type Viewer as ViewerType } from "cesium";
 import { onBeforeUnmount, shallowRef } from "vue";
-
-import type { ViewerOptions } from "@/modules/cesium/types";
 
 /**
  * Cesium viewer composable.

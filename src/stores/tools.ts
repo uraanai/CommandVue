@@ -1,7 +1,7 @@
+import type { ToolId } from "@/modules/tools/types";
+
 import { defineStore } from "pinia";
 import { ref } from "vue";
-
-import type { ToolId } from "@/modules/tools/types";
 
 /**
  * Tools store — owns the single source of truth for which tool is active.
