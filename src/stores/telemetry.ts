@@ -1,7 +1,7 @@
+import type { WsMessage } from "@/modules/realtime/protocol";
+
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
-
-import type { WsMessage } from "@/modules/realtime/protocol";
 
 const DEFAULT_BUFFER = 50;
 

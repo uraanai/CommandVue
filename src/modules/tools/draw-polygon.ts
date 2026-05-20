@@ -1,9 +1,8 @@
+import type { Tool, ToolContext, ToolSetupResult } from "./types";
 import type { Feature, FeatureCollection, Position } from "geojson";
 import type { GeoJSONSource, MapMouseEvent } from "maplibre-gl";
 
 import { areaSquareMeters, centroidOfRing, distanceMeters } from "@/modules/geo/measure";
-
-import type { Tool, ToolContext, ToolSetupResult } from "./types";
 
 const NS = "commandvue:draw-polygon";
 const SRC_DRAFT = `${NS}:draft`;

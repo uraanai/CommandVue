@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
-
 import type { Lonlat } from "@/types";
+
+import { describe, expect, it } from "vitest";
 
 /**
  * Placeholder smoke test. Real utility coverage is added in Phase 6 alongside
