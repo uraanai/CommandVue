@@ -21,7 +21,9 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "allowImportingTsExtensions": false,
-    "baseUrl": ".",
+    // `paths` resolves relative to this file in TS 5+; `baseUrl` was
+    // dropped in the TS 6 migration (it's deprecated as of 6.0 and
+    // slated for removal in 7.0).
     "paths": {
       "@/*": ["./src/*"]
     },
