@@ -66,15 +66,19 @@ export default defineConfigWithVueTs(
         {
           type: "natural",
           order: "asc",
-          newlinesBetween: "always",
+          // perfectionist 5 changed this from `"always" | "never"` to a number:
+          // 1 = exactly one blank line between groups (matches the prior `"always"`).
+          newlinesBetween: 1,
+          // perfectionist 5 reversed the modifier-selector order for type-import
+          // groups: `internal-type` → `type-internal`, etc. `object` is no longer a
+          // valid group for sort-imports (it never matched anything here).
           groups: [
             "type",
             ["builtin", "external"],
-            "internal-type",
+            "type-internal",
             "internal",
-            ["parent-type", "sibling-type", "index-type"],
+            ["type-parent", "type-sibling", "type-index"],
             ["parent", "sibling", "index"],
-            "object",
             "unknown",
           ],
         },
