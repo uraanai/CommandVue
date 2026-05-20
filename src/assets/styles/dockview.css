@@ -1,23 +1,29 @@
 /*
  * Dockview theme overrides for CommandVue.
  *
- * Phase 4 imports this file from `main.css` alongside the Dockview package
- * itself. The variables below follow Dockview's public theme API
- * (see https://dockview.dev/docs/theme/). Values reference the semantic
- * tokens from `main.css` so dark mode "just works".
+ * Imported from `main.css` alongside the package's base styles. The
+ * selectors and variable names below are dockview-vue **6.x**'s public
+ * theme API (see https://dockview.dev/docs/theme/). Values reference
+ * the semantic tokens from `main.css` so dark mode "just works".
+ *
+ * Migration note (2026-05-20, dockview-vue 4 → 6): theme class names
+ * were renamed from `.dv-theme-*` / `.dv-default-theme` to
+ * `.dockview-theme-*`. The template already applies our custom
+ * `dockview-theme-commandvue` class to `<DockviewVue>` (see
+ * `DockLayout.vue`); we target that here. Four v4 variables were
+ * also dropped in v6 (`--dv-background-color`,
+ * `--dv-paneview-background-color`, `--dv-tab-active-background-color`,
+ * `--dv-tab-inactive-background-color`) — replaced by the granular
+ * `--dv-activegroup-*` / `--dv-inactivegroup-*` family below, plus
+ * `--dv-group-view-background-color` for the overall surface.
  */
 
-.dv-theme-light,
-.dv-theme-dark,
-.dv-default-theme {
-  --dv-background-color: var(--color-surface);
-  --dv-paneview-background-color: var(--color-surface);
+.dockview-theme-commandvue {
+  --dv-group-view-background-color: var(--color-surface);
   --dv-tabs-and-actions-container-background-color: var(--color-surface-raised);
   --dv-tabs-and-actions-container-font-size: 0.8125rem;
   --dv-tabs-container-scrollbar-color: var(--color-border);
 
-  --dv-tab-active-background-color: var(--color-surface);
-  --dv-tab-inactive-background-color: var(--color-surface-raised);
   --dv-activegroup-visiblepanel-tab-background-color: var(--color-surface);
   --dv-activegroup-hiddenpanel-tab-background-color: var(--color-surface-raised);
   --dv-inactivegroup-visiblepanel-tab-background-color: var(--color-surface);

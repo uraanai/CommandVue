@@ -1,6 +1,6 @@
 # Dependency modernization — multi-phase plan
 
-> **Status:** Active — Phases 1–3 complete; Phase 4 (dockview-vue) starting next.
+> **Status:** Active — Phases 1–4 complete; Phase 5 (typescript) starting next.
 >
 > **2026-05-20 plan amendment:** During the original Phase 2 prep, `npm view vue-router@5.0.7` showed `peerDependencies: { pinia: '^3.0.4', '@pinia/colada': '>=0.21.2', ... }`. vue-router 5 has been redesigned around Pinia-backed state; it can no longer ship before pinia. Phases 2 and 3 have been **swapped**: pinia 3 first, then vue-router 5. The "phases are independent" claim above no longer holds — phase 3 (now `vue-router`) is **gated on** phase 2 (now `pinia`).
 > **Started:** 2026-05-20
@@ -64,13 +64,13 @@ Every phase PR must:
 
 ## Phase tracker
 
-| Phase | Package(s)                               | Status               | PR        | Notes                                                                                                                                 |
-| ----- | ---------------------------------------- | -------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | `echarts` 6 + `vue-echarts` 8            | ✅ Done — 2026-05-20 | #42       | Zero code changes — echarts 6 kept the subpath export contract stable.                                                                |
-| 2     | `pinia` 3 _(swapped — was Phase 3)_      | ✅ Done — 2026-05-20 | (this PR) | Zero code changes — setup-fn `defineStore` syntax stable across 2 → 3. Tests 66/66.                                                   |
-| 3     | `vue-router` 5 _(swapped — was Phase 2)_ | ✅ Done — 2026-05-20 | (this PR) | Zero code changes — our usage (createRouter, createWebHistory, RouterView, RouterLink, useRouter, useRoute) is on stable API surface. |
-| 4     | `dockview-vue` 6                         | ⏳ Not started       | —         |                                                                                                                                       |
-| 5     | `typescript` 6                           | ⏳ Not started       | —         |                                                                                                                                       |
+| Phase | Package(s)                               | Status               | PR        | Notes                                                                                                                                                                                                                                                                                                                                                                                     |
+| ----- | ---------------------------------------- | -------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | `echarts` 6 + `vue-echarts` 8            | ✅ Done — 2026-05-20 | #42       | Zero code changes — echarts 6 kept the subpath export contract stable.                                                                                                                                                                                                                                                                                                                    |
+| 2     | `pinia` 3 _(swapped — was Phase 3)_      | ✅ Done — 2026-05-20 | (this PR) | Zero code changes — setup-fn `defineStore` syntax stable across 2 → 3. Tests 66/66.                                                                                                                                                                                                                                                                                                       |
+| 3     | `vue-router` 5 _(swapped — was Phase 2)_ | ✅ Done — 2026-05-20 | (this PR) | Zero code changes — our usage (createRouter, createWebHistory, RouterView, RouterLink, useRouter, useRoute) is on stable API surface.                                                                                                                                                                                                                                                     |
+| 4     | `dockview-vue` 6                         | ✅ Done — 2026-05-20 | (this PR) | Skipped a major (4→6). One code change: theme class names renamed `.dv-theme-*` → `.dockview-theme-*`; rewrote `src/assets/styles/dockview.css` selector + dropped 4 deprecated v4 variables. API surface (addPanel/toJSON/fromJSON/onDidLayoutChange) intact. Existing idb-stored layouts: `fromJSON`'s try/catch falls back to defaults on schema mismatch (acceptable for a template). |
+| 5     | `typescript` 6                           | ⏳ Not started       | —         |                                                                                                                                                                                                                                                                                                                                                                                           |
 
 ---
 
