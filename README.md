@@ -23,29 +23,29 @@
 
 ## Stack
 
-| Layer | Choice |
-|---|---|
-| Framework | Vue 3 + Vite |
-| Language | TypeScript (strict) |
-| Router | Vue Router 4 |
-| State | Pinia |
-| Package manager | pnpm (with workspaces) |
-| UI components | PrimeVue (unstyled) + Tailwind v4 |
-| Window/panel manager | Dockview Vue |
-| Icons | @lucide/vue + @iconify-prerendered/vue-mdi + @heroicons/vue |
-| 3D map | CesiumJS |
-| 2D map | MapLibre GL |
-| Geospatial math | @turf/*, mgrs, h3-js, formatcoords, suncalc |
-| Operational symbology | milsymbol, @orbat-mapper/convert-symbology (MIL-STD-2525 / APP-6 SIDC codes) |
-| Charting | Apache ECharts (primary) + d3-* modules (escape hatch) |
-| Real-time | Native WebSocket via @vueuse/core useWebSocket |
-| Tables / virtualization | @tanstack/vue-table + @tanstack/vue-virtual |
-| Drag & drop | @atlaskit/pragmatic-drag-and-drop |
-| Storage / offline | idb (IndexedDB), browser-fs-access |
-| Utilities | @vueuse/core, dayjs, es-toolkit, nanoid, fuzzysort, immer, klona, rfc6902 |
-| Markdown | markdown-it |
-| Quality | ESLint 9 flat config, Prettier, Vitest, vue-tsc, CSpell |
-| Containerization | Multi-stage Dockerfile + docker-compose.yml |
+| Layer                   | Choice                                                                       |
+| ----------------------- | ---------------------------------------------------------------------------- |
+| Framework               | Vue 3 + Vite                                                                 |
+| Language                | TypeScript (strict)                                                          |
+| Router                  | Vue Router 4                                                                 |
+| State                   | Pinia                                                                        |
+| Package manager         | pnpm (with workspaces)                                                       |
+| UI components           | PrimeVue (unstyled) + Tailwind v4                                            |
+| Window/panel manager    | Dockview Vue                                                                 |
+| Icons                   | @lucide/vue + @iconify-prerendered/vue-mdi + @heroicons/vue                  |
+| 3D map                  | CesiumJS                                                                     |
+| 2D map                  | MapLibre GL                                                                  |
+| Geospatial math         | @turf/\*, mgrs, h3-js, formatcoords, suncalc                                 |
+| Operational symbology   | milsymbol, @orbat-mapper/convert-symbology (MIL-STD-2525 / APP-6 SIDC codes) |
+| Charting                | Apache ECharts (primary) + d3-\* modules (escape hatch)                      |
+| Real-time               | Native WebSocket via @vueuse/core useWebSocket                               |
+| Tables / virtualization | @tanstack/vue-table + @tanstack/vue-virtual                                  |
+| Drag & drop             | @atlaskit/pragmatic-drag-and-drop                                            |
+| Storage / offline       | idb (IndexedDB), browser-fs-access                                           |
+| Utilities               | @vueuse/core, dayjs, es-toolkit, nanoid, fuzzysort, immer, klona, rfc6902    |
+| Markdown                | markdown-it                                                                  |
+| Quality                 | ESLint 9 flat config, Prettier, Vitest, vue-tsc, CSpell                      |
+| Containerization        | Multi-stage Dockerfile + docker-compose.yml                                  |
 
 ---
 
@@ -99,21 +99,24 @@ CommandVue/
 
 ## Scripts
 
-| Command | Action |
-|---|---|
-| `pnpm dev` | Start Vite dev server on http://localhost:5173 |
-| `pnpm build` | Type-check + production build to `dist/` |
-| `pnpm preview` | Serve the production build locally |
-| `pnpm lint` | Run ESLint with `--fix` and cache |
-| `pnpm format` | Prettier write across `src/` |
-| `pnpm format:check` | Prettier check (CI-friendly) |
-| `pnpm type-check` | `vue-tsc --build` across all tsconfig projects |
-| `pnpm test` | Vitest one-shot |
-| `pnpm test:watch` | Vitest watch mode |
-| `pnpm spell` | CSpell across source + docs |
-| `pnpm docker:build` | Build the multi-stage Docker image (`commandvue:local`) |
-| `pnpm docker:up` | `docker compose up --build` (serves on http://localhost:8080) |
-| `pnpm docker:down` | Stop the compose stack |
+| Command             | Action                                                        |
+| ------------------- | ------------------------------------------------------------- |
+| `pnpm dev`          | Start Vite dev server on http://localhost:5173                |
+| `pnpm build`        | Type-check + production build to `dist/`                      |
+| `pnpm preview`      | Serve the production build locally                            |
+| `pnpm lint`         | Run ESLint with `--fix` and cache                             |
+| `pnpm format`       | Prettier write across `src/`                                  |
+| `pnpm format:check` | Prettier check (CI-friendly)                                  |
+| `pnpm type-check`   | `vue-tsc --build` across all tsconfig projects                |
+| `pnpm test`         | Vitest one-shot                                               |
+| `pnpm test:watch`   | Vitest watch mode                                             |
+| `pnpm spell`        | CSpell across source + docs                                   |
+| `pnpm docs:dev`     | Run the VitePress docs site locally (auto-picks a free port)  |
+| `pnpm docs:build`   | Build the docs site to `docs/.vitepress/dist/`                |
+| `pnpm docs:preview` | Serve the built docs site                                     |
+| `pnpm docker:build` | Build the multi-stage Docker image (`commandvue:local`)       |
+| `pnpm docker:up`    | `docker compose up --build` (serves on http://localhost:8080) |
+| `pnpm docker:down`  | Stop the compose stack                                        |
 
 ---
 
@@ -121,11 +124,11 @@ CommandVue/
 
 Copy `.env.example` to `.env.local` and override per environment:
 
-| Variable | Default | Purpose |
-|---|---|---|
-| `VITE_WS_URL` | `wss://echo.websocket.events` | Telemetry WebSocket endpoint |
-| `VITE_MAPLIBRE_STYLE_URL` | OpenFreeMap Liberty | MapLibre style URL (use a self-hosted one for offline) |
-| `VITE_APP_TITLE` | `CommandVue` | Title shown in the tab and TitleBar |
+| Variable                  | Default                       | Purpose                                                |
+| ------------------------- | ----------------------------- | ------------------------------------------------------ |
+| `VITE_WS_URL`             | `wss://echo.websocket.events` | Telemetry WebSocket endpoint                           |
+| `VITE_MAPLIBRE_STYLE_URL` | OpenFreeMap Liberty           | MapLibre style URL (use a self-hosted one for offline) |
+| `VITE_APP_TITLE`          | `CommandVue`                  | Title shown in the tab and TitleBar                    |
 
 ---
 
@@ -136,6 +139,20 @@ Copy `.env.example` to `.env.local` and override per environment:
 - **Adding a tool (measure / draw / select)** — see [`docs/tools.md`](./docs/tools.md).
 - **Architecture deep-dive (Cesium / MapLibre interplay)** — see [`docs/architecture.md`](./docs/architecture.md).
 - **Deployment (Docker, nginx, offline)** — see [`docs/deployment.md`](./docs/deployment.md).
+
+---
+
+## Documentation site
+
+The `docs/` tree is served as a [VitePress](https://vitepress.dev/) site with sidebar navigation, local search, and dark mode by default:
+
+```bash
+pnpm docs:dev       # live preview, picks a free port
+pnpm docs:build     # static output → docs/.vitepress/dist/
+pnpm docs:preview   # serve the built site
+```
+
+The site config lives at [`docs/.vitepress/config.ts`](./docs/.vitepress/config.ts). When adding a new doc page, register it in the sidebar there so it appears in the nav.
 
 ---
 
