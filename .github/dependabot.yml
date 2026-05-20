@@ -14,12 +14,18 @@ updates:
     labels:
       - "dependencies"
     groups:
+      # Major bumps for `vue` and `eslint` always land as individual PRs
+      # (each one needs deliberate migration work). Minors and patches still
+      # group together to keep the noise down.
       vue:
         patterns:
           - "vue"
           - "vue-*"
           - "@vue/*"
           - "@vitejs/plugin-vue"
+        update-types:
+          - "minor"
+          - "patch"
       vite:
         patterns:
           - "vite"
@@ -43,6 +49,9 @@ updates:
           - "eslint"
           - "eslint-*"
           - "@vue/eslint-config-*"
+        update-types:
+          - "minor"
+          - "patch"
       commitlint:
         patterns:
           - "@commitlint/*"
