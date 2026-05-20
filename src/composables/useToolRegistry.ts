@@ -54,10 +54,17 @@ export function useToolRegistry(
 
   function teardown(): void {
     if (!currentCleanup) return;
+    const cleanup = currentCleanup;
+    currentCleanup = null;
     try {
-      currentCleanup();
-    } finally {
-      currentCleanup = null;
+      cleanup();
+    } catch (err) {
+      // A tool's cleanup must never propagate into Vue's unmount sequence —
+      // throwing here corrupts the patch tree (Cannot read properties of null:
+      // 'subTree' chains downstream). Swallow + log instead.
+      if (typeof console !== "undefined") {
+        console.warn("[useToolRegistry] cleanup threw:", err);
+      }
     }
   }
 

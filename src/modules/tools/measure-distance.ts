@@ -70,6 +70,7 @@ export const measureDistanceTool: Tool = {
       source: SRC_LABELS,
       layout: {
         "text-field": ["get", "text"],
+        "text-font": ["Noto Sans Regular"],
         "text-size": 11,
         "text-anchor": "center",
         "text-offset": [0, -1],
@@ -168,20 +169,29 @@ export const measureDistanceTool: Tool = {
         if (disposed) return;
         disposed = true;
 
-        map.off("click", onClick);
-        map.off("mousemove", onMove);
-        map.off("dblclick", onDblClick);
         window.removeEventListener("keydown", onKey, { capture: true });
 
-        if (map.getLayer(LYR_LINE)) map.removeLayer(LYR_LINE);
-        if (map.getLayer(LYR_LABELS)) map.removeLayer(LYR_LABELS);
-        if (map.getLayer(LYR_HANDLES)) map.removeLayer(LYR_HANDLES);
-        if (map.getSource(SRC_DRAFT)) map.removeSource(SRC_DRAFT);
-        if (map.getSource(SRC_LABELS)) map.removeSource(SRC_LABELS);
-        if (map.getSource(SRC_HANDLES)) map.removeSource(SRC_HANDLES);
-
-        map.getCanvas().style.cursor = "";
-        restore();
+        try {
+          if (!map || typeof map.off !== "function") return;
+          map.off("click", onClick);
+          map.off("mousemove", onMove);
+          map.off("dblclick", onDblClick);
+          if (map.getLayer(LYR_LINE)) map.removeLayer(LYR_LINE);
+          if (map.getLayer(LYR_LABELS)) map.removeLayer(LYR_LABELS);
+          if (map.getLayer(LYR_HANDLES)) map.removeLayer(LYR_HANDLES);
+          if (map.getSource(SRC_DRAFT)) map.removeSource(SRC_DRAFT);
+          if (map.getSource(SRC_LABELS)) map.removeSource(SRC_LABELS);
+          if (map.getSource(SRC_HANDLES)) map.removeSource(SRC_HANDLES);
+          map.getCanvas().style.cursor = "";
+        } catch {
+          // Map was torn down before cleanup ran (HMR or panel-unmount race);
+          // sources/layers go with it, so the only thing left to do is restore().
+        }
+        try {
+          restore();
+        } catch {
+          /* map gone — restore is a no-op */
+        }
       },
     };
   },

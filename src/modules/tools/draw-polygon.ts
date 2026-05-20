@@ -79,6 +79,7 @@ export const drawPolygonTool: Tool = {
       source: SRC_LABEL,
       layout: {
         "text-field": ["get", "text"],
+        "text-font": ["Noto Sans Regular"],
         "text-size": 12,
         "text-anchor": "center",
         "text-allow-overlap": true,
@@ -183,21 +184,30 @@ export const drawPolygonTool: Tool = {
         if (disposed) return;
         disposed = true;
 
-        map.off("click", onClick);
-        map.off("mousemove", onMove);
-        map.off("dblclick", onDblClick);
         window.removeEventListener("keydown", onKey, { capture: true });
 
-        if (map.getLayer(LYR_FILL)) map.removeLayer(LYR_FILL);
-        if (map.getLayer(LYR_LINE)) map.removeLayer(LYR_LINE);
-        if (map.getLayer(LYR_LABEL)) map.removeLayer(LYR_LABEL);
-        if (map.getLayer(LYR_HANDLES)) map.removeLayer(LYR_HANDLES);
-        if (map.getSource(SRC_DRAFT)) map.removeSource(SRC_DRAFT);
-        if (map.getSource(SRC_LABEL)) map.removeSource(SRC_LABEL);
-        if (map.getSource(SRC_HANDLES)) map.removeSource(SRC_HANDLES);
-
-        map.getCanvas().style.cursor = "";
-        restore();
+        try {
+          if (!map || typeof map.off !== "function") return;
+          map.off("click", onClick);
+          map.off("mousemove", onMove);
+          map.off("dblclick", onDblClick);
+          if (map.getLayer(LYR_FILL)) map.removeLayer(LYR_FILL);
+          if (map.getLayer(LYR_LINE)) map.removeLayer(LYR_LINE);
+          if (map.getLayer(LYR_LABEL)) map.removeLayer(LYR_LABEL);
+          if (map.getLayer(LYR_HANDLES)) map.removeLayer(LYR_HANDLES);
+          if (map.getSource(SRC_DRAFT)) map.removeSource(SRC_DRAFT);
+          if (map.getSource(SRC_LABEL)) map.removeSource(SRC_LABEL);
+          if (map.getSource(SRC_HANDLES)) map.removeSource(SRC_HANDLES);
+          map.getCanvas().style.cursor = "";
+        } catch {
+          // Map was torn down before cleanup ran (HMR or panel-unmount race);
+          // sources/layers go with it, so the only thing left to do is restore().
+        }
+        try {
+          restore();
+        } catch {
+          /* map gone — restore is a no-op */
+        }
       },
     };
   },
