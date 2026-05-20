@@ -23,9 +23,19 @@ pnpm type-check
 pnpm test
 pnpm spell
 pnpm build
+pnpm docs:build    # ~3s; catches broken sidebar entries and dead links
 ```
 
 CI runs them automatically on every PR. The `pnpm spell` step uses the dictionaries under `dictionaries/`. If you introduce a new term, add it to the appropriate dictionary file rather than to `cspell.json`.
+
+### Adding a documentation page
+
+The `docs/` tree is published as a VitePress site (`pnpm docs:dev` for a live preview). When you add a new page:
+
+1. Create the `.md` file under `docs/`.
+2. Register it in the sidebar at [`docs/.vitepress/config.ts`](./docs/.vitepress/config.ts) so it appears in the nav.
+3. Cross-link from any related page that already exists.
+4. Run `pnpm docs:build` to verify the link graph.
 
 ## Commit conventions
 

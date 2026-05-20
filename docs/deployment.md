@@ -163,3 +163,30 @@ The container exposes a `/` healthcheck via the Dockerfile's
 your backend and proxy it through nginx. Logging is plain nginx
 `access.log` / `error.log` to stdout/stderr — pipe them into your log
 aggregator of choice.
+
+## Shipping the documentation site
+
+The `docs/` tree is a VitePress site. The build is independent of the
+app build and produces a separate static bundle:
+
+```bash
+pnpm docs:build     # → docs/.vitepress/dist/
+pnpm docs:preview   # local sanity check of the built site
+```
+
+The output is plain static. The same hosts that serve the app bundle
+work here:
+
+- **GitHub Pages** — point a workflow at `docs/.vitepress/dist/` after
+  `pnpm docs:build`. Use a separate `gh-pages` branch (or the new
+  Pages-from-workflow flow) so it doesn't collide with the app bundle.
+- **Netlify / Cloudflare Pages / Vercel** — set the build command to
+  `pnpm docs:build` and publish `docs/.vitepress/dist/`. Useful when
+  the app itself ships elsewhere.
+- **Same nginx container as the app** — copy the docs bundle into
+  `/usr/share/nginx/html/docs/` and add a `location /docs/ { try_files
+$uri $uri/ /docs/index.html; }` block so its client-side routing
+  works.
+
+The docs site has no runtime dependencies (no API calls, no WS), so
+offline / air-gapped deployment is just "serve the static folder."

@@ -20,32 +20,33 @@ This repository is a **template**. Code in this repo should be generic, reusable
 
 Do not substitute libraries from this list without explicit instruction.
 
-| Layer | Choice |
-|---|---|
-| Framework | Vue 3 + Vite |
-| Language | TypeScript (strict) |
-| Router | Vue Router 4 |
-| State | Pinia |
-| Package manager | pnpm (with workspaces) |
-| UI components | PrimeVue (unstyled) + Tailwind v4 |
-| Window/panel manager | Dockview Vue |
-| Icons | @lucide/vue + @iconify-prerendered/vue-mdi + @heroicons/vue |
-| 3D map | CesiumJS |
-| 2D map | MapLibre GL |
-| Geospatial math | @turf/*, mgrs, h3-js, formatcoords, suncalc |
-| Operational symbology | milsymbol, @orbat-mapper/convert-symbology (MIL-STD-2525 / APP-6 SIDC codes) |
-| Charting | Apache ECharts (primary) + d3-* modules (escape hatch) |
-| Real-time | Native WebSocket via @vueuse/core useWebSocket |
-| Tables / virtualization | @tanstack/vue-table + @tanstack/vue-virtual |
-| Drag & drop | @atlaskit/pragmatic-drag-and-drop |
-| Storage / offline | idb (IndexedDB), browser-fs-access |
-| Utilities | @vueuse/core, dayjs, es-toolkit, nanoid, fuzzysort, immer, klona, rfc6902 |
-| Markdown | markdown-it |
-| Spell-check (code) | CSpell + dictionaries/*.txt |
-| Spell-check (user input) | Native `spellcheck` attribute |
-| Build | Vite |
-| Quality | ESLint 9 flat config, Prettier, Vitest, vue-tsc |
-| Containerization | Multi-stage Dockerfile + docker-compose.yml |
+| Layer                    | Choice                                                                                                    |
+| ------------------------ | --------------------------------------------------------------------------------------------------------- |
+| Framework                | Vue 3 + Vite                                                                                              |
+| Language                 | TypeScript (strict)                                                                                       |
+| Router                   | Vue Router 4                                                                                              |
+| State                    | Pinia                                                                                                     |
+| Package manager          | pnpm (with workspaces)                                                                                    |
+| UI components            | PrimeVue (unstyled) + Tailwind v4                                                                         |
+| Window/panel manager     | Dockview Vue                                                                                              |
+| Icons                    | @lucide/vue + @iconify-prerendered/vue-mdi + @heroicons/vue                                               |
+| 3D map                   | CesiumJS                                                                                                  |
+| 2D map                   | MapLibre GL                                                                                               |
+| Geospatial math          | @turf/\*, mgrs, h3-js, formatcoords, suncalc                                                              |
+| Operational symbology    | milsymbol, @orbat-mapper/convert-symbology (MIL-STD-2525 / APP-6 SIDC codes)                              |
+| Charting                 | Apache ECharts (primary) + d3-\* modules (escape hatch)                                                   |
+| Real-time                | Native WebSocket via @vueuse/core useWebSocket                                                            |
+| Tables / virtualization  | @tanstack/vue-table + @tanstack/vue-virtual                                                               |
+| Drag & drop              | @atlaskit/pragmatic-drag-and-drop                                                                         |
+| Storage / offline        | idb (IndexedDB), browser-fs-access                                                                        |
+| Utilities                | @vueuse/core, dayjs, es-toolkit, nanoid, fuzzysort, immer, klona, rfc6902                                 |
+| Markdown                 | markdown-it                                                                                               |
+| Spell-check (code)       | CSpell + dictionaries/\*.txt                                                                              |
+| Spell-check (user input) | Native `spellcheck` attribute                                                                             |
+| Build                    | Vite                                                                                                      |
+| Quality                  | ESLint 9 flat config, Prettier, Vitest, vue-tsc                                                           |
+| Containerization         | Multi-stage Dockerfile + docker-compose.yml                                                               |
+| Documentation site       | VitePress (config: `docs/.vitepress/config.ts`; scripts: `pnpm docs:dev` / `docs:build` / `docs:preview`) |
 
 ---
 
@@ -109,6 +110,7 @@ Do not substitute libraries from this list without explicit instruction.
 ## Commit conventions
 
 Conventional Commits, enforced by commitlint:
+
 - `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`, `build:`, `ci:`, `perf:`, `style:`
 
 ---
@@ -129,7 +131,27 @@ Conventional Commits, enforced by commitlint:
 ## Brand colors (overridable defaults)
 
 The template ships with neutral slate/blue defaults. The intended primary downstream brand (Uraan AI) uses:
+
 - Navy: `#0B1120`
 - Teal: `#10C4A2`
 
 These are documented in `docs/theming.md` as an example override.
+
+---
+
+## Keeping documentation in sync
+
+The canonical reference for "when I change X, what else do I update" is [`.agent/workflows/documentation-sync.md`](./.agent/workflows/documentation-sync.md). Consult it before any non-trivial change and apply the relevant updates in the same PR.
+
+The short version, agents must obey:
+
+- **New / renamed / removed `pnpm` script** → update `README.md` Scripts table.
+- **New / removed dependency** → update `README.md` Stack table **and** the `Locked technology stack` table above.
+- **New environment variable** → update `README.md` Configuration table, `.env.example`, and `docs/deployment.md`.
+- **New panel** → register in `DockLayout.vue` and document in `docs/panels.md`.
+- **New tool** → register in `src/modules/tools/index.ts` (`TOOLS`), add a shortcut entry in `src/modules/shortcuts/catalog.ts`, and document in `docs/tools.md`.
+- **New `docs/*.md` page** → register in `docs/.vitepress/config.ts` sidebar.
+- **CSpell-flagged term** → add to `dictionaries/{operations,project,tech}.txt`, never to `cspell.json`.
+- **Architecture / API change** → update the affected `docs/*.md` page (don't leave the docs lying about how the code works).
+
+The full table — including bug-fix triggers, deprecation flows, and what to skip — lives in the workflow file. Read it; don't re-derive it.
