@@ -41,6 +41,11 @@ export default defineConfig({
   },
   optimizeDeps: {
     exclude: ["cesium"],
+    // Cesium itself is excluded above, but a couple of its CJS subdeps need
+    // explicit pre-bundling because Vite serves them raw otherwise and ESM
+    // resolution chokes on the missing `default` export (e.g.
+    // `Math.js` imports mersenne-twister via default import).
+    include: ["mersenne-twister"],
   },
   resolve: {
     alias: {
