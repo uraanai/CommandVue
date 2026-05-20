@@ -1,6 +1,6 @@
 # Dependency modernization — multi-phase plan
 
-> **Status:** Active — Phase 0 (planning) complete; Phase 1 starting.
+> **Status:** Active — Phase 1 complete; Phase 2 starting next.
 > **Started:** 2026-05-20
 > **Goal:** Get the remaining 6 outdated packages to their latest majors, in phases, with each phase shipping as its own PR and the app verified clean between phases.
 > **Lifetime:** This file lives in the repo only while the migration is in progress. It is **deleted in the final PR** once every phase completes.
@@ -62,13 +62,13 @@ Every phase PR must:
 
 ## Phase tracker
 
-| Phase | Package(s)                    | Status         | PR  | Notes |
-| ----- | ----------------------------- | -------------- | --- | ----- |
-| 1     | `echarts` 6 + `vue-echarts` 8 | ⏳ Not started | —   |       |
-| 2     | `vue-router` 5                | ⏳ Not started | —   |       |
-| 3     | `pinia` 3                     | ⏳ Not started | —   |       |
-| 4     | `dockview-vue` 6              | ⏳ Not started | —   |       |
-| 5     | `typescript` 6                | ⏳ Not started | —   |       |
+| Phase | Package(s)                    | Status               | PR        | Notes                                                                                                              |
+| ----- | ----------------------------- | -------------------- | --------- | ------------------------------------------------------------------------------------------------------------------ |
+| 1     | `echarts` 6 + `vue-echarts` 8 | ✅ Done — 2026-05-20 | (this PR) | Zero code changes needed — echarts 6 kept the `/core`, `/charts`, `/components`, `/renderers` export shape stable. |
+| 2     | `vue-router` 5                | ⏳ Not started       | —         |                                                                                                                    |
+| 3     | `pinia` 3                     | ⏳ Not started       | —         |                                                                                                                    |
+| 4     | `dockview-vue` 6              | ⏳ Not started       | —         |                                                                                                                    |
+| 5     | `typescript` 6                | ⏳ Not started       | —         |                                                                                                                    |
 
 ---
 
