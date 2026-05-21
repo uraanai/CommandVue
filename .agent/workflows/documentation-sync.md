@@ -75,6 +75,18 @@ The "Quality gates" in [`CONTRIBUTING.md`](../../CONTRIBUTING.md#quality-gates) 
 | New **CI workflow** step         | Update `CONTRIBUTING.md` Quality gates if contributors need to run it locally                                                  |
 | New **Husky hook**               | Document in `CONTRIBUTING.md`; explain how to bypass safely if there's a legitimate need                                       |
 
+### Agent memory (claude-mem + `memory/*.md`)
+
+Two memory surfaces; pick the right one per trigger. See the "Memory & knowledge" section in [`CLAUDE.md`](../../CLAUDE.md) for the full decision rule.
+
+| Trigger                                                                                                             | Update these                                                                                                                                                                                                        |
+| ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **New hard rule that must always apply** (e.g., "never bump package X", "always run Y after Z")                     | Create a new `.md` under `~/.claude/projects/D--Work-UraanAI-Public-CommandVue/memory/`; add a link to `MEMORY.md`; use `[[name]]` cross-links to siblings                                                          |
+| **Discovered a bug-fix recipe, library gotcha, or "we tried X and reverted" insight**                               | Already captured automatically by claude-mem's `PostToolUse` / `PreToolUse:Read` hooks. No manual write needed in worker runtime (`memory_add` is server-beta only). Just keep working — observations flow through. |
+| **Major project change that should be reflected in the searchable corpus** (new panel, big refactor, new module)    | Run `rebuild_corpus({ name: "commandvue" })` once the change lands so the primed knowledge agent sees it.                                                                                                           |
+| **A `memory/*.md` rule becomes stale** (the underlying constraint changed, e.g., a held-back package was un-pinned) | Edit or delete the `.md` file; update `MEMORY.md` index; remove inbound `[[name]]` links from sibling files                                                                                                         |
+| **You wrote a rule into a session and want it to outlive the session**                                              | Promote it to a `memory/*.md` file — observations decay in relevance over time; MD files are the durable surface                                                                                                    |
+
 ### Lifecycle events
 
 > **CHANGELOG policy:** `CHANGELOG.md` is **release-only**. Do not modify it on bug-fix, feature, breaking-change, or deprecation PRs. The entry is written **once, at release time**, as a curated summary of everything since the last tag. The `[Unreleased]` section is a placeholder — leave it empty between releases. See "Cut a release" below for the only row that touches the file.
