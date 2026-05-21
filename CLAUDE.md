@@ -139,6 +139,27 @@ These are documented in `docs/theming.md` as an example override.
 
 ---
 
+## Memory & knowledge
+
+CommandVue uses **two memory surfaces**. Both are agent-only — they're not part of the shipped template:
+
+1. **Always-loaded rules** — `~/.claude/projects/D--Work-UraanAI-Public-CommandVue/memory/*.md`, indexed by `MEMORY.md`. Auto-loaded at every session start. **Add a file here for any rule that must surface without being searched for** (release-only changelog, runtime verification, Context7 first, milsymbol no-undefined, branch protection on `main`, modernization debt, Cesium recipe). Keep each file under ~50 lines and link siblings with `[[name]]` syntax.
+
+2. **Searchable observations + named corpus** — claude-mem (worker runtime). Hooks auto-capture every prompt, tool call, file read, and session summary into `~/.claude-mem/claude-mem.db`. Surface them via:
+   - `mcp__plugin_claude-mem_mcp-search__search` → `timeline(anchor=<ID>)` → `get_observations([IDs])` (3-layer pattern — 10× token savings vs fetching full details upfront).
+   - `mcp__plugin_claude-mem_mcp-search__smart_search` for tree-sitter symbol/file lookups inside `src/`.
+   - The primed **`commandvue` corpus**: `prime_corpus({ name: "commandvue" })` then `query_corpus({ name: "commandvue", question: "..." })` for whole-project Q&A grounded in observations.
+
+**Decision rule for "where does this knowledge go":**
+
+- Hard rule that must always apply → MD file under `memory/`.
+- Bug-fix recipe, "we tried X and reverted", per-PR rationale, code-knowledge note → already captured via hooks; you don't need to write it manually. In worker runtime, `memory_add` is unavailable — rely on the auto-capture.
+- Rebuild the `commandvue` corpus after major project changes: `rebuild_corpus({ name: "commandvue" })`.
+
+Before reaching for `grep` on a "where is X" question, try `smart_search` first.
+
+---
+
 ## Library integration — Context7 first
 
 **Mandatory rule, no exceptions:** Before writing, modifying, or debugging any code that integrates a third-party library, framework, SDK, CLI tool, or cloud service, fetch current docs via the **Context7 MCP** server. Use `mcp__context7__resolve-library-id` then `mcp__context7__query-docs`. **Never** rely on training-data knowledge or blog posts older than ~6 months — anchoring on stale Cesium-on-Vite guidance cost us hours on 2026-05-20 because `vite-plugin-static-copy@4`'s dev middleware had silently regressed.
