@@ -4,6 +4,7 @@ import type { DockviewApi } from "dockview-vue";
 import { defineStore } from "pinia";
 import { ref, shallowRef } from "vue";
 
+import { MISSING_PANEL_TYPE } from "@/modules/panels/missing";
 import { panelRegistry } from "@/modules/panels/registry";
 import { layoutRepo } from "@/modules/storage/layoutRepo";
 import { panelStateRepo } from "@/modules/storage/panelStateRepo";
@@ -233,8 +234,21 @@ export const useSessionStore = defineStore("session", () => {
 
 function rebuildFromPanelStates(api: DockviewApi, panelStates: PanelState[]): void {
   for (const ps of panelStates) {
-    const component = ps.panelType ?? "__unassigned__";
-    const title = ps.panelType ? (panelRegistry.get(ps.panelType)?.title ?? ps.panelType) : "Empty";
+    let component: string;
+    let title: string;
+    if (!ps.panelType) {
+      component = "__unassigned__";
+      title = "Empty";
+    } else if (panelRegistry.get(ps.panelType)) {
+      component = ps.panelType;
+      title = panelRegistry.get(ps.panelType)!.title;
+    } else {
+      // Unregistered panel type — render the missing-panel placeholder so
+      // the user can reassign or remove without losing the panel-state id
+      // (preserves preset references and dock position).
+      component = MISSING_PANEL_TYPE;
+      title = "Missing";
+    }
     api.addPanel({ id: ps.id, component, title });
   }
 }

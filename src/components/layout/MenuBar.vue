@@ -13,6 +13,11 @@ import { panelRegistry } from "@/modules/panels/registry";
 import { UNASSIGNED_PANEL_TYPE } from "@/modules/panels/unassigned";
 import { formatCombo } from "@/modules/shortcuts/catalog";
 import { newId } from "@/modules/storage/ids";
+import {
+  exportWorkspace,
+  importWorkspace,
+  type PortableWorkspace,
+} from "@/modules/workspaces/portable";
 import { useLayoutStore } from "@/stores/layout";
 import { usePanelStateStore } from "@/stores/panelState";
 import { useSessionStore } from "@/stores/session";
@@ -136,6 +141,44 @@ async function onSaveAs(payload: {
   await session.saveCurrentAsNewLayout(payload);
 }
 
+async function onExportWorkspace(): Promise<void> {
+  const id = workspace.currentWorkspaceId;
+  if (!id) return;
+  const payload = await exportWorkspace(id, { includeChrome: true });
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const name = (workspace.currentWorkspace?.name ?? "workspace").replace(/\s+/g, "-").toLowerCase();
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `commandvue-workspace-${name}-${Date.now()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+async function onImportWorkspace(): Promise<void> {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "application/json,.json";
+  input.addEventListener("change", async () => {
+    const file = input.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text) as PortableWorkspace;
+      const imported = await importWorkspace(data, { renameOnConflict: true, importChrome: true });
+      await workspace.loadAll();
+      await workspace.setCurrentWorkspace(imported.id);
+      await layoutStore.loadForWorkspace(imported.id);
+      if (layoutStore.currentLayoutId) await session.loadLayout(layoutStore.currentLayoutId);
+    } catch (err) {
+      console.warn("Import failed:", err);
+    }
+  });
+  input.click();
+}
+
 function buildAddComponentChildren(): MenuItem[] {
   const grouped = panelRegistry.listByCategory();
   const out: MenuItem[] = [];
@@ -192,8 +235,12 @@ const menuItems = computed<MenuItem[]>(() => [
         shortcut: formatCombo("mod+shift+s", isMac),
       },
       { separator: true },
-      { label: "Import Workspace…", disabled: true },
-      { label: "Export Workspace…", disabled: true },
+      { label: "Import Workspace…", command: () => void onImportWorkspace() },
+      {
+        label: "Export Workspace…",
+        command: () => void onExportWorkspace(),
+        disabled: !workspace.currentWorkspaceId,
+      },
     ],
   },
   {

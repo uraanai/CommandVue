@@ -166,6 +166,10 @@ Noto
 mersenne
 predev
 prebuild
+moveend
+zoomend
+rotateend
+pitchend
 Supabase
 supabase
 timestamptz
