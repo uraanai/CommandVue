@@ -207,7 +207,7 @@ This section grows as phases land. Phase A baseline:
 - [x] Repository layer is the only path that touches IndexedDB.
 - [x] Cascade behavior is centralized in the repos that own the parent.
 - [x] No reactive state references repository internals.
-- [ ] All UI flows pass through stores → repos (Phase C onward).
+- [x] All UI flows pass through stores → repos (Phase C complete — workspace / layout / panelState / session stores wrap the repos; no component touches a repo directly).
 - [ ] Schema version handling for portable JSON (Phase G).
 - [ ] Auth `canEdit` check stub is in place (Phase E).
 
@@ -215,6 +215,35 @@ This section grows as phases land. Phase A baseline:
 
 ## Phase B note — Panel Registry
 
-The Panel Registry (`src/modules/panels/registry.ts`, Phase B) is **client-side only and does not migrate**. The registry is repopulated on every app boot via `registerBuiltinPanels()` and any downstream extension hooks. Only the `panel_states.panel_type` column carries a registry-id reference into storage — and that column is just `text`, validated client-side against the registry at restore time.
+The Panel Registry (`src/modules/panels/registry.ts`, Phase B) is **client-side only and does not migrate**. The registry is repopulated on every app boot via `registerBuiltinPanels()` and any downstream extension hooks. Only `panel_states.panel_type` carries a registry-id reference into storage — and that column is just `text`, validated client-side against the registry at restore time.
 
 Implication for Supabase migration: if a downstream app removes a panel type from its registry, all `panel_states` rows referencing that type render the `MissingPanelPlaceholder` (Phase G). No DB-side enforcement needed; the placeholder + reassign UI handles the case.
+
+---
+
+## Phase C note — Stores and session
+
+Phase C introduced four Pinia stores (`workspace`, `layout`, `panelState`, `session`) that wrap the repositories. None of the stores hold IndexedDB state directly; they're read-through caches that re-fetch via `*.loadAll` / `*.loadForWorkspace` / `*.loadForLayout`.
+
+### Current-pointer persistence
+
+Two `app-meta` keys carry the "where am I" pointer across reloads:
+
+| Key                    | Type   | Owner               |
+| ---------------------- | ------ | ------------------- |
+| `current-workspace-id` | `Ulid` | `useWorkspaceStore` |
+| `current-layout-id`    | `Ulid` | `useLayoutStore`    |
+
+These are written every time `setCurrentWorkspace` / `setCurrentLayout` runs. In Supabase, the same keys live in `app_meta(user_id, key, value)` — RLS scopes them per user automatically.
+
+### DockviewApi is intentionally outside Pinia state
+
+`useSessionStore` holds the `DockviewApi` reference in a **module-scope `shallowRef`**, not in the Pinia state surface. CLAUDE.md's architectural rule 4 forbids non-serializable values in stores; the module-scope ref keeps the live API reachable from store actions without leaking into devtools / persistence / Supabase Realtime. No migration impact — the API only exists in-browser.
+
+### Dirty-flag semantics
+
+`session.dirty` flips `true` on every `onDidLayoutChange` from Dockview and clears on `updateCurrentLayout` / `loadLayout` / `discardChanges`. Dockview state and dirty tracking live entirely client-side — they don't migrate. Supabase Realtime conflict resolution (Last-Write-Wins vs CRDT) remains an open question (#3 in the original Open Questions section); the dirty flag gives us a clean place to gate optimistic-vs-pessimistic merge later.
+
+### `saveCurrentAsNewLayout` deep-clone pattern
+
+The session store implements layout fork-on-save: capture the current `dockviewState.toJSON()`, allocate fresh ULIDs for every panel-state, rewrite the panel-id references inside the serialized JSON via string replace (same approach as `layoutRepo.duplicate`), then insert the new layout with its cloned panel-states. In Postgres, this becomes a single transactional `INSERT ... RETURNING` chain — the client still allocates the ULIDs.
