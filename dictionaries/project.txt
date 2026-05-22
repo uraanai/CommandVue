@@ -29,3 +29,5 @@ lucide
 Lucide
 openfreemap
 OpenFreeMap
+serializability
+repoints

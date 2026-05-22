@@ -8,6 +8,15 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 
 ### Added
 
+- **Workspace / layout / preset / chrome storage layer (Phase A of the workspace system).**
+  - Six typed IndexedDB repositories: `workspaceRepo`, `layoutRepo`, `panelStateRepo`, `presetRepo`, `chromeProfileRepo`, `appMetaRepo` under `src/modules/storage/`.
+  - ULID-based ids via the new `ulid` runtime dependency; `src/modules/storage/ids.ts` is now the canonical id source for persisted entities (`src/utils/id.ts` nanoid stays for ephemeral ids).
+  - Cascade behavior: workspace delete → layouts → panel-states → workspace-scoped presets. Layout delete → panel-states + workspace `defaultLayoutId` repointed.
+  - Invariants enforced at the repo layer: exactly one global-default workspace, exactly one default chrome profile, ≥1 workspace + ≥1 layout per workspace + ≥1 chrome profile always present.
+  - First-run seed (`seedIfEmpty`) — idempotent; creates the Operations workspace, Default layout (seven configured panels), and Default chrome profile with the canonical slot assignments.
+  - `docs/supabase-migration.md` — agent-only reference capturing the IndexedDB → Postgres + RLS migration contract.
+  - 121 unit tests via `fake-indexeddb`; full cascade and invariant coverage.
+
 ### Changed
 
 ### Deprecated
