@@ -16,8 +16,17 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
   - First-run seed (`seedIfEmpty`) — idempotent; creates the Operations workspace, Default layout (seven configured panels), and Default chrome profile with the canonical slot assignments.
   - `docs/supabase-migration.md` — agent-only reference capturing the IndexedDB → Postgres + RLS migration contract.
   - 121 unit tests via `fake-indexeddb`; full cascade and invariant coverage.
+- **Panel Registry (Phase B of the workspace system).**
+  - `src/modules/panels/registry.ts` — singleton with `register` / `unregister` / `get` / `list` / `listByCategory` / `subscribe`.
+  - `src/modules/panels/types.ts` — `PanelDefinition`, `PanelCategory`, `PanelLifecycle` (stubs to be wired in Phase G).
+  - `src/modules/panels/builtin.ts` — idempotent `registerBuiltinPanels()` covering the seven built-in panels (Cesium, MapLibre, EntityList, Chart, Telemetry, Markdown, Symbology).
+  - `src/modules/panels/unassigned.ts` — reserved synthetic type `__unassigned__` for empty panels.
+  - Wired into `main.ts` before mount; sits alongside the existing `app.component()` registrations (Dockview still resolves components from Vue's global registry).
+  - 9 new unit tests covering registry surface and built-in registration.
 
 ### Changed
+
+- **Storage seed: align panel type ids with existing Dockview registrations.** `SEED_PANEL_TYPES` now uses `entities` (not `entity-list`) so the seeded `panel-states` match the strings passed to `app.component()` and `addPanel({ component: ... })`.
 
 ### Deprecated
 
