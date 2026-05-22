@@ -66,7 +66,22 @@ Do not substitute libraries from this list without explicit instruction.
 3. **Tools (measure, draw, select) register through the Tool Registry pattern** (`src/modules/tools/registry.ts`). Tools must implement `activate()`, `deactivate()`, and clean up all listeners.
 4. **Pinia stores hold serializable state only.** No DOM refs, no Cesium objects, no Map instances in stores.
 5. **Composables own lifecycle.** Initialization and teardown of viewers/maps happens in composables, not components.
-6. **One panel = one component in `src/components/panels/`.** Panels are registered in `DockLayout.vue` and identified by string keys.
+6. **One panel = one component in `src/components/panels/`.** Panels are registered globally via `app.component(id, ...)` in `main.ts` (Dockview resolves panel components from Vue's global registry). The **Panel Registry** (`src/modules/panels/registry.ts`) owns the metadata — title, icon, category, async loader, lifecycle hooks — used by menus and (from Phase F) preset application.
+
+---
+
+## Panel Registry
+
+The Panel Registry is the single source of truth for "what panel types exist in this app."
+
+- **Source of truth:** `src/modules/panels/registry.ts` (singleton `panelRegistry`).
+- **Built-in registration:** `registerBuiltinPanels()` in `src/modules/panels/builtin.ts`, called once from `main.ts` before `app.mount()`.
+- **Definition shape:** `PanelDefinition` in `src/modules/panels/types.ts` — `id`, `title`, `description`, `icon` (Lucide name), `category`, async `component()` loader, optional `singleton`, optional `serialize` / `restore` lifecycle hooks (wired in Phase G).
+- **Dockview integration:** the registry does NOT replace `app.component()`. Dockview-vue 6 resolves panel components from Vue's global registry. The registry sits alongside it and adds metadata for the View / Components Panel / Add Component menu and the Phase F preset `applicableTo` contract. The `id` field of a registry entry must equal the string passed to `app.component()` and to `addPanel({ component: id })`.
+- **Synthetic types:** `UNASSIGNED_PANEL_TYPE = "__unassigned__"` (in `src/modules/panels/unassigned.ts`) reserves the namespace for empty panels (assignment state: `empty`). Underscore-prefixed ids are reserved for synthetic types and must not be used by real panels.
+- **Extending downstream:** apps that fork CommandVue add their own panel types via `panelRegistry.register({ id, ... })` plus an `app.component(id, ...)` registration. The registry exposes `subscribe()` so UI surfaces stay in sync as types are added at runtime.
+- **Categories:** `charts`, `data`, `docs`, `maps`, `monitoring`, `tools`. Use the closest match; don't invent one-offs.
+- **Test seam:** `panelRegistry.__resetForTests()` / `__unregisterBuiltinPanelsForTests()` exist for spec isolation. Never call them from app code.
 
 ---
 

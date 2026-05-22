@@ -24,7 +24,7 @@ import { workspaceRepo } from "./workspaceRepo";
 export const SEED_PANEL_TYPES = [
   "cesium",
   "maplibre",
-  "entity-list",
+  "entities",
   "chart",
   "telemetry",
   "markdown",

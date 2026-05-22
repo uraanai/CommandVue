@@ -7,8 +7,17 @@ import { createPinia } from "pinia";
 import PrimeVue from "primevue/config";
 import { createApp, defineAsyncComponent } from "vue";
 
+import { registerBuiltinPanels } from "@/modules/panels/builtin";
+
 import App from "./App.vue";
 import { router } from "./router";
+
+// Populate the panel registry before mount. The registry sits alongside the
+// global `app.component()` registrations below — Dockview resolves panel
+// components from the global registry, while the panel registry owns the
+// metadata (title, icon, category, async loader) used by menus and Phase F's
+// preset `applicableTo` contract.
+registerBuiltinPanels();
 
 const app = createApp(App);
 
