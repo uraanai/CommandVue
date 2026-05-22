@@ -85,6 +85,22 @@ The Panel Registry is the single source of truth for "what panel types exist in 
 
 ---
 
+## Chrome System
+
+The Chrome System owns the persistent application UI surrounding the dock — top bar, status bar, and all their items.
+
+- **Source of truth:** `src/modules/chrome/registry.ts` (singleton `chromeItemRegistry`) + `src/stores/chrome.ts` (`useChromeStore`) + `src/components/chrome/ChromeBar.vue` (renders one bar with three slots).
+- **Built-in registration:** `registerBuiltinChromeItems()` in `src/modules/chrome/builtin.ts`, called once from `main.ts` before mount.
+- **Slots:** `top-left`, `top-center`, `top-right`, `status-left`, `status-center`, `status-right` — defined in `src/types/chrome.ts` (`CHROME_SLOTS`).
+- **Item shape:** `ChromeItemDefinition` in `src/modules/chrome/types.ts` — `id`, `title`, `description`, `icon` (Lucide), `allowedSlots`, optional `defaultSlot`, async `component()` loader, `removable`, `singleton`.
+- **The always-on rule:** `app-icon` is registered with `removable: false`. Its right-click context menu mirrors the MenuBar's File / Edit / View structure — when the user hides the menu bar (View → Hide Menu Bar) the app icon remains the only path to those actions. Never make `app-icon` removable, never allow it in slots other than `top-left`.
+- **Permission gating:** `useChromeStore.canEdit` is the extension point. Phase E returns `true` (unconditional). Downstream apps replace this computed with their own permission check (e.g. read from a session store). When `canEdit` is `false`, `enterEditMode` is a no-op and `EditModeToggleItem` doesn't render.
+- **Edit mode:** `useChromeStore.editMode` toggles via the EditModeToggle item or the app-icon context menu. In edit mode, slots show a dashed border, present items get an `×` badge (only for `removable: true`), and a `+` button per slot opens a dropdown of items that can be added (filtered by `allowedSlots` and excluding items already present elsewhere).
+- **Persistence:** active arrangement is a `ChromeProfile` record persisted via `chromeProfileRepo`. Exactly one profile has `isDefault: true`. The store auto-persists every mutation to the active profile.
+- **Test seam:** `chromeItemRegistry.__resetForTests()` / `__unregisterBuiltinChromeItemsForTests()` exist for spec isolation. Never call them from app code.
+
+---
+
 ## Styling rules
 
 - Tailwind v4 utility-first. No CSS modules, no scoped styles for layout/spacing.
