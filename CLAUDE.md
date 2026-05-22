@@ -4,6 +4,12 @@ This file is read by Claude Code and other AI coding agents at the start of ever
 
 ---
 
+## Agent skills
+
+Project-specific agent guidance lives in [`.agent/skills/`](./.agent/skills). Four skills cover the four workspace-system subsystems: `commandvue-workspace-system`, `commandvue-panel-development`, `commandvue-preset-development`, `commandvue-chrome-system`. Each skill bundles its subsystem's data model, invariants, common mistakes, and copy-paste templates. When working in one of those areas, the relevant skill is the canonical source — read it before making changes.
+
+---
+
 ## Project context
 
 **CommandVue** is an open-source Vue 3 boilerplate for operations dashboards: command-and-control, fleet monitoring, geospatial operations, mission planning, and real-time telemetry. It is map-first, panel-based, and built to be extended.
