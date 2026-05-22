@@ -210,3 +210,11 @@ This section grows as phases land. Phase A baseline:
 - [ ] All UI flows pass through stores → repos (Phase C onward).
 - [ ] Schema version handling for portable JSON (Phase G).
 - [ ] Auth `canEdit` check stub is in place (Phase E).
+
+---
+
+## Phase B note — Panel Registry
+
+The Panel Registry (`src/modules/panels/registry.ts`, Phase B) is **client-side only and does not migrate**. The registry is repopulated on every app boot via `registerBuiltinPanels()` and any downstream extension hooks. Only the `panel_states.panel_type` column carries a registry-id reference into storage — and that column is just `text`, validated client-side against the registry at restore time.
+
+Implication for Supabase migration: if a downstream app removes a panel type from its registry, all `panel_states` rows referencing that type render the `MissingPanelPlaceholder` (Phase G). No DB-side enforcement needed; the placeholder + reassign UI handles the case.
