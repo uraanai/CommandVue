@@ -101,6 +101,21 @@ The Chrome System owns the persistent application UI surrounding the dock — to
 
 ---
 
+## Presets
+
+Typed bundles of visual configuration applied to panels at runtime.
+
+- **Source of truth:** `src/modules/presets/registry.ts` (`presetTypeRegistry`) + `src/stores/preset.ts` (`usePresetStore`).
+- **Built-in registration:** `registerBuiltinPresetTypes()` in `src/modules/presets/builtin.ts`, called once from `main.ts` before mount. Ships three example types: `map-style` (runtime-wired to `map.setStyle`), `map-overlay` and `chart-theme` (registered with stub `applyToPanel`s — downstream apps replace these with tailored implementations).
+- **Type shape:** `PresetTypeDefinition<TConfig>` in `src/modules/presets/types.ts` — `id`, `title`, `description`, `icon`, `applicableTo` (panel-type ids), `defaultConfig`, async `editComponent`, `applyToPanel(panelId, config)`, optional `removeFromPanel`.
+- **Records vs types:** a `Preset` record (`src/types/preset.ts`) is one user-created instance of a type, persisted via `presetRepo`. Records have `workspaceId: null` (global to user) or a workspace id (scoped, cascades on workspace delete).
+- **Runtime apply path:** the panel component watches `panelStateStore.getState(panelId)?.appliedPresetIds`. On change, it iterates in order (later overrides earlier — CSS-cascade semantics) and calls `presetTypeRegistry.get(typeId).applyToPanel(panelId, config)`. Panel components reach their live instance via the **panel-instance registry** (`src/modules/panels/instances.ts`) — each panel registers its imperative handle on mount.
+- **Cascading order** is enforced by `panelStateRepo.applyPreset`: re-applying an already-applied preset moves it to the end of `appliedPresetIds`, raising its precedence.
+- **`applicableTo` contract:** preset types declare which panel types they apply to. The Apply Preset dialog filters candidates by panel type; downstream apps adding panels must opt in by listing them here.
+- **Test seam:** `presetTypeRegistry.__resetForTests()` / `__unregisterBuiltinPresetTypesForTests()` for spec isolation.
+
+---
+
 ## Styling rules
 
 - Tailwind v4 utility-first. No CSS modules, no scoped styles for layout/spacing.

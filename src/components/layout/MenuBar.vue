@@ -6,6 +6,7 @@ import Menubar from "primevue/menubar";
 import { computed, ref } from "vue";
 
 import ManageLayoutsDialog from "@/components/dialogs/ManageLayoutsDialog.vue";
+import ManagePresetsDialog from "@/components/dialogs/ManagePresetsDialog.vue";
 import ManageWorkspacesDialog from "@/components/dialogs/ManageWorkspacesDialog.vue";
 import SaveLayoutAsDialog from "@/components/dialogs/SaveLayoutAsDialog.vue";
 import { panelRegistry } from "@/modules/panels/registry";
@@ -24,6 +25,7 @@ const panelStateStore = usePanelStateStore();
 
 const manageWorkspacesOpen = ref(false);
 const manageLayoutsOpen = ref(false);
+const managePresetsOpen = ref(false);
 const saveAsOpen = ref(false);
 
 async function saveLayout(): Promise<void> {
@@ -204,7 +206,7 @@ const menuItems = computed<MenuItem[]>(() => [
       { label: "Duplicate Layout", command: () => void duplicateCurrentLayout() },
       { label: "Delete Layout…", command: () => void deleteCurrentLayout() },
       { separator: true },
-      { label: "Manage Presets…", disabled: true },
+      { label: "Manage Presets…", command: () => (managePresetsOpen.value = true) },
     ],
   },
   {
@@ -269,6 +271,7 @@ const menuItems = computed<MenuItem[]>(() => [
 
   <ManageWorkspacesDialog v-model:visible="manageWorkspacesOpen" />
   <ManageLayoutsDialog v-model:visible="manageLayoutsOpen" />
+  <ManagePresetsDialog v-model:visible="managePresetsOpen" />
   <SaveLayoutAsDialog
     v-model:visible="saveAsOpen"
     :default-name="(layoutStore.currentLayout?.name ?? '') + ' (saved)'"
