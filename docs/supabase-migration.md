@@ -304,3 +304,30 @@ Each panel that supports presets watches its `appliedPresetIds` and iterates `pr
 ### `updatePreset` propagates via the repo
 
 When a preset's config is edited, `usePresetStore.updatePreset` scans `panel-states` for every record that references the preset id and re-runs `applyToPanel` against the live instance for each. In Supabase, this can be replaced with Realtime — subscribe to `presets` UPDATE events filtered to the active workspace, and re-apply locally on receipt.
+
+---
+
+## Phase G note — Portable JSON + per-panel state + missing-panel fallback
+
+Phase G wraps the system with three additions that all live entirely on the existing schema:
+
+### Portable JSON (`schemaVersion: 2`)
+
+`src/modules/workspaces/portable.ts` exports / imports a single workspace as a self-contained JSON blob: workspace + layouts + panel-states + workspace-scoped presets + (optionally) the active chrome profile. Every ULID is regenerated on import, panel-id refs inside `dockviewState` are rewritten via the same string-replace pattern used by `layoutRepo.duplicate`, and preset refs in `panel-states.appliedPresetIds` are remapped to the new ids. Unknown preset refs are silently dropped (invariant 9). Imports refuse mismatched `schemaVersion` or non-CommandVue payloads.
+
+**Migration impact:** none. The blob is client-format only — the server side will use Postgres `COPY ... TO STDOUT (FORMAT json)` for export and a parameterized `INSERT ... SELECT ... RETURNING` chain for import. The contract (one workspace per blob, fresh ids on import, ref rewriting) stays identical.
+
+### Per-panel state persistence
+
+`src/composables/usePanelState.ts` is the shared helper. Panels opt in by passing `{ serialize, restore }`; the composable debounces writes (400 ms default), flushes on unmount, and marks `session.dirty`. Phase G wires:
+
+- **MapLibrePanel** — `{ center, zoom, bearing, pitch }`, save triggered on `moveend` / `zoomend` / `rotateend` / `pitchend`.
+- **MarkdownPanel** — `{ content }`, save triggered on textarea input + "Done" button.
+
+Cesium / Entity-list / Chart / Telemetry panels are unchanged — their state is rich enough that wiring is per-app and would constrain downstream customization. The composable + repo are ready for any panel to opt in later.
+
+### MissingPanelPlaceholder + `__missing__` synthetic type
+
+`src/components/panels/MissingPanelPlaceholder.vue` + `src/modules/panels/missing.ts` reserve the `__missing__` synthetic id. DockLayout's `rebuildFromPanelStates` falls back to this when a panel-state references an unregistered `panelType` (common after import from a different build). The user can Reassign (keeps the panel id intact, preserves preset refs) or Remove.
+
+**Migration impact:** none. The fallback runs entirely client-side against the panel registry. After migration, the server returns the panel-state row as-is; the client decides whether the type resolves.

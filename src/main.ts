@@ -9,6 +9,7 @@ import { createApp, defineAsyncComponent } from "vue";
 
 import { registerBuiltinChromeItems } from "@/modules/chrome/builtin";
 import { registerBuiltinPanels } from "@/modules/panels/builtin";
+import { MISSING_PANEL_TYPE, registerMissingPanel } from "@/modules/panels/missing";
 import { registerUnassignedPanel, UNASSIGNED_PANEL_TYPE } from "@/modules/panels/unassigned";
 import { registerBuiltinPresetTypes } from "@/modules/presets/builtin";
 import { seedIfEmpty } from "@/modules/storage/seed";
@@ -28,6 +29,7 @@ await seedIfEmpty();
 // preset `applicableTo` contract.
 registerBuiltinPanels();
 registerUnassignedPanel();
+registerMissingPanel();
 registerBuiltinChromeItems();
 registerBuiltinPresetTypes();
 
@@ -95,6 +97,10 @@ app.component(
 app.component(
   UNASSIGNED_PANEL_TYPE,
   defineAsyncComponent(() => import("@/components/panels/UnassignedPanel.vue")),
+);
+app.component(
+  MISSING_PANEL_TYPE,
+  defineAsyncComponent(() => import("@/components/panels/MissingPanelPlaceholder.vue")),
 );
 /* eslint-enable vue/component-definition-name-casing */
 

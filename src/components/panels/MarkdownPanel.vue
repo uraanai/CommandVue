@@ -1,6 +1,21 @@
 <script setup lang="ts">
+import type { DockviewPanelApi } from "dockview-vue";
+
+import { Pencil, Save } from "@lucide/vue";
 import MarkdownIt from "markdown-it";
-import { computed } from "vue";
+import { computed, ref } from "vue";
+
+import { usePanelState } from "@/composables/usePanelState";
+
+interface Props {
+  api?: DockviewPanelApi;
+}
+
+interface MarkdownState extends Record<string, unknown> {
+  content: string;
+}
+
+const props = defineProps<Props>();
 
 const md = new MarkdownIt({
   html: false,
@@ -40,15 +55,61 @@ render as expected.
 | WebSocket | echo | replace VITE_WS_URL for production |
 `;
 
-const html = computed(() => md.render(sampleBriefing));
+const content = ref<string>(sampleBriefing);
+const editing = ref(false);
+
+const html = computed(() => md.render(content.value));
+
+let saveFn: (() => void) | null = null;
+if (props.api) {
+  const { save } = usePanelState<MarkdownState>(props.api.id, {
+    serialize: () => ({ content: content.value }),
+    restore: (state) => {
+      if (typeof state.content === "string" && state.content.length > 0) {
+        content.value = state.content;
+      }
+    },
+  });
+  saveFn = save;
+}
+
+function toggleEdit(): void {
+  if (editing.value) {
+    saveFn?.();
+  }
+  editing.value = !editing.value;
+}
 </script>
 
 <template>
-  <div class="bg-surface-sunken h-full w-full overflow-auto p-4">
-    <!-- eslint-disable-next-line vue/no-v-html -- markdown-it instantiated with html: false; output is sanitized -->
-    <article
-      class="prose prose-sm prose-invert dark:prose-invert [&_a]:text-accent-400 [&_code]:bg-surface-raised [&_code]:text-foreground [&_table]:border-border [&_th]:border-border [&_td]:border-border [&_blockquote]:border-accent-500 max-w-none [&_blockquote]:border-l [&_blockquote]:pl-3 [&_table]:border [&_td]:border-b [&_th]:border-b"
-      v-html="html"
+  <div class="bg-surface-sunken flex h-full w-full flex-col">
+    <header
+      class="border-border bg-surface-raised flex items-center justify-between border-b px-3 py-1.5 text-xs"
+    >
+      <span class="text-faint">Markdown briefing</span>
+      <button
+        type="button"
+        class="text-muted hover:text-foreground hover:bg-surface-sunken flex items-center gap-1 rounded px-1.5 py-0.5"
+        @click="toggleEdit"
+      >
+        <Save v-if="editing" class="size-3" />
+        <Pencil v-else class="size-3" />
+        <span>{{ editing ? "Done" : "Edit" }}</span>
+      </button>
+    </header>
+    <textarea
+      v-if="editing"
+      v-model="content"
+      class="bg-surface text-foreground placeholder:text-faint min-h-0 flex-1 resize-none p-3 font-mono text-xs focus:outline-none"
+      placeholder="# Briefing…"
+      @input="saveFn?.()"
     />
+    <div v-else class="min-h-0 flex-1 overflow-auto p-4">
+      <!-- eslint-disable-next-line vue/no-v-html -- markdown-it instantiated with html: false; output is sanitized -->
+      <article
+        class="prose prose-sm prose-invert dark:prose-invert [&_a]:text-accent-400 [&_code]:bg-surface-raised [&_code]:text-foreground [&_table]:border-border [&_th]:border-border [&_td]:border-border [&_blockquote]:border-accent-500 max-w-none [&_blockquote]:border-l [&_blockquote]:pl-3 [&_table]:border [&_td]:border-b [&_th]:border-b"
+        v-html="html"
+      />
+    </div>
   </div>
 </template>

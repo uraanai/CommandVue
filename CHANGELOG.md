@@ -78,6 +78,16 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
   - 10 new unit tests (preset registry + store); total **181/181 passing**.
   - `CLAUDE.md` gains a `## Presets` section; `docs/supabase-migration.md` gains a Phase F note covering schema decisions (`org_id` / `is_system` columns) and the runtime apply path.
 
+- **Portable JSON, per-panel state, missing-panel fallback (Phase G of the workspace system).**
+  - `src/modules/workspaces/portable.ts` — `exportWorkspace` / `importWorkspace` with `schemaVersion: 2`. Captures a workspace + layouts + panel-states + workspace-scoped presets + optional chrome profile in one JSON blob. Imports regenerate every ULID, rewrite panel-id refs inside `dockviewState`, remap preset refs in `appliedPresetIds`, rename on conflict, and refuse mismatched schema versions or non-CommandVue payloads.
+  - File → Import / Export Workspace wired in MenuBar via plain DOM file picker + Blob download (avoids adding `browser-fs-access` this late in the project).
+  - `src/composables/usePanelState.ts` — shared `{ serialize, restore }` helper with debounced writes (400 ms default), flush-on-unmount, and `session.dirty` marking.
+  - **MapLibrePanel** persists `{ center, zoom, bearing, pitch }` on map move/zoom/rotate/pitch events.
+  - **MarkdownPanel** gains an Edit/Done toggle with a textarea and persists `{ content }`.
+  - `src/components/panels/MissingPanelPlaceholder.vue` + `src/modules/panels/missing.ts` — synthetic `__missing__` panel type. `session.rebuildFromPanelStates` falls back to it when a panel-state references an unregistered `panelType` (common after import). Users can Reassign (keeps panel id intact, preserves preset refs) or Remove.
+  - 13 new unit tests (10 portable round-trip + ID regeneration + version rejection + chrome opt-in; 3 missing-panel registry). Total: **194/194 passing**.
+  - `docs/supabase-migration.md` gains a Phase G note (portable JSON contract, per-panel state hook, missing-panel fallback all map cleanly to Supabase with no schema changes).
+
 ### Deprecated
 
 ### Removed
