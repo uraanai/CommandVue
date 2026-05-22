@@ -35,6 +35,10 @@ export default defineConfigWithVueTs(
       // VitePress config is standalone (loaded by `vitepress` CLI via its own
       // bundler); it's not part of the app's project-references graph.
       "docs/.vitepress/**",
+      // Agent-skills reference templates are illustrative, not part of the
+      // app's tsconfig project. They live alongside the SKILL.md files so
+      // agents can read them in context.
+      ".agent/skills/**",
     ],
   },
   {

@@ -34,3 +34,5 @@ repoints
 repointed
 spawnable
 Repoint
+retheme
+touchpoints
