@@ -10,6 +10,7 @@ export { useDrawingsStore, type StoredDrawing } from "./drawings";
 export { useEntitiesStore, type Entity } from "./entities";
 export { useLayoutStore } from "./layout";
 export { usePanelStateStore } from "./panelState";
+export { usePresetStore } from "./preset";
 export { useSessionStore } from "./session";
 export { useTelemetryStore } from "./telemetry";
 export { useToolsStore } from "./tools";

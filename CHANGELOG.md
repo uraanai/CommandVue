@@ -63,6 +63,21 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 
 - **TitleBar and StatusBar are no longer mounted by AppShell.** Their items moved into the new Chrome System (workspace switcher, menu bar, layout/workspace labels, WS status, clock, edit-mode toggle). The component files remain in `src/components/layout/` because they're still referenced by tests / docs; they can be deleted in a follow-up if no downstream apps reference them.
 
+### Added (continued)
+
+- **Presets system: typed registry, panel binding, cascading application (Phase F of the workspace system).**
+  - `src/modules/presets/{types,registry,builtin}.ts` — `PresetTypeDefinition<TConfig>` + singleton `presetTypeRegistry` + `registerBuiltinPresetTypes()`. Three built-in types: **`map-style`** (fully runtime-wired to `map.setStyle`), **`map-overlay`** and **`chart-theme`** (registered with stub `applyToPanel`s; downstream apps replace per their needs).
+  - `src/modules/panels/instances.ts` — module-scope panel-instance registry (`registerPanelInstance` / `unregisterPanelInstance` / `getPanelInstance`) bridges preset `applyToPanel` calls to live panel handles (MapLibre map, Cesium viewer, ECharts chart). Non-Pinia by design — values are deliberately non-serializable.
+  - `src/stores/preset.ts` — `usePresetStore` with `loadAll` / `loadForWorkspace` / `presetsForPanel` / `createPreset` / `updatePreset` (re-applies to every referencing panel) / `deletePreset` / `duplicatePreset` (`{ workspaceId }` override for promote/scope) / `applyToPanel` / `removeFromPanel`.
+  - `src/components/dialogs/{ManagePresetsDialog,EditPresetDialog,ApplyPresetDialog}.vue` — full CRUD with global/workspace tabs, promote-to-global and scope-to-workspace duplicate actions, and a per-type editor switcher.
+  - `src/components/presets/editors/{MapStylePresetEditor,MapOverlayPresetEditor,ChartThemePresetEditor}.vue` — per-type edit UI.
+  - `src/components/panels/UnassignedPanel.vue` — the "Apply preset" dropdown is now populated from `usePresetStore.presetsForPanel`; selecting a preset before Assign applies it to the new panel.
+  - `src/components/panels/MapLibrePanel.vue` — registers its `MapLibreMap` instance on mount and watches `appliedPresetIds` to re-apply presets in cascade order on every change.
+  - `MenuBar` Edit → Manage Presets… opens the dialog.
+  - `App.vue.onMounted` loads presets for the current workspace alongside layouts.
+  - 10 new unit tests (preset registry + store); total **181/181 passing**.
+  - `CLAUDE.md` gains a `## Presets` section; `docs/supabase-migration.md` gains a Phase F note covering schema decisions (`org_id` / `is_system` columns) and the runtime apply path.
+
 ### Deprecated
 
 ### Removed

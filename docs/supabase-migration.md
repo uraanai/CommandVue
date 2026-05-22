@@ -274,3 +274,33 @@ Phase E introduces `chrome-profiles` (already in the Phase A schema) as a fully 
 ### Drag-and-drop deferred
 
 Phase E ships an **Add Item dropdown + Remove badge** affordance for edit-mode mutations, **not** full pointer-driven drag-and-drop. The store API (`moveItem(itemId, fromSlot, toSlot, position)`) is in place and exercised by the dropdown flow; a later phase can wire `@atlaskit/pragmatic-drag-and-drop` onto the same store action without changing the data model. No migration impact either way.
+
+---
+
+## Phase F note — Presets system
+
+Phase F lifts `presets` from "schema-only" to a fully managed entity with a typed registry, per-workspace scoping, and runtime application.
+
+### Schema stays as Phase A specified
+
+`presets` table shape is unchanged from the Phase A DDL sketch. The decision deferred in **Open question 1** (org-level vs user-level globals) is unblocked now:
+
+- `workspaceId: null` continues to mean "global to this user." For the upcoming Supabase migration, **add nullable `org_id` and `is_system` columns**:
+  - `org_id IS NOT NULL` → org-global (visible to every member of the org).
+  - `is_system = true` → system-global (shipped by the template / platform admin).
+  - All-null (`org_id IS NULL AND is_system = false AND workspace_id IS NULL`) → user-global, today's behavior.
+- The repo API stays `presetRepo.listGlobal()` / `listForWorkspace(id)` — under the hood, `listGlobal` becomes `WHERE workspace_id IS NULL AND (user_id = auth.uid() OR org_id = current_setting('app.org_id') OR is_system)`.
+
+### Panel-instance registry
+
+`src/modules/panels/instances.ts` is a non-Pinia, **module-scope** map of `panelId → imperative handle`. It exists to bridge `PresetTypeDefinition.applyToPanel(panelId, config)` to the live panel instance (MapLibre map, Cesium viewer, ECharts chart). Same reasoning as the DockviewApi in the session store — non-serializable, intentionally out of Pinia state, doesn't migrate.
+
+### Runtime application is per-panel
+
+Each panel that supports presets watches its `appliedPresetIds` and iterates `presetTypeRegistry.get(typeId).applyToPanel`. This phase wires **MapLibrePanel** as the proof-of-concept: `useMapLibre()` returns the map, MapLibrePanel registers it via `registerPanelInstance(api.id, map)` on mount, and a `watch` re-applies presets on any change. `MAP_STYLE_PRESET.applyToPanel` reads the map by id and calls `map.setStyle`.
+
+`map-overlay` and `chart-theme` ship as registered types with stub `applyToPanel` implementations that warn to the console. Downstream apps replace these with tailored implementations (or override the entire definition by re-registering after `registerBuiltinPresetTypes()`).
+
+### `updatePreset` propagates via the repo
+
+When a preset's config is edited, `usePresetStore.updatePreset` scans `panel-states` for every record that references the preset id and re-runs `applyToPanel` against the live instance for each. In Supabase, this can be replaced with Realtime — subscribe to `presets` UPDATE events filtered to the active workspace, and re-apply locally on receipt.

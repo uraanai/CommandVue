@@ -10,7 +10,9 @@ import { panelRegistry } from "@/modules/panels/registry";
 import { UNASSIGNED_PANEL_TYPE } from "@/modules/panels/unassigned";
 import { useLayoutStore } from "@/stores/layout";
 import { usePanelStateStore } from "@/stores/panelState";
+import { usePresetStore } from "@/stores/preset";
 import { useSessionStore } from "@/stores/session";
+import { useWorkspaceStore } from "@/stores/workspace";
 
 /**
  * UnassignedPanel — rendered for any panel-state with `assignmentState: 'empty'`.
@@ -32,10 +34,13 @@ const props = defineProps<Props>();
 
 const panelStateStore = usePanelStateStore();
 const session = useSessionStore();
+const presetStore = usePresetStore();
+const workspace = useWorkspaceStore();
 const _layoutStore = useLayoutStore();
 void _layoutStore;
 
 const selectedType = ref<PanelType>("");
+const selectedPreset = ref<string>("");
 const switching = ref(false);
 
 const candidates = computed(() =>
@@ -44,6 +49,11 @@ const candidates = computed(() =>
     .filter((d) => d.id !== UNASSIGNED_PANEL_TYPE && d.id !== "components-browser")
     .sort((a, b) => a.title.localeCompare(b.title)),
 );
+
+const availablePresets = computed(() => {
+  if (!selectedType.value) return [];
+  return presetStore.presetsForPanel(selectedType.value, workspace.currentWorkspaceId);
+});
 
 async function assign(): Promise<void> {
   if (!selectedType.value) return;
@@ -55,6 +65,9 @@ async function assign(): Promise<void> {
   try {
     const panelId = props.api.id;
     await panelStateStore.assignComponent(panelId, targetType, "configured");
+    if (selectedPreset.value) {
+      await presetStore.applyToPanel(panelId, selectedPreset.value);
+    }
 
     const group = props.api.group;
     props.containerApi.addPanel({
@@ -93,12 +106,18 @@ async function assign(): Promise<void> {
         <Button variant="primary" size="sm" :disabled="!selectedType || switching" @click="assign">
           {{ switching ? "Assigning…" : "Assign" }}
         </Button>
-        <label class="text-faint text-[10px] tracking-[0.18em] uppercase"> Apply preset </label>
+        <label class="text-faint text-[10px] tracking-[0.18em] uppercase">
+          Apply preset (optional)
+        </label>
         <select
-          class="border-border bg-surface-raised text-muted focus-visible:ring-accent-500 block w-full rounded-md border px-3 py-1.5 text-sm focus-visible:ring-2 focus-visible:outline-none"
-          disabled
+          v-model="selectedPreset"
+          class="border-border bg-surface-raised text-foreground focus-visible:ring-accent-500 block w-full rounded-md border px-3 py-1.5 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
+          :disabled="!selectedType || availablePresets.length === 0"
         >
-          <option>No presets available</option>
+          <option value="">
+            {{ availablePresets.length === 0 ? "No presets available" : "None" }}
+          </option>
+          <option v-for="p in availablePresets" :key="p.id" :value="p.id">{{ p.name }}</option>
         </select>
       </div>
     </div>

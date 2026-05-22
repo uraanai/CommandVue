@@ -10,6 +10,7 @@ import { createApp, defineAsyncComponent } from "vue";
 import { registerBuiltinChromeItems } from "@/modules/chrome/builtin";
 import { registerBuiltinPanels } from "@/modules/panels/builtin";
 import { registerUnassignedPanel, UNASSIGNED_PANEL_TYPE } from "@/modules/panels/unassigned";
+import { registerBuiltinPresetTypes } from "@/modules/presets/builtin";
 import { seedIfEmpty } from "@/modules/storage/seed";
 
 import App from "./App.vue";
@@ -28,6 +29,7 @@ await seedIfEmpty();
 registerBuiltinPanels();
 registerUnassignedPanel();
 registerBuiltinChromeItems();
+registerBuiltinPresetTypes();
 
 const app = createApp(App);
 
