@@ -40,6 +40,15 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 
 - **ULID generation is now monotonic.** `src/modules/storage/ids.ts` uses `ulid.monotonicFactory()` so two ULIDs minted in the same millisecond are guaranteed to sort lexicographically in creation order. Without this, IDB key order could disagree with creation order for same-millisecond writes — which broke "ORDER BY created_at" assumptions in the store list APIs.
 
+- **Menu bar, workspace switcher, manage dialogs, and panel-creation flows (Phase D of the workspace system).**
+  - `src/components/layout/MenuBar.vue` — PrimeVue Menubar (unstyled) with File / Edit / View menus, including a cascade "Add Component ▸ <category>" submenu sourced from the panel registry.
+  - `src/components/layout/WorkspaceSwitcher.vue` — top-right dropdown listing workspaces with dirty-check on switch (triggers UnsavedChangesDialog).
+  - `src/components/dialogs/{SaveLayoutAsDialog,UnsavedChangesDialog,ManageWorkspacesDialog,ManageLayoutsDialog}.vue` — full CRUD for workspaces and layouts, plus the Save-As and unsaved-changes flows.
+  - `src/components/panels/UnassignedPanel.vue` — empty-panel placeholder with "Assign a component…" dropdown; swaps the Dockview panel in-group on assignment (Dockview has no `setComponent`, so the swap is `addPanel({ ..., position: { referenceGroup: currentGroup, direction: 'within' } })` then `currentPanel.api.close()`).
+  - `src/components/panels/ComponentsPanel.vue` — singleton browser registered as `components-browser` panel type; subscribes to the registry; click-to-spawn floating panels grouped by category with a search filter.
+  - `src/components/layout/AppShell.vue` — adds a MenuBar row beneath the TitleBar with the WorkspaceSwitcher and a dirty indicator ("Layout: Default •" when dirty).
+  - Keyboard shortcuts: **Cmd/Ctrl+S** (Save Layout), **Cmd/Ctrl+Shift+S** (Save Layout As…), **Cmd/Ctrl+B** (Toggle Components Panel) — extended `src/modules/shortcuts/catalog.ts` and bridged in AppShell.
+
 ### Deprecated
 
 ### Removed

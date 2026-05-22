@@ -71,6 +71,15 @@ export const BUILTIN_PANELS: readonly PanelDefinition[] = [
     category: "tools",
     component: () => import("@/components/panels/SymbologyPanel.vue"),
   },
+  {
+    id: "components-browser",
+    title: "Components",
+    description: "Browse and add registered panel types.",
+    icon: "layout-grid",
+    category: "docs",
+    singleton: true,
+    component: () => import("@/components/panels/ComponentsPanel.vue"),
+  },
 ] as const;
 
 let registered = false;

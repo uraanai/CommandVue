@@ -8,6 +8,7 @@ import PrimeVue from "primevue/config";
 import { createApp, defineAsyncComponent } from "vue";
 
 import { registerBuiltinPanels } from "@/modules/panels/builtin";
+import { registerUnassignedPanel, UNASSIGNED_PANEL_TYPE } from "@/modules/panels/unassigned";
 import { seedIfEmpty } from "@/modules/storage/seed";
 
 import App from "./App.vue";
@@ -24,6 +25,7 @@ await seedIfEmpty();
 // metadata (title, icon, category, async loader) used by menus and Phase F's
 // preset `applicableTo` contract.
 registerBuiltinPanels();
+registerUnassignedPanel();
 
 const app = createApp(App);
 
@@ -81,6 +83,14 @@ app.component(
 app.component(
   "markdown",
   defineAsyncComponent(() => import("@/components/panels/MarkdownPanel.vue")),
+);
+app.component(
+  "components-browser",
+  defineAsyncComponent(() => import("@/components/panels/ComponentsPanel.vue")),
+);
+app.component(
+  UNASSIGNED_PANEL_TYPE,
+  defineAsyncComponent(() => import("@/components/panels/UnassignedPanel.vue")),
 );
 /* eslint-enable vue/component-definition-name-casing */
 

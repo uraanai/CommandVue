@@ -10,7 +10,13 @@
 
 export type ShortcutScope = "global" | "map" | "palette";
 
-export type ShortcutAction = "palette.open" | "tool.deactivate" | `tool.${string}`;
+export type ShortcutAction =
+  | "layout.save"
+  | "layout.saveAs"
+  | "palette.open"
+  | "tool.deactivate"
+  | "view.toggleComponents"
+  | `tool.${string}`;
 
 export interface ShortcutDef {
   /** Key combos. Multiple combos can map to the same action. */
@@ -29,6 +35,24 @@ export const SHORTCUTS: readonly ShortcutDef[] = [
     scope: "global",
     label: "Open command palette",
     action: "palette.open",
+  },
+  {
+    keys: ["mod+s"],
+    scope: "global",
+    label: "Save layout",
+    action: "layout.save",
+  },
+  {
+    keys: ["mod+shift+s"],
+    scope: "global",
+    label: "Save layout as…",
+    action: "layout.saveAs",
+  },
+  {
+    keys: ["mod+b"],
+    scope: "global",
+    label: "Toggle Components panel",
+    action: "view.toggleComponents",
   },
   {
     keys: ["escape"],

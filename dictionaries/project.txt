@@ -32,3 +32,4 @@ OpenFreeMap
 serializability
 repoints
 repointed
+spawnable
