@@ -4,6 +4,7 @@ commandvue
 CommandVue
 uraanai
 Uraan
+awaisali
 dockview
 Dockview
 maplibre

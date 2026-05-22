@@ -115,6 +115,51 @@ Conventional Commits, enforced by commitlint:
 
 ---
 
+## Git workflow (mandatory)
+
+`main` is protected. `enforce_admins: true` is set — direct push to `main` is rejected for **everyone**, including the maintainer. **Every code change goes through a PR**, no exceptions, even one-line doc fixes.
+
+### The required sequence
+
+```bash
+git checkout main && git pull                      # start from clean main
+git checkout -b <type>/<short-slug>                # feature branch first, BEFORE any edits
+# … edit, commit (lint-staged + commitlint hooks run automatically) …
+git push -u origin <type>/<short-slug>             # push branch
+gh pr create --title "<conventional-commit-style>" --body "<summary + test plan>"
+gh pr merge <n> --rebase --auto                    # queue auto-merge once CI is green
+```
+
+Use `--rebase` (or `--squash`) — **never `--merge`** (a merge commit fails the linear-history check).
+
+**Branch naming:** mirror the Conventional Commit prefix — `feat/...`, `fix/...`, `chore/...`, `docs/...`, `refactor/...`.
+
+**Required CI status checks** (set in branch protection, must be green before merge):
+
+- `Lint · Type-check · Test · Build` — `.github/workflows/ci.yml`, job `quality`
+- `CSpell` — `.github/workflows/cspell.yml`, job `spell`
+
+**Approval policy:** the maintainer (`awaisali88`) self-merges; required approvals is `0`. Do not raise this to 1+ until a second collaborator exists. **Do NOT auto-merge PRs without checking with the user first** — the user approves merges into `main`, the agent only queues them on explicit confirmation.
+
+### Critical "don'ts"
+
+- **Never run `git push origin main`** — it will be rejected, and the attempt itself indicates you missed this section.
+- **Never edit `main` directly.** Confirm `git branch --show-current` is a feature branch before any edit.
+- **Never amend a published commit** or force-push to `main` — both blocked by protection, but also bad practice on a shared branch.
+- **Never skip the PR** for "trivial" changes — the required CI checks only run on PRs. Same path for one-line typo fixes as for major features.
+
+### If you've already made changes on `main` by mistake
+
+1. Don't push, don't panic.
+2. `git checkout -b <type>/<slug>` — your modifications follow you to the new branch.
+3. Stage, commit, push, open PR as normal. The recovery is invisible to reviewers.
+
+### How to inspect / modify branch protection
+
+`gh api repos/uraanai/CommandVue/branches/main/protection`. Settings live there; don't loosen without the user's explicit go-ahead.
+
+---
+
 ## What not to do
 
 - Do not add Socket.IO. Native WebSocket only.
@@ -143,17 +188,19 @@ These are documented in `docs/theming.md` as an example override.
 
 CommandVue uses **two memory surfaces**. Both are agent-only — they're not part of the shipped template:
 
-1. **Always-loaded rules** — `~/.claude/projects/D--Work-UraanAI-Public-CommandVue/memory/*.md`, indexed by `MEMORY.md`. Auto-loaded at every session start. **Add a file here for any rule that must surface without being searched for** (release-only changelog, runtime verification, Context7 first, milsymbol no-undefined, branch protection on `main`, modernization debt, Cesium recipe). Keep each file under ~50 lines and link siblings with `[[name]]` syntax.
+1. **Auto-loaded rules** — this `CLAUDE.md` file, plus `~/.claude/rules/*.md` (user-global) and `.claude/CLAUDE.md` / `.claude/rules/*.md` (project-scoped, if present). These are the files Claude Code's harness actually reads at session start. **Any hard rule that must surface without being searched for goes here, in this file.**
 
 2. **Searchable observations + named corpus** — claude-mem (worker runtime). Hooks auto-capture every prompt, tool call, file read, and session summary into `~/.claude-mem/claude-mem.db`. Surface them via:
    - `mcp__plugin_claude-mem_mcp-search__search` → `timeline(anchor=<ID>)` → `get_observations([IDs])` (3-layer pattern — 10× token savings vs fetching full details upfront).
    - `mcp__plugin_claude-mem_mcp-search__smart_search` for tree-sitter symbol/file lookups inside `src/`.
    - The primed **`commandvue` corpus**: `prime_corpus({ name: "commandvue" })` then `query_corpus({ name: "commandvue", question: "..." })` for whole-project Q&A grounded in observations.
 
+> **Important (verified 2026-05-22):** Files at `~/.claude/projects/D--Work-UraanAI-Public-CommandVue/memory/*.md` are **NOT** auto-loaded by Claude Code's harness — that directory is session-storage (JSONL transcripts), not a rule-loader path. Even `MEMORY.md` (the index) does not reliably appear in session startup context. **Treat that directory as reference/archive only.** If a rule must always apply at session start, it goes in this file or in `.claude/rules/`.
+
 **Decision rule for "where does this knowledge go":**
 
-- Hard rule that must always apply → MD file under `memory/`.
-- Bug-fix recipe, "we tried X and reverted", per-PR rationale, code-knowledge note → already captured via hooks; you don't need to write it manually. In worker runtime, `memory_add` is unavailable — rely on the auto-capture.
+- Hard rule that must always apply at session start → **this `CLAUDE.md` file** (or `.claude/rules/` if the rule is project-scoped agent infrastructure that doesn't belong in the project's source-of-truth file).
+- Bug-fix recipe, "we tried X and reverted", per-PR rationale, code-knowledge note → already captured via claude-mem hooks; you don't need to write it manually. In worker runtime, `memory_add` is unavailable — rely on the auto-capture.
 - Rebuild the `commandvue` corpus after major project changes: `rebuild_corpus({ name: "commandvue" })`.
 
 Before reaching for `grep` on a "where is X" question, try `smart_search` first.
