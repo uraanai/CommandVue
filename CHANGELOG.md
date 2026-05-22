@@ -49,6 +49,20 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
   - `src/components/layout/AppShell.vue` — adds a MenuBar row beneath the TitleBar with the WorkspaceSwitcher and a dirty indicator ("Layout: Default •" when dirty).
   - Keyboard shortcuts: **Cmd/Ctrl+S** (Save Layout), **Cmd/Ctrl+Shift+S** (Save Layout As…), **Cmd/Ctrl+B** (Toggle Components Panel) — extended `src/modules/shortcuts/catalog.ts` and bridged in AppShell.
 
+- **Chrome system: slots, items registry, edit mode, app-icon fallback (Phase E of the workspace system).**
+  - `src/modules/chrome/{types,registry}.ts` — `ChromeItemDefinition` + singleton `chromeItemRegistry` with `register` / `unregister` (refuses non-removable) / `listForSlot` / `subscribe`.
+  - `src/modules/chrome/builtin.ts` — `registerBuiltinChromeItems()` registers nine items: `app-icon` (non-removable, top-left only), `menu-bar`, `workspace-switcher`, `current-workspace-label`, `current-layout-label`, `dirty-indicator`, `websocket-status`, `clock`, `edit-mode-toggle`.
+  - `src/stores/chrome.ts` — `useChromeStore` with `editMode`, `canEdit` (always `true` in Phase E — auth seam), `slotItems` / `isVisible` / `addItemToSlot` (strips from other slots first) / `removeItemFromSlot` / `moveItem` / `toggleMenuBar` / `toggleStatusBar` / `createProfile` / `setDefaultProfile` / `deleteProfile`. Auto-persists every mutation to the active profile.
+  - `src/components/chrome/items/*.vue` — nine item components including the **AppIconItem** whose right-click context menu mirrors the MenuBar File / Edit / View structure (the fallback when the menu bar is hidden).
+  - `src/components/chrome/{ChromeBar,ChromeSlot,EditModeOverlay}.vue` — ChromeBar renders one bar (top or status) with three slots; ChromeSlot renders items and (in edit mode) shows the `×` badge per item and a `+` dropdown to add hidden items; EditModeOverlay renders the bar-top edit-mode banner with an Exit button.
+  - `src/components/layout/AppShell.vue` refactored: TitleBar + MenuBar + StatusBar composition replaced by **two ChromeBars** driven by the active ChromeProfile.
+  - 16 new unit tests (chrome registry + store); total **171/171 passing**.
+  - `CLAUDE.md` gains a `## Chrome System` section documenting the registry, slots, edit mode, the `app-icon` always-on rule, and the `canEdit` extension point for downstream auth.
+
+### Removed
+
+- **TitleBar and StatusBar are no longer mounted by AppShell.** Their items moved into the new Chrome System (workspace switcher, menu bar, layout/workspace labels, WS status, clock, edit-mode toggle). The component files remain in `src/components/layout/` because they're still referenced by tests / docs; they can be deleted in a follow-up if no downstream apps reference them.
+
 ### Deprecated
 
 ### Removed

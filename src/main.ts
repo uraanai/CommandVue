@@ -7,6 +7,7 @@ import { createPinia } from "pinia";
 import PrimeVue from "primevue/config";
 import { createApp, defineAsyncComponent } from "vue";
 
+import { registerBuiltinChromeItems } from "@/modules/chrome/builtin";
 import { registerBuiltinPanels } from "@/modules/panels/builtin";
 import { registerUnassignedPanel, UNASSIGNED_PANEL_TYPE } from "@/modules/panels/unassigned";
 import { seedIfEmpty } from "@/modules/storage/seed";
@@ -26,6 +27,7 @@ await seedIfEmpty();
 // preset `applicableTo` contract.
 registerBuiltinPanels();
 registerUnassignedPanel();
+registerBuiltinChromeItems();
 
 const app = createApp(App);
 

@@ -261,3 +261,16 @@ Notable Phase D pieces worth pinning down:
 - **`view.toggleComponents` (`Cmd/Ctrl+B`)** looks up the components-browser panel via `panelStateStore.listForLayout()` rather than via `DockviewApi.panels[].component` — the public `IDockviewPanel` doesn't expose the component-type field.
 - **Manage Workspaces dialog auto-creates a "Default" layout** for each new workspace so invariant 6 (≥1 layout per workspace) is satisfied before the user switches into it. In Supabase this becomes a server-side trigger or a `WITH ... INSERT` chain.
 - **Permission gating:** `canEdit` is the Phase E hook for auth. Phase D's menu items and dialogs are all enabled today; once Phase E lands the `canEdit` computed in `useChromeStore`, the menu items / WorkspaceSwitcher should consult it (left as a Phase E task — Phase D does not gate).
+
+---
+
+## Phase E note — Chrome system
+
+Phase E introduces `chrome-profiles` (already in the Phase A schema) as a fully managed entity. Two migration-relevant points:
+
+- **Slot assignments persist as JSONB.** `chrome_profiles.slot_assignments` is `jsonb` mapping `ChromeSlot → text[]`. The shape matches `ChromeProfile.slotAssignments` 1:1; no transformation needed on read.
+- **`canEdit` is the auth seam.** `useChromeStore.canEdit` returns `true` in Phase E (stubbed). In a Supabase-backed deployment, this computed should read from a session store populated by Supabase Auth — e.g. `canEdit = computed(() => sessionStore.user?.role === 'admin' || sessionStore.user?.role === 'editor')`. The chrome store's actions (`enterEditMode`, `addItemToSlot`, etc.) already gate on `canEdit`, so flipping the source is the entire integration surface.
+
+### Drag-and-drop deferred
+
+Phase E ships an **Add Item dropdown + Remove badge** affordance for edit-mode mutations, **not** full pointer-driven drag-and-drop. The store API (`moveItem(itemId, fromSlot, toSlot, position)`) is in place and exercised by the dropdown flow; a later phase can wire `@atlaskit/pragmatic-drag-and-drop` onto the same store action without changing the data model. No migration impact either way.

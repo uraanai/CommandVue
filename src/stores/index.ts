@@ -4,6 +4,7 @@
  *   - Phase 6: entities, telemetry, connection
  *   - Phase 7: tools, drawings
  */
+export { useChromeStore } from "./chrome";
 export { useConnectionStore } from "./connection";
 export { useDrawingsStore, type StoredDrawing } from "./drawings";
 export { useEntitiesStore, type Entity } from "./entities";
