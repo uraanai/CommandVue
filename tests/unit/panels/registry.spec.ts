@@ -92,7 +92,7 @@ describe("registerBuiltinPanels", () => {
     panelRegistry.__resetForTests();
   });
 
-  it("registers all seven built-in panels with stable ids", () => {
+  it("registers all built-in panels with stable ids", () => {
     registerBuiltinPanels();
     const ids = panelRegistry
       .list()
@@ -101,6 +101,7 @@ describe("registerBuiltinPanels", () => {
     expect(ids).toEqual([
       "cesium",
       "chart",
+      "components-browser",
       "entities",
       "maplibre",
       "markdown",

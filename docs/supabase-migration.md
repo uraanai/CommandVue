@@ -247,3 +247,17 @@ These are written every time `setCurrentWorkspace` / `setCurrentLayout` runs. In
 ### `saveCurrentAsNewLayout` deep-clone pattern
 
 The session store implements layout fork-on-save: capture the current `dockviewState.toJSON()`, allocate fresh ULIDs for every panel-state, rewrite the panel-id references inside the serialized JSON via string replace (same approach as `layoutRepo.duplicate`), then insert the new layout with its cloned panel-states. In Postgres, this becomes a single transactional `INSERT ... RETURNING` chain — the client still allocates the ULIDs.
+
+---
+
+## Phase D note — Menu bar, dialogs, panel-creation flows
+
+Phase D is **UI-only and does not migrate** — every action delegates to the Phase C stores, which in turn delegate to the Phase A repositories. The migration path is unchanged.
+
+Notable Phase D pieces worth pinning down:
+
+- **`UnassignedPanel.vue` swap pattern.** Dockview-vue has no `setComponent` API, so changing a panel's component type means `containerApi.addPanel({ id, component: newType, position: { referenceGroup: currentGroup, direction: 'within' } })` followed by `currentPanel.api.close()`. The panel id is preserved, which keeps cross-references intact (`layout.panelIds`, `panel.appliedPresetIds`). Same pattern will apply in a Supabase-backed deployment.
+- **`View → Add Empty Panel` and `View → Add Component`** allocate a new ULID client-side, write a `panel-states` row, then ask Dockview to mount the panel as `floating: true`. Order matters: the panel-state must exist before Dockview mounts the component (Phase G readers).
+- **`view.toggleComponents` (`Cmd/Ctrl+B`)** looks up the components-browser panel via `panelStateStore.listForLayout()` rather than via `DockviewApi.panels[].component` — the public `IDockviewPanel` doesn't expose the component-type field.
+- **Manage Workspaces dialog auto-creates a "Default" layout** for each new workspace so invariant 6 (≥1 layout per workspace) is satisfied before the user switches into it. In Supabase this becomes a server-side trigger or a `WITH ... INSERT` chain.
+- **Permission gating:** `canEdit` is the Phase E hook for auth. Phase D's menu items and dialogs are all enabled today; once Phase E lands the `canEdit` computed in `useChromeStore`, the menu items / WorkspaceSwitcher should consult it (left as a Phase E task — Phase D does not gate).
