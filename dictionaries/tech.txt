@@ -166,3 +166,17 @@ Noto
 mersenne
 predev
 prebuild
+Supabase
+supabase
+timestamptz
+nanoids
+Crockford
+CRDT
+indexeddb
+ulid
+ULID
+ULIDs
+postgres
+Postgres
+RLS
+auth
