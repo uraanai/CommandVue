@@ -27,6 +27,18 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 ### Changed
 
 - **Storage seed: align panel type ids with existing Dockview registrations.** `SEED_PANEL_TYPES` now uses `entities` (not `entity-list`) so the seeded `panel-states` match the strings passed to `app.component()` and `addPanel({ component: ... })`.
+- **Workspace-aware stores and session management (Phase C of the workspace system).**
+  - `src/stores/workspace.ts` — `useWorkspaceStore` over `workspaceRepo`; loads workspaces, tracks `currentWorkspaceId`, persists the pointer to `app-meta` (`current-workspace-id`).
+  - `src/stores/layout.ts` — **REPLACES** the prior single-Dockview-JSON store; new `useLayoutStore` over `layoutRepo`; tracks `currentLayoutId` per workspace and persists the pointer (`current-layout-id`).
+  - `src/stores/panelState.ts` — `usePanelStateStore` with map-based cache for the loaded layout; supports assign/clear, applyPreset/removePreset, createEmpty/delete.
+  - `src/stores/session.ts` — `useSessionStore` bridging persisted state and the live Dockview API. Holds `DockviewApi` in a module-scope `shallowRef` (intentionally outside Pinia state per CLAUDE.md rule 4). Exposes `loadLayout`, `saveCurrentAsNewLayout` (fork-on-save with fresh ULIDs), `updateCurrentLayout`, `discardChanges`, `switchWorkspace`; tracks `dirty` flag.
+  - `main.ts` now `await seedIfEmpty()` before mount via Vite top-level await; `App.vue` guards rendering on `workspaceStore.ready` with a loading splash.
+  - `DockLayout.vue` refactored: hardcoded panel arrangement removed; loads from the current Layout via session store; falls back to stacking panel-states as tabs when `dockviewState` is null.
+  - 34 new store unit tests; the old `tests/unit/layout-store.spec.ts` (single-JSON-store API) was removed.
+
+### Changed
+
+- **ULID generation is now monotonic.** `src/modules/storage/ids.ts` uses `ulid.monotonicFactory()` so two ULIDs minted in the same millisecond are guaranteed to sort lexicographically in creation order. Without this, IDB key order could disagree with creation order for same-millisecond writes — which broke "ORDER BY created_at" assumptions in the store list APIs.
 
 ### Deprecated
 

@@ -8,9 +8,15 @@ import PrimeVue from "primevue/config";
 import { createApp, defineAsyncComponent } from "vue";
 
 import { registerBuiltinPanels } from "@/modules/panels/builtin";
+import { seedIfEmpty } from "@/modules/storage/seed";
 
 import App from "./App.vue";
 import { router } from "./router";
+
+// First-run seed before anything else touches storage. Top-level await is
+// supported by Vite for entry modules; ensures the Operations workspace,
+// Default layout, and Default chrome profile exist before App.vue mounts.
+await seedIfEmpty();
 
 // Populate the panel registry before mount. The registry sits alongside the
 // global `app.component()` registrations below — Dockview resolves panel
