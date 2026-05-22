@@ -160,6 +160,28 @@ Use `--rebase` (or `--squash`) — **never `--merge`** (a merge commit fails the
 
 ---
 
+## Runtime verification (mandatory after major-version bumps)
+
+The static gauntlet (`pnpm lint && pnpm type-check && pnpm test && pnpm spell && pnpm build && pnpm docs:build`) does **not** prove a major-version migration is safe. All five can pass while the running app is broken in ways that only surface when components actually mount in the browser.
+
+**After any major-version bump** of a UI framework, build tool, state library, or rendering library:
+
+1. Run `pnpm dev` and confirm panels mount + key flows work. Drive verification with the **Playwright MCP** server (`mcp__plugin_playwright_playwright__*`) when possible; otherwise ask the user to verify manually.
+2. Click through **every panel that uses the bumped library** — runtime regressions are component-mount-specific.
+3. Watch for these failure modes (each has bitten this repo at least once):
+   - **Vite `optimizeDeps` failures** — `Cannot optimize dependency: X`, `Failed to find module Y`, pre-bundle vs raw-serve interop, pnpm strict-store hiding transitive CJS deps (the `mersenne-twister` bug).
+   - **Vue `inject` regressions** when functional components are involved (the Lucide 1.16 / Vue 3.5 bug — fixed in 1.16+ but the pattern recurs across libraries).
+   - **ESM ↔ CJS interop mismatches** — `.d.ts` claims a named export the ESM module doesn't provide (the milsymbol `Symbol` bug).
+   - **Reactivity lifecycle changes** in major releases — e.g. echarts 6 added strict `setOption` lifecycle rules that broke `vue-echarts` 8 reactive updates.
+   - **Breaking-prop removal** — e.g. `dockview-vue 6` dropped the `:components` prop; panel registration must move to global `app.component()`.
+4. When CI is green but the page doesn't mount, the relevant tooling is **browser console + dev-server stderr**, not the build log.
+
+**Do not** report a migration complete until the running app has been clicked through.
+
+When multiple major bumps land in one session, plan to spend the **back half** of the session on runtime fixes — the static work is the easier half.
+
+---
+
 ## What not to do
 
 - Do not add Socket.IO. Native WebSocket only.
@@ -214,6 +236,55 @@ Before reaching for `grep` on a "where is X" question, try `smart_search` first.
 This rule applies to: integrating a new package, bumping a major version of an existing one, debugging a runtime error that names a library (e.g. `cesium.js:...`, `[ECharts]`, `<Lucide Icon>`), and acting on any tutorial / blog link the user shares. It does **not** apply to refactoring our own code, writing scripts from scratch, or debugging business logic.
 
 Full rationale + decision matrix lives in [`.agent/workflows/documentation-sync.md`](./.agent/workflows/documentation-sync.md) under "Library integration".
+
+---
+
+## Library-specific gotchas (do not regress)
+
+Two load-bearing configurations that each took hours to land. **If you change any of them, runtime-verify before merging.**
+
+### Cesium-on-Vite — the four working parts
+
+1. **Assets served from `public/cesium/`, not via `vite-plugin-static-copy`'s middleware.** `scripts/copy-cesium-assets.mjs` mirrors `node_modules/cesium/Build/Cesium/{Assets,Workers,ThirdParty,Widgets}` into `public/cesium/` and is wired as `predev` + `prebuild`. `vite-plugin-static-copy@4`'s dev middleware regressed and returned SPA-fallback HTML for asset URLs — every imagery tile came back as `200 text/html`, breaking image decode.
+2. **`CESIUM_BASE_URL = "/cesium/"`** set both at build time (`define` in `vite.config.ts`) and at runtime (`window.CESIUM_BASE_URL` in `src/modules/cesium/init.ts`, which must be the first import of `useCesium.ts` — before any other Cesium module).
+3. **Ion explicitly disabled in `init.ts`:** `Ion.defaultAccessToken = ""`. The default shared dev token is rate-limited and returns HTML error pages that propagate as `InvalidStateError: The source image could not be decoded` and `Unexpected token '<'`.
+4. **Offline imagery + terrain:** `baseLayer: ImageryLayer.fromProviderAsync(TileMapServiceImageryProvider.fromUrl(buildModuleUrl("Assets/Textures/NaturalEarthII")), {})` and `terrainProvider: new EllipsoidTerrainProvider()`. Both ship inside the cesium package; no network required.
+
+**`optimizeDeps.exclude` does NOT contain `cesium`.** The old exclusion was a 2023-era workaround that stopped Vite pre-bundling Cesium's CJS subdeps like `mersenne-twister`. `optimizeDeps.include` _does_ contain `mersenne-twister`, and `.npmrc`'s `public-hoist-pattern[]=mersenne-twister` hoists it for pnpm. Belt-and-suspenders.
+
+**Do not add `cesium` back to `optimizeDeps.exclude` without re-verifying the mersenne-twister chain.** If Cesium starts throwing `InvalidStateError` or `Unexpected token '<'`, check the four parts above first — the error chain is almost always: asset URL returns HTML → browser image decoder chokes → Cesium reports a generic decode error.
+
+### milsymbol — build options incrementally, never pass `undefined`
+
+In `src/modules/symbology/render.ts` (and any future call site), build the options object key-by-key — only assign a key when the caller supplied a value:
+
+```typescript
+const symbolOptions: Record<string, number | string | undefined> = {
+  size: options.size ?? 32,
+};
+if (options.fillColor !== undefined) symbolOptions.fillColor = options.fillColor;
+if (options.iconColor !== undefined) symbolOptions.iconColor = options.iconColor;
+if (options.outlineColor !== undefined) symbolOptions.outlineColor = options.outlineColor;
+if (options.outlineWidth !== undefined) symbolOptions.outlineWidth = options.outlineWidth;
+return new ms.Symbol(sidc, symbolOptions).asSVG();
+```
+
+`ms.Symbol` distinguishes "key not present" from "key present with `undefined` value". The latter corrupts internal layout math — `Number(undefined) → NaN` runs through the bbox computation, every derived attribute becomes `NaN`, and `asSVG()` returns `width="NaN" height="NaN" viewBox="X Y NaN NaN"` with fills stripped (the PR #51 regression — ~180 browser warnings per page load).
+
+**Do not refactor to a single object literal** with spread or explicit `undefined` defaults. The conditional-assign pattern is intentional.
+
+Also: **import the default, never the named** — the `.d.ts` lies. It declares `export class Symbol`, which compiles cleanly, but the actual ESM only has `export default ms` with `ms.Symbol` hanging off it:
+
+```typescript
+// ❌ compiles green, throws "Symbol is not a constructor" at runtime
+import { Symbol } from "milsymbol";
+
+// ✅ correct
+import ms from "milsymbol";
+new ms.Symbol(sidc, options);
+```
+
+This is a milsymbol-specific quirk. Don't generalize the `undefined`-key rule to other libraries.
 
 ---
 
