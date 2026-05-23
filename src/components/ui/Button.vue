@@ -1,8 +1,20 @@
 <script setup lang="ts">
+import PvButton from "primevue/button";
 import { computed } from "vue";
 
 import { cn } from "@/utils/cn";
 
+/**
+ * Button — thin wrapper over PrimeVue Button with our project token palette
+ * applied via the unstyled-mode passthrough (`pt`). The public API is
+ * preserved from the previous hand-rolled version so callers don't change.
+ *
+ * Variant mapping (project → PrimeVue Button):
+ *   primary   → severity primary  + filled
+ *   secondary → severity secondary + outlined
+ *   ghost     → variant text
+ *   danger    → severity danger + filled
+ */
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 type Size = "sm" | "md" | "lg";
 
@@ -33,7 +45,7 @@ const sizeClass: Record<Size, string> = {
   lg: "px-5 py-2.5 text-base",
 };
 
-const classes = computed(() =>
+const rootClass = computed(() =>
   cn(
     "inline-flex items-center justify-center gap-1.5 rounded-md font-medium",
     "transition-colors duration-150 ease-out",
@@ -46,7 +58,14 @@ const classes = computed(() =>
 </script>
 
 <template>
-  <button :type="type" :class="classes" :disabled="disabled">
+  <PvButton
+    :type="type"
+    :disabled="disabled"
+    :pt="{
+      root: { class: rootClass },
+      label: { class: 'inline-flex items-center gap-1.5' },
+    }"
+  >
     <slot />
-  </button>
+  </PvButton>
 </template>

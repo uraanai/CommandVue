@@ -3,9 +3,12 @@ import type { DockviewPanelApi } from "dockview-vue";
 
 import { Pencil, Save } from "@lucide/vue";
 import MarkdownIt from "markdown-it";
+import Textarea from "primevue/textarea";
 import { computed, ref } from "vue";
 
+import Button from "@/components/ui/Button.vue";
 import { usePanelState } from "@/composables/usePanelState";
+import { cn } from "@/utils/cn";
 
 interface Props {
   api?: DockviewPanelApi;
@@ -87,21 +90,27 @@ function toggleEdit(): void {
       class="border-border bg-surface-raised flex items-center justify-between border-b px-3 py-1.5 text-xs"
     >
       <span class="text-faint">Markdown briefing</span>
-      <button
-        type="button"
-        class="text-muted hover:text-foreground hover:bg-surface-sunken flex items-center gap-1 rounded px-1.5 py-0.5"
-        @click="toggleEdit"
-      >
+      <Button variant="ghost" size="sm" @click="toggleEdit">
         <Save v-if="editing" class="size-3" />
         <Pencil v-else class="size-3" />
         <span>{{ editing ? "Done" : "Edit" }}</span>
-      </button>
+      </Button>
     </header>
-    <textarea
+    <Textarea
       v-if="editing"
       v-model="content"
-      class="bg-surface text-foreground placeholder:text-faint min-h-0 flex-1 resize-none p-3 font-mono text-xs focus:outline-none"
+      :auto-resize="false"
       placeholder="# Briefing…"
+      :pt="{
+        root: {
+          class: cn(
+            'bg-surface text-foreground placeholder:text-faint',
+            'min-h-0 flex-1 resize-none p-3 font-mono text-xs',
+            'focus:outline-none focus-visible:outline-none',
+            'border-0',
+          ),
+        },
+      }"
       @input="saveFn?.()"
     />
     <div v-else class="min-h-0 flex-1 overflow-auto p-4">

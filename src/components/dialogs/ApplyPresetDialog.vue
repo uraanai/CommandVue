@@ -5,6 +5,7 @@ import { computed, ref, watch } from "vue";
 
 import Button from "@/components/ui/Button.vue";
 import Dialog from "@/components/ui/Dialog.vue";
+import Select from "@/components/ui/Select.vue";
 import { presetTypeRegistry } from "@/modules/presets/registry";
 import { usePanelStateStore } from "@/stores/panelState";
 import { usePresetStore } from "@/stores/preset";
@@ -29,6 +30,13 @@ const candidates = computed(() => {
   if (!panel.value?.panelType) return [];
   return presetStore.presetsForPanel(panel.value.panelType, workspace.currentWorkspaceId);
 });
+
+const candidateOptions = computed(() =>
+  candidates.value.map((p) => ({
+    label: `${p.name} · ${presetTypeRegistry.get(p.presetTypeId)?.title ?? p.presetTypeId}`,
+    value: p.id,
+  })),
+);
 
 watch(
   () => props.visible,
@@ -59,14 +67,7 @@ async function apply(): Promise<void> {
       <p class="text-faint text-[10px] tracking-[0.18em] uppercase">
         Available presets for {{ panel.panelType }}
       </p>
-      <select
-        v-model="chosen"
-        class="border-border bg-surface text-foreground rounded-md border px-3 py-1.5 text-sm"
-      >
-        <option v-for="p in candidates" :key="p.id" :value="p.id">
-          {{ p.name }} · {{ presetTypeRegistry.get(p.presetTypeId)?.title ?? p.presetTypeId }}
-        </option>
-      </select>
+      <Select v-model="chosen" :options="candidateOptions" placeholder="Pick a preset…" />
     </div>
 
     <template #footer>

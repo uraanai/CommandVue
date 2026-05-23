@@ -4,6 +4,7 @@ import type { ChartThemeConfig } from "@/modules/presets/builtin";
 import { computed } from "vue";
 
 import Input from "@/components/ui/Input.vue";
+import Select from "@/components/ui/Select.vue";
 
 interface Props {
   modelValue: ChartThemeConfig;
@@ -13,6 +14,17 @@ const props = defineProps<Props>();
 const emit = defineEmits<{ "update:modelValue": [value: ChartThemeConfig] }>();
 
 const palette = computed(() => props.modelValue.colorPalette.join(", "));
+
+const gridOptions = [
+  { label: "Subtle", value: "subtle" },
+  { label: "Bold", value: "bold" },
+  { label: "None", value: "none" },
+];
+
+const tooltipOptions = [
+  { label: "Axis", value: "axis" },
+  { label: "Item", value: "item" },
+];
 
 function update<K extends keyof ChartThemeConfig>(key: K, value: ChartThemeConfig[K]): void {
   emit("update:modelValue", { ...props.modelValue, [key]: value });
@@ -49,38 +61,19 @@ function updatePalette(raw: string): void {
     </label>
     <label class="flex flex-col gap-1">
       <span class="text-faint text-[10px] tracking-[0.18em] uppercase">Grid style</span>
-      <select
-        :value="modelValue.gridStyle"
-        class="border-border bg-surface text-foreground rounded-md border px-3 py-1.5 text-sm"
-        @change="
-          (e) =>
-            update(
-              'gridStyle',
-              (e.target as HTMLSelectElement).value as ChartThemeConfig['gridStyle'],
-            )
-        "
-      >
-        <option value="subtle">Subtle</option>
-        <option value="bold">Bold</option>
-        <option value="none">None</option>
-      </select>
+      <Select
+        :model-value="modelValue.gridStyle"
+        :options="gridOptions"
+        @update:model-value="(v) => update('gridStyle', v as ChartThemeConfig['gridStyle'])"
+      />
     </label>
     <label class="flex flex-col gap-1">
       <span class="text-faint text-[10px] tracking-[0.18em] uppercase">Tooltip mode</span>
-      <select
-        :value="modelValue.tooltipMode"
-        class="border-border bg-surface text-foreground rounded-md border px-3 py-1.5 text-sm"
-        @change="
-          (e) =>
-            update(
-              'tooltipMode',
-              (e.target as HTMLSelectElement).value as ChartThemeConfig['tooltipMode'],
-            )
-        "
-      >
-        <option value="axis">Axis</option>
-        <option value="item">Item</option>
-      </select>
+      <Select
+        :model-value="modelValue.tooltipMode"
+        :options="tooltipOptions"
+        @update:model-value="(v) => update('tooltipMode', v as ChartThemeConfig['tooltipMode'])"
+      />
     </label>
   </div>
 </template>

@@ -172,6 +172,9 @@ rotateend
 pitchend
 datatable
 contextmenu
+inputtext
+colorpicker
+tablist
 Supabase
 supabase
 timestamptz

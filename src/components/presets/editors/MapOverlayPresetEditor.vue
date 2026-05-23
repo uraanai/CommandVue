@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import type { MapOverlayConfig } from "@/modules/presets/builtin";
 
+import Checkbox from "primevue/checkbox";
+import ColorPicker from "primevue/colorpicker";
+import Slider from "primevue/slider";
+import { computed } from "vue";
+
 import Input from "@/components/ui/Input.vue";
+import { cn } from "@/utils/cn";
 
 interface Props {
   modelValue: MapOverlayConfig;
@@ -9,6 +15,13 @@ interface Props {
 
 const props = defineProps<Props>();
 const emit = defineEmits<{ "update:modelValue": [value: MapOverlayConfig] }>();
+
+// PrimeVue ColorPicker returns hex without the leading "#"; our config stores
+// it with the "#" prefix. Strip on write, prepend on read.
+const colorHex = computed({
+  get: () => props.modelValue.color.replace(/^#/, ""),
+  set: (hex: string) => update("color", `#${hex}`),
+});
 
 function update<K extends keyof MapOverlayConfig>(key: K, value: MapOverlayConfig[K]): void {
   emit("update:modelValue", { ...props.modelValue, [key]: value });
@@ -37,34 +50,57 @@ function update<K extends keyof MapOverlayConfig>(key: K, value: MapOverlayConfi
     <div class="grid grid-cols-2 gap-3">
       <label class="flex flex-col gap-1">
         <span class="text-faint text-[10px] tracking-[0.18em] uppercase">Color</span>
-        <input
-          :value="modelValue.color"
-          type="color"
-          class="border-border h-8 w-full rounded border"
-          @input="(e) => update('color', (e.target as HTMLInputElement).value)"
+        <ColorPicker
+          v-model="colorHex"
+          format="hex"
+          :pt="{
+            preview: {
+              class: cn('h-8 w-full rounded border border-border cursor-pointer'),
+              style: { backgroundColor: modelValue.color },
+            },
+          }"
         />
       </label>
       <label class="flex flex-col gap-1">
-        <span class="text-faint text-[10px] tracking-[0.18em] uppercase">Opacity</span>
-        <input
-          :value="modelValue.opacity"
-          type="range"
-          min="0"
-          max="1"
-          step="0.05"
-          class="h-8"
-          @input="(e) => update('opacity', Number((e.target as HTMLInputElement).value))"
+        <span class="text-faint text-[10px] tracking-[0.18em] uppercase">
+          Opacity ({{ Math.round(modelValue.opacity * 100) }}%)
+        </span>
+        <Slider
+          :model-value="modelValue.opacity"
+          :min="0"
+          :max="1"
+          :step="0.05"
+          :pt="{
+            root: { class: 'relative h-2 rounded bg-surface-sunken my-3' },
+            range: { class: 'absolute h-2 rounded bg-accent-500' },
+            handle: {
+              class: cn(
+                'absolute -mt-1 h-4 w-4 -translate-x-1/2 rounded-full',
+                'bg-accent-500 border-2 border-white shadow cursor-pointer',
+              ),
+            },
+          }"
+          @update:model-value="(v) => update('opacity', Array.isArray(v) ? (v[0] ?? 0) : (v ?? 0))"
         />
       </label>
     </div>
     <label class="flex items-center gap-2 text-sm">
-      <input
-        :checked="modelValue.visible"
-        type="checkbox"
-        class="accent-accent-600"
-        @change="(e) => update('visible', (e.target as HTMLInputElement).checked)"
+      <Checkbox
+        :model-value="modelValue.visible"
+        binary
+        input-id="map-overlay-visible"
+        :pt="{
+          box: {
+            class: cn(
+              'inline-flex h-4 w-4 items-center justify-center rounded border border-border bg-surface',
+              'data-[p-checked=true]:bg-accent-600 data-[p-checked=true]:border-accent-600',
+            ),
+          },
+          icon: { class: 'h-3 w-3 text-white' },
+        }"
+        @update:model-value="(v) => update('visible', !!v)"
       />
-      <span>Visible by default</span>
+      <label for="map-overlay-visible">Visible by default</label>
     </label>
   </div>
 </template>

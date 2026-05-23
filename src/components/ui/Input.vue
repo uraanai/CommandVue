@@ -1,8 +1,17 @@
 <script setup lang="ts">
+import InputText from "primevue/inputtext";
 import { computed } from "vue";
 
 import { cn } from "@/utils/cn";
 
+/**
+ * Input — thin wrapper over PrimeVue InputText. The public API is preserved
+ * from the previous hand-rolled version so callers don't change.
+ *
+ * For specialized types (number, color, range, password, etc.) prefer the
+ * dedicated PrimeVue component (`InputNumber`, `ColorPicker`, `Slider`,
+ * `Password`) directly — this wrapper covers text/search/email/url only.
+ */
 interface Props {
   modelValue?: string;
   type?: "text" | "search" | "email" | "url" | "number" | "password";
@@ -23,7 +32,7 @@ defineEmits<{
   "update:modelValue": [value: string];
 }>();
 
-const classes = computed(() =>
+const rootClass = computed(() =>
   cn(
     "block w-full rounded-md border bg-surface px-3 py-1.5 text-sm text-foreground",
     "placeholder:text-faint",
@@ -35,13 +44,13 @@ const classes = computed(() =>
 </script>
 
 <template>
-  <input
+  <InputText
+    :model-value="modelValue"
     :type="type"
-    :value="modelValue"
     :placeholder="placeholder"
     :disabled="disabled"
     :aria-invalid="invalid"
-    :class="classes"
-    @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
+    :pt="{ root: { class: rootClass } }"
+    @update:model-value="(v) => $emit('update:modelValue', String(v ?? ''))"
   />
 </template>

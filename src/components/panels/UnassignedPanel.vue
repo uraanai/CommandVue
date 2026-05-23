@@ -6,6 +6,7 @@ import { Square } from "@lucide/vue";
 import { computed, ref } from "vue";
 
 import Button from "@/components/ui/Button.vue";
+import Select from "@/components/ui/Select.vue";
 import { panelRegistry } from "@/modules/panels/registry";
 import { UNASSIGNED_PANEL_TYPE } from "@/modules/panels/unassigned";
 import { useLayoutStore } from "@/stores/layout";
@@ -39,8 +40,8 @@ const workspace = useWorkspaceStore();
 const _layoutStore = useLayoutStore();
 void _layoutStore;
 
-const selectedType = ref<PanelType>("");
-const selectedPreset = ref<string>("");
+const selectedType = ref<null | PanelType>(null);
+const selectedPreset = ref<null | string>(null);
 const switching = ref(false);
 
 const candidates = computed(() =>
@@ -50,10 +51,18 @@ const candidates = computed(() =>
     .sort((a, b) => a.title.localeCompare(b.title)),
 );
 
+const componentOptions = computed(() =>
+  candidates.value.map((d) => ({ label: d.title, value: d.id })),
+);
+
 const availablePresets = computed(() => {
   if (!selectedType.value) return [];
   return presetStore.presetsForPanel(selectedType.value, workspace.currentWorkspaceId);
 });
+
+const presetOptions = computed(() =>
+  availablePresets.value.map((p) => ({ label: p.name, value: p.id })),
+);
 
 async function assign(): Promise<void> {
   if (!selectedType.value) return;
@@ -93,32 +102,27 @@ async function assign(): Promise<void> {
         <label class="text-faint text-[10px] tracking-[0.18em] uppercase">
           Assign a component
         </label>
-        <select
+        <Select
           v-model="selectedType"
-          class="border-border bg-surface-raised text-foreground focus-visible:ring-accent-500 block w-full rounded-md border px-3 py-1.5 text-sm focus-visible:ring-2 focus-visible:outline-none"
+          :options="componentOptions"
+          placeholder="Choose a panel type…"
           :disabled="switching"
-        >
-          <option value="" disabled>Choose a panel type…</option>
-          <option v-for="def in candidates" :key="def.id" :value="def.id">
-            {{ def.title }}
-          </option>
-        </select>
+        />
         <Button variant="primary" size="sm" :disabled="!selectedType || switching" @click="assign">
           {{ switching ? "Assigning…" : "Assign" }}
         </Button>
         <label class="text-faint text-[10px] tracking-[0.18em] uppercase">
           Apply preset (optional)
         </label>
-        <select
+        <Select
           v-model="selectedPreset"
-          class="border-border bg-surface-raised text-foreground focus-visible:ring-accent-500 block w-full rounded-md border px-3 py-1.5 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
+          :options="presetOptions"
+          :placeholder="
+            availablePresets.length === 0 ? 'No presets available' : 'None — apply later'
+          "
           :disabled="!selectedType || availablePresets.length === 0"
-        >
-          <option value="">
-            {{ availablePresets.length === 0 ? "No presets available" : "None" }}
-          </option>
-          <option v-for="p in availablePresets" :key="p.id" :value="p.id">{{ p.name }}</option>
-        </select>
+          show-clear
+        />
       </div>
     </div>
   </div>
