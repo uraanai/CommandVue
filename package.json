@@ -69,7 +69,6 @@
     "@iconify-prerendered/vue-mdi": "^0.28.0",
     "@lucide/vue": "^1.16.0",
     "@orbat-mapper/convert-symbology": "latest",
-    "@tanstack/vue-table": "^8.20.5",
     "@tanstack/vue-virtual": "^3.13.25",
     "@turf/area": "^7.0.0",
     "@turf/bbox": "^7.0.0",

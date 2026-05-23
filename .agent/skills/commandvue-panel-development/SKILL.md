@@ -11,6 +11,8 @@ when_to_use: |
 
 # CommandVue Panel Development
 
+> **Library-first reminder:** UI inside a panel uses PrimeVue components — never hand-rolled equivalents. Tables → `DataTable`, dropdowns → `Select`, textareas → `Textarea`, color/range/checkbox → `ColorPicker` / `Slider` / `Checkbox`, section grouping → `Fieldset`, badges → `Tag`. Charts use `vue-echarts`; maps use `cesium` / `maplibre-gl`; symbology uses `milsymbol`. See [`CLAUDE.md → Library-first rule`](../../../CLAUDE.md) for the full mapping table and [`workflows/library-first.md`](../../workflows/library-first.md) for the check workflow.
+
 ## Three things to know first
 
 1. **Dockview-vue 6 resolves panels by string id from Vue's global component registry.** The Panel Registry sits **alongside** `app.component()`, not in place of it.

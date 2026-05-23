@@ -11,6 +11,8 @@ when_to_use: |
 
 # CommandVue Preset Development
 
+> **Library-first reminder:** preset _editor_ components (`src/components/presets/editors/*.vue`) must use PrimeVue form controls: `ColorPicker` for color fields, `Slider` for ranges, `Checkbox` for booleans, `Select` for enums, `Textarea` for multi-line text. Never use raw `<input type=color/range/checkbox>` or `<select>` — they look out-of-place next to the rest of the app and miss out on accessibility. See [`CLAUDE.md → Library-first rule`](../../../CLAUDE.md).
+
 A **preset** is a typed bundle of visual configuration applied to panels at runtime. Two layers:
 
 | Layer             | What it is                                   | Where it lives                          |

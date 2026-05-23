@@ -4,6 +4,53 @@ This file is read by Claude Code and other AI coding agents at the start of ever
 
 ---
 
+## Library-first rule (MANDATORY)
+
+**Before building any UI component, check if PrimeVue — or another already-installed library in the locked stack below — has a pre-built equivalent. If it does, use it. Do not roll your own.**
+
+This rule applies to every UI surface: menus, dropdowns, dialogs, close buttons, tables, tabs, popovers, context menus, file pickers, form controls (select / checkbox / color / range / textarea), tags / chips, fieldsets, dividers, toasts, file uploads — all of it. PrimeVue 4 ships 80+ unstyled components; the project consumes them with `:pt` (passthrough) for Tailwind theming. Charts come from `vue-echarts`; maps from `cesium` / `maplibre-gl`; symbology from `milsymbol` / `@orbat-mapper/convert-symbology`. The locked-stack table below names everything available.
+
+### Workflow
+
+1. **Before writing markup** for a new UI element, scan PrimeVue's component list (https://primevue.org — fetch via Context7 with library id `/websites/primevue`). The full reference workflow lives in [`.agent/workflows/library-first.md`](./.agent/workflows/library-first.md).
+2. **If a PrimeVue component fits**, use it directly (or extend the relevant `src/components/ui/*` wrapper to delegate to it). Style via `:pt` to match project tokens — never rely on PrimeVue's bundled styles.
+3. **If no PrimeVue component fits**, surface the gap before writing custom code. Ask the user; don't assume.
+4. **If something custom genuinely is required** (e.g., the slot-driven `ChromeBar`), document why in the component's docstring so future agents don't waste cycles re-evaluating.
+
+### Common mappings (memorize)
+
+| Need                                             | Use                                                                       |
+| ------------------------------------------------ | ------------------------------------------------------------------------- |
+| Modal / dialog (with close button)               | PrimeVue `Dialog` (already wrapped by `src/components/ui/Dialog.vue`)     |
+| Right-click context menu                         | PrimeVue `ContextMenu` — never hand-roll outside-click + clientX/Y        |
+| Top menu bar / nested submenus                   | PrimeVue `Menubar`                                                        |
+| Dropdown popup (workspace switcher, action menu) | PrimeVue `Menu` (popup mode) or `TieredMenu`                              |
+| Tabbed UI                                        | PrimeVue `Tabs` + `TabList` + `Tab` + `TabPanels` (wrapped by `ui/Tabs`)  |
+| Tabular data (sortable, filterable, paginated)   | PrimeVue `DataTable` + `Column` — never raw `<table>`                     |
+| Card grid / item gallery                         | PrimeVue `DataView` (`layout="grid"`) or `Fieldset` + plain grid          |
+| Section grouping with legend                     | PrimeVue `Fieldset`                                                       |
+| Inline label / badge                             | PrimeVue `Tag` or `Chip`                                                  |
+| Dropdown select                                  | PrimeVue `Select` (wrapped by `ui/Select`)                                |
+| Multi-select                                     | PrimeVue `MultiSelect`                                                    |
+| Text input                                       | PrimeVue `InputText` (wrapped by `ui/Input`) or `IconField` + `InputIcon` |
+| Number input                                     | PrimeVue `InputNumber`                                                    |
+| Textarea                                         | PrimeVue `Textarea` — never raw `<textarea>`                              |
+| Checkbox / radio                                 | PrimeVue `Checkbox` (`binary` for single) / `RadioButton`                 |
+| Color picker                                     | PrimeVue `ColorPicker` — never `<input type=color>`                       |
+| Range / slider                                   | PrimeVue `Slider` — never `<input type=range>`                            |
+| Date picker                                      | PrimeVue `DatePicker`                                                     |
+| File upload (incl. hidden + programmatic)        | PrimeVue `FileUpload` (`mode="basic"`, ref-triggered `choose()`)          |
+| Button                                           | PrimeVue `Button` (wrapped by `ui/Button` + `ui/IconButton`)              |
+| Toast notification                               | PrimeVue `Toast` (wrapped by `ui/Toast`)                                  |
+| Confirm dialog                                   | PrimeVue `ConfirmDialog` (use for 2-action; custom Dialog for 3+ actions) |
+| Popover                                          | PrimeVue `Popover`                                                        |
+| Divider                                          | PrimeVue `Divider`                                                        |
+| Chart                                            | `vue-echarts` (not PrimeVue Chart — already in locked stack)              |
+
+If the need you have isn't on this list, check the PrimeVue catalog before inventing custom markup. New mappings discovered during work should be added here.
+
+---
+
 ## Agent skills
 
 Project-specific agent guidance lives in [`.agent/skills/`](./.agent/skills). Four skills cover the four workspace-system subsystems: `commandvue-workspace-system`, `commandvue-panel-development`, `commandvue-preset-development`, `commandvue-chrome-system`. Each skill bundles its subsystem's data model, invariants, common mistakes, and copy-paste templates. When working in one of those areas, the relevant skill is the canonical source — read it before making changes.
@@ -42,7 +89,8 @@ Do not substitute libraries from this list without explicit instruction.
 | Operational symbology    | milsymbol, @orbat-mapper/convert-symbology (MIL-STD-2525 / APP-6 SIDC codes)                              |
 | Charting                 | Apache ECharts (primary) + d3-\* modules (escape hatch)                                                   |
 | Real-time                | Native WebSocket via @vueuse/core useWebSocket                                                            |
-| Tables / virtualization  | @tanstack/vue-table + @tanstack/vue-virtual                                                               |
+| Tables                   | PrimeVue `DataTable` (uniform across the app — replaces @tanstack/vue-table)                              |
+| Virtualization           | @tanstack/vue-virtual                                                                                     |
 | Drag & drop              | @atlaskit/pragmatic-drag-and-drop                                                                         |
 | Storage / offline        | idb (IndexedDB), browser-fs-access                                                                        |
 | Utilities                | @vueuse/core, dayjs, es-toolkit, nanoid, fuzzysort, immer, klona, rfc6902                                 |

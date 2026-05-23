@@ -175,6 +175,7 @@ contextmenu
 inputtext
 colorpicker
 tablist
+fieldsets
 Supabase
 supabase
 timestamptz
