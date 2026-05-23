@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import type { Ulid } from "@/types/workspace";
+import type { MenuItem } from "primevue/menuitem";
 
 import { Check, ChevronDown, FolderCog, Plus } from "@lucide/vue";
-import { onBeforeUnmount, ref } from "vue";
+import Menu from "primevue/menu";
+import { computed, ref } from "vue";
 
 import ManageWorkspacesDialog from "@/components/dialogs/ManageWorkspacesDialog.vue";
 import SaveLayoutAsDialog from "@/components/dialogs/SaveLayoutAsDialog.vue";
@@ -12,31 +14,43 @@ import UnsavedChangesDialog, {
 import { useLayoutStore } from "@/stores/layout";
 import { useSessionStore } from "@/stores/session";
 import { useWorkspaceStore } from "@/stores/workspace";
+import { cn } from "@/utils/cn";
 
 const workspace = useWorkspaceStore();
 const layoutStore = useLayoutStore();
 const session = useSessionStore();
 
-const open = ref(false);
+const menuRef = ref<InstanceType<typeof Menu> | null>(null);
 const manageOpen = ref(false);
 const unsavedOpen = ref(false);
 const saveAsOpen = ref(false);
 const pendingWorkspaceId = ref<null | Ulid>(null);
 
-function toggle(): void {
-  open.value = !open.value;
-}
+const menuItems = computed<MenuItem[]>(() => [
+  {
+    label: "Workspaces",
+    items: workspace.workspaces.map((ws) => ({
+      label: ws.name,
+      command: () => void pickWorkspace(ws.id),
+      class: ws.id === workspace.currentWorkspaceId ? "is-current" : undefined,
+    })),
+  },
+  { separator: true },
+  {
+    label: "Manage workspaces…",
+    command: () => (manageOpen.value = true),
+  },
+  {
+    label: "New workspace…",
+    command: () => (manageOpen.value = true),
+  },
+]);
 
-function onClickOutside(event: MouseEvent): void {
-  const target = event.target as HTMLElement;
-  if (!target.closest("[data-workspace-switcher]")) open.value = false;
+function toggle(event: MouseEvent): void {
+  menuRef.value?.toggle(event);
 }
-
-window.addEventListener("click", onClickOutside);
-onBeforeUnmount(() => window.removeEventListener("click", onClickOutside));
 
 async function pickWorkspace(id: Ulid): Promise<void> {
-  open.value = false;
   if (id === workspace.currentWorkspaceId) return;
 
   if (session.dirty) {
@@ -77,18 +91,15 @@ async function onSaveAs(payload: {
   pendingWorkspaceId.value = null;
   if (target) await session.switchWorkspace(target);
 }
-
-function openManage(): void {
-  open.value = false;
-  manageOpen.value = true;
-}
 </script>
 
 <template>
-  <div data-workspace-switcher class="relative">
+  <div class="relative">
     <button
       type="button"
       class="text-muted hover:text-foreground hover:bg-surface-sunken flex items-center gap-1.5 rounded px-2 py-1 text-xs transition-colors"
+      aria-haspopup="true"
+      aria-controls="workspace-switcher-menu"
       @click="toggle"
     >
       <span class="text-foreground font-medium">
@@ -96,39 +107,40 @@ function openManage(): void {
       </span>
       <ChevronDown class="size-3.5" />
     </button>
-    <div
-      v-if="open"
-      class="border-border bg-surface-raised absolute right-0 z-40 mt-1 w-56 rounded-md border py-1 shadow-lg"
+
+    <Menu
+      id="workspace-switcher-menu"
+      ref="menuRef"
+      :model="menuItems"
+      popup
+      :pt="{
+        root: {
+          class: cn(
+            'absolute z-[100] mt-1 min-w-[220px] rounded-md border border-border bg-surface-raised py-1 shadow-lg',
+          ),
+        },
+        submenuLabel: {
+          class: 'text-faint px-3 py-1 text-[10px] tracking-[0.18em] uppercase',
+        },
+        separator: { class: 'my-1 border-t border-border' },
+      }"
     >
-      <div class="text-faint px-3 py-1 text-[10px] tracking-[0.18em] uppercase">Workspaces</div>
-      <button
-        v-for="ws in workspace.workspaces"
-        :key="ws.id"
-        type="button"
-        class="text-foreground hover:bg-surface-sunken flex w-full items-center justify-between px-3 py-1.5 text-left text-sm"
-        @click="pickWorkspace(ws.id)"
-      >
-        <span>{{ ws.name }}</span>
-        <Check v-if="ws.id === workspace.currentWorkspaceId" class="text-accent-500 size-3.5" />
-      </button>
-      <div class="border-border my-1 border-t" />
-      <button
-        type="button"
-        class="text-foreground hover:bg-surface-sunken flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm"
-        @click="openManage"
-      >
-        <FolderCog class="size-3.5" />
-        Manage workspaces…
-      </button>
-      <button
-        type="button"
-        class="text-foreground hover:bg-surface-sunken flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm"
-        @click="openManage"
-      >
-        <Plus class="size-3.5" />
-        New workspace…
-      </button>
-    </div>
+      <template #item="{ item, props: itemProps }">
+        <a v-bind="itemProps.action" class="flex items-center">
+          <span
+            class="text-foreground hover:bg-surface-sunken flex w-full items-center gap-2 rounded px-3 py-1.5 text-sm"
+          >
+            <FolderCog v-if="(item as MenuItem).label === 'Manage workspaces…'" class="size-3.5" />
+            <Plus v-else-if="(item as MenuItem).label === 'New workspace…'" class="size-3.5" />
+            <span class="flex-1">{{ item.label }}</span>
+            <Check
+              v-if="(item as MenuItem & { class?: string }).class === 'is-current'"
+              class="text-accent-500 size-3.5"
+            />
+          </span>
+        </a>
+      </template>
+    </Menu>
 
     <ManageWorkspacesDialog v-model:visible="manageOpen" />
     <UnsavedChangesDialog

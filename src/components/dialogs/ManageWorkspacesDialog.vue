@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { Check, Plus, Star, Trash2 } from "@lucide/vue";
+import Column from "primevue/column";
+import DataTable, { type DataTableRowEditSaveEvent } from "primevue/datatable";
 import { ref, watch } from "vue";
 
 import Button from "@/components/ui/Button.vue";
@@ -7,6 +9,7 @@ import Dialog from "@/components/ui/Dialog.vue";
 import Input from "@/components/ui/Input.vue";
 import { layoutRepo } from "@/modules/storage/layoutRepo";
 import { useWorkspaceStore } from "@/stores/workspace";
+import { cn } from "@/utils/cn";
 
 interface Props {
   visible: boolean;
@@ -17,17 +20,17 @@ const emit = defineEmits<{ "update:visible": [value: boolean] }>();
 
 const workspace = useWorkspaceStore();
 const newName = ref("");
-const renaming = ref<string | null>(null);
-const renameValue = ref("");
 const error = ref<string | null>(null);
+// DataTable row-edit state — PrimeVue tracks edit by row id when v-model:editingRows is bound.
+const editingRows = ref<{ id: string }[]>([]);
 
 watch(
   () => props.visible,
   (open) => {
     if (open) {
       newName.value = "";
-      renaming.value = null;
       error.value = null;
+      editingRows.value = [];
     }
   },
 );
@@ -37,8 +40,8 @@ async function create(): Promise<void> {
   error.value = null;
   try {
     const ws = await workspace.createWorkspace({ name: newName.value.trim() });
-    // Newly created workspaces need at least one layout to satisfy invariant 6
-    // before the user can switch into them — auto-create a "Default" layout.
+    // Newly created workspaces need ≥1 layout (invariant 6) before the user
+    // can switch in — auto-create a "Default" layout.
     await layoutRepo.create({ workspaceId: ws.id, name: "Default" });
     newName.value = "";
   } catch (e) {
@@ -46,15 +49,11 @@ async function create(): Promise<void> {
   }
 }
 
-function startRename(id: string, currentName: string): void {
-  renaming.value = id;
-  renameValue.value = currentName;
-}
-
-async function confirmRename(id: string): Promise<void> {
-  if (!renameValue.value.trim()) return;
-  await workspace.renameWorkspace(id, { name: renameValue.value.trim() });
-  renaming.value = null;
+async function onRowEditSave(event: DataTableRowEditSaveEvent): Promise<void> {
+  const { newData } = event;
+  const next = newData as { id: string; name: string };
+  if (!next.name?.trim()) return;
+  await workspace.renameWorkspace(next.id, { name: next.name.trim() });
 }
 
 async function makeDefault(id: string): Promise<void> {
@@ -89,66 +88,77 @@ async function remove(id: string): Promise<void> {
         </Button>
       </div>
       <p v-if="error" class="text-danger text-xs">{{ error }}</p>
-      <div class="border-border rounded-md border">
-        <table class="w-full text-sm">
-          <thead class="text-faint text-[10px] tracking-[0.18em] uppercase">
-            <tr class="border-border border-b">
-              <th class="px-3 py-2 text-left">Name</th>
-              <th class="px-3 py-2 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="ws in workspace.workspaces"
-              :key="ws.id"
-              class="border-border border-b last:border-b-0"
-            >
-              <td class="px-3 py-2">
-                <div v-if="renaming === ws.id" class="flex items-center gap-1.5">
-                  <Input v-model="renameValue" @keydown.enter="confirmRename(ws.id)" />
-                  <Button size="sm" variant="primary" @click="confirmRename(ws.id)">
-                    <Check class="size-3.5" />
-                  </Button>
-                </div>
-                <div v-else class="flex items-center gap-2">
-                  <button
-                    type="button"
-                    class="text-foreground hover:underline"
-                    @click="startRename(ws.id, ws.name)"
-                  >
-                    {{ ws.name }}
-                  </button>
-                  <Star
-                    v-if="ws.isGlobalDefault"
-                    class="text-accent-500 size-3.5"
-                    aria-label="Global default"
-                  />
-                </div>
-              </td>
-              <td class="px-3 py-2 text-right">
-                <div class="flex items-center justify-end gap-1">
-                  <Button
-                    v-if="!ws.isGlobalDefault"
-                    size="sm"
-                    variant="ghost"
-                    @click="makeDefault(ws.id)"
-                  >
-                    Make default
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    :disabled="workspace.workspaces.length <= 1"
-                    @click="remove(ws.id)"
-                  >
-                    <Trash2 class="size-3.5" />
-                  </Button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+
+      <DataTable
+        v-model:editing-rows="editingRows"
+        :value="workspace.workspaces"
+        data-key="id"
+        edit-mode="row"
+        size="small"
+        :pt="{
+          root: { class: cn('border border-border rounded-md overflow-hidden') },
+          table: { class: 'w-full text-sm' },
+          thead: { class: 'bg-surface-sunken' },
+          headerRow: { class: 'border-b border-border' },
+          headerCell: {
+            class: 'text-faint px-3 py-2 text-[10px] tracking-[0.18em] uppercase text-left',
+          },
+          bodyRow: { class: 'border-b border-border last:border-b-0' },
+          bodyCell: { class: 'px-3 py-2 text-foreground' },
+        }"
+        @row-edit-save="onRowEditSave"
+      >
+        <Column field="name" header="Name" style="min-width: 12rem">
+          <template #body="{ data }">
+            <div class="flex items-center gap-2">
+              <span>{{ data.name }}</span>
+              <Star
+                v-if="data.isGlobalDefault"
+                class="text-accent-500 size-3.5"
+                aria-label="Global default"
+              />
+            </div>
+          </template>
+          <template #editor="{ data, field }">
+            <Input v-model="data[field]" />
+          </template>
+        </Column>
+        <Column header="Actions" header-style="width: 18rem">
+          <template #body="{ data, editorInitCallback }">
+            <div class="flex items-center justify-end gap-1">
+              <Button size="sm" variant="ghost" @click="editorInitCallback">
+                <Check class="size-3.5" />
+                Rename
+              </Button>
+              <Button
+                v-if="!data.isGlobalDefault"
+                size="sm"
+                variant="ghost"
+                @click="makeDefault(data.id)"
+              >
+                Make default
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                :disabled="workspace.workspaces.length <= 1"
+                @click="remove(data.id)"
+              >
+                <Trash2 class="size-3.5" />
+              </Button>
+            </div>
+          </template>
+          <template #editor="{ editorSaveCallback, editorCancelCallback }">
+            <div class="flex items-center justify-end gap-1">
+              <Button size="sm" variant="primary" @click="editorSaveCallback">
+                <Check class="size-3.5" />
+                Save
+              </Button>
+              <Button size="sm" variant="ghost" @click="editorCancelCallback">Cancel</Button>
+            </div>
+          </template>
+        </Column>
+      </DataTable>
     </div>
     <template #footer>
       <Button variant="primary" size="sm" @click="emit('update:visible', false)">Done</Button>
