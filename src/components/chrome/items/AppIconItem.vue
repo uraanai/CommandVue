@@ -1,88 +1,108 @@
 <script setup lang="ts">
+import type { MenuItem } from "primevue/menuitem";
+
 import { Hexagon } from "@lucide/vue";
-import { onBeforeUnmount, ref } from "vue";
+import ContextMenu from "primevue/contextmenu";
+import { computed, ref } from "vue";
 
 import ManageLayoutsDialog from "@/components/dialogs/ManageLayoutsDialog.vue";
 import ManageWorkspacesDialog from "@/components/dialogs/ManageWorkspacesDialog.vue";
 import SaveLayoutAsDialog from "@/components/dialogs/SaveLayoutAsDialog.vue";
+import { formatCombo } from "@/modules/shortcuts/catalog";
 import { useChromeStore } from "@/stores/chrome";
 import { useLayoutStore } from "@/stores/layout";
 import { useSessionStore } from "@/stores/session";
 import { useWorkspaceStore } from "@/stores/workspace";
+import { cn } from "@/utils/cn";
 
 /**
  * AppIconItem — the always-on chrome item.
  *
- * Left-click opens the app brand link (currently a no-op anchor). Right-click
- * opens a context menu mirroring the MenuBar's File / Edit / View structure.
- * This is the fallback affordance: when the user hides the menu bar entirely,
- * the app icon's context menu remains the only way to reach the global
- * actions. As such this item is registered with `removable: false`.
+ * Left-click opens the app brand area (currently a no-op anchor). Right-click
+ * opens a PrimeVue `ContextMenu` mirroring the MenuBar's File / Edit / View
+ * structure. This is the fallback affordance: when the user hides the menu
+ * bar entirely, the app icon's context menu remains the only way to reach
+ * the global actions. As such this item is registered with `removable: false`.
+ *
+ * The context menu uses PrimeVue's `ContextMenu` with `MenuItem[]` — same
+ * model shape the MenuBar uses, so the two stay structurally aligned.
  */
 const chrome = useChromeStore();
 const session = useSessionStore();
 const layoutStore = useLayoutStore();
 const workspace = useWorkspaceStore();
 
-const menuOpen = ref(false);
-const menuX = ref(0);
-const menuY = ref(0);
+const cm = ref<InstanceType<typeof ContextMenu> | null>(null);
 const manageWorkspacesOpen = ref(false);
 const manageLayoutsOpen = ref(false);
 const saveAsOpen = ref(false);
 
-function openContext(event: MouseEvent): void {
-  event.preventDefault();
-  menuX.value = event.clientX;
-  menuY.value = event.clientY;
-  menuOpen.value = true;
-}
+const isMac = typeof navigator !== "undefined" && /mac/i.test(navigator.platform);
 
-function close(): void {
-  menuOpen.value = false;
-}
+const menuItems = computed<MenuItem[]>(() => [
+  {
+    label: "File",
+    items: [
+      { label: "New Workspace…", command: () => (manageWorkspacesOpen.value = true) },
+      {
+        label: "New Layout",
+        command: () => {
+          if (workspace.currentWorkspaceId)
+            void layoutStore.createLayout({
+              workspaceId: workspace.currentWorkspaceId,
+              name: "Untitled",
+            });
+        },
+      },
+      { separator: true },
+      {
+        label: "Save Layout",
+        command: () => {
+          if (session.dirty && session.loadedLayoutId) void session.updateCurrentLayout();
+        },
+        disabled: !session.dirty || !session.loadedLayoutId,
+        shortcut: formatCombo("mod+s", isMac),
+      },
+      {
+        label: "Save Layout As…",
+        command: () => (saveAsOpen.value = true),
+        shortcut: formatCombo("mod+shift+s", isMac),
+      },
+    ],
+  },
+  {
+    label: "Edit",
+    items: [
+      { label: "Manage Layouts…", command: () => (manageLayoutsOpen.value = true) },
+      {
+        label: "Discard Changes",
+        command: () => void session.discardChanges(),
+        disabled: !session.dirty,
+      },
+    ],
+  },
+  {
+    label: "View",
+    items: [
+      {
+        label: `${chrome.menuBarVisible ? "Hide" : "Show"} Menu Bar`,
+        command: () => void chrome.toggleMenuBar(),
+      },
+      {
+        label: `${chrome.statusBarVisible ? "Hide" : "Show"} Status Bar`,
+        command: () => void chrome.toggleStatusBar(),
+      },
+      {
+        label: chrome.editMode ? "Exit Edit Mode" : "Edit Chrome…",
+        command: () => chrome.toggleEditMode(),
+        disabled: !chrome.canEdit,
+      },
+    ],
+  },
+]);
 
-function onWindowClick(event: MouseEvent): void {
-  if (!menuOpen.value) return;
-  const target = event.target as HTMLElement;
-  if (target.closest("[data-app-icon-menu]")) return;
-  close();
-}
-window.addEventListener("click", onWindowClick);
-onBeforeUnmount(() => window.removeEventListener("click", onWindowClick));
-
-async function saveLayout(): Promise<void> {
-  close();
-  if (session.loadedLayoutId && session.dirty) await session.updateCurrentLayout();
-}
-
-async function newLayout(): Promise<void> {
-  close();
-  if (workspace.currentWorkspaceId)
-    await layoutStore.createLayout({
-      workspaceId: workspace.currentWorkspaceId,
-      name: "Untitled",
-    });
-}
-
-async function discardChanges(): Promise<void> {
-  close();
-  await session.discardChanges();
-}
-
-function toggleEditMode(): void {
-  close();
-  chrome.toggleEditMode();
-}
-
-async function toggleMenuBar(): Promise<void> {
-  close();
-  await chrome.toggleMenuBar();
-}
-
-async function toggleStatusBar(): Promise<void> {
-  close();
-  await chrome.toggleStatusBar();
+function onContextMenu(event: MouseEvent): void {
+  cm.value?.show(event);
 }
 
 async function onSaveAs(payload: {
@@ -95,7 +115,7 @@ async function onSaveAs(payload: {
 </script>
 
 <template>
-  <div class="flex items-center" @contextmenu="openContext">
+  <div class="flex items-center" @contextmenu="onContextMenu">
     <button
       type="button"
       class="text-foreground hover:bg-surface-sunken flex items-center gap-1.5 rounded px-2 py-1"
@@ -105,97 +125,46 @@ async function onSaveAs(payload: {
       <span class="text-sm font-semibold tracking-tight">CommandVue</span>
     </button>
 
-    <div
-      v-if="menuOpen"
-      data-app-icon-menu
-      class="border-border bg-surface-raised fixed z-[100] min-w-[220px] rounded-md border py-1 shadow-xl"
-      :style="{ left: `${menuX}px`, top: `${menuY}px` }"
+    <ContextMenu
+      ref="cm"
+      :model="menuItems"
+      :pt="{
+        root: {
+          class: cn(
+            'absolute z-[100] min-w-[220px] rounded-md border border-border bg-surface-raised py-1 shadow-xl',
+          ),
+        },
+        submenu: {
+          class: cn(
+            'absolute z-[100] min-w-[220px] rounded-md border border-border bg-surface-raised py-1 shadow-xl',
+          ),
+        },
+        separator: { class: 'my-1 border-t border-border' },
+      }"
     >
-      <div class="text-faint px-3 py-1 text-[10px] tracking-[0.18em] uppercase">File</div>
-      <button
-        type="button"
-        class="text-foreground hover:bg-surface-sunken block w-full px-3 py-1.5 text-left text-sm"
-        @click="
-          manageWorkspacesOpen = true;
-          close();
-        "
-      >
-        New Workspace…
-      </button>
-      <button
-        type="button"
-        class="text-foreground hover:bg-surface-sunken block w-full px-3 py-1.5 text-left text-sm"
-        @click="newLayout"
-      >
-        New Layout
-      </button>
-      <button
-        type="button"
-        class="text-foreground hover:bg-surface-sunken block w-full px-3 py-1.5 text-left text-sm disabled:cursor-not-allowed disabled:opacity-40"
-        :disabled="!session.dirty || !session.loadedLayoutId"
-        @click="saveLayout"
-      >
-        Save Layout
-      </button>
-      <button
-        type="button"
-        class="text-foreground hover:bg-surface-sunken block w-full px-3 py-1.5 text-left text-sm"
-        @click="
-          saveAsOpen = true;
-          close();
-        "
-      >
-        Save Layout As…
-      </button>
-
-      <div class="border-border my-1 border-t" />
-
-      <div class="text-faint px-3 py-1 text-[10px] tracking-[0.18em] uppercase">Edit</div>
-      <button
-        type="button"
-        class="text-foreground hover:bg-surface-sunken block w-full px-3 py-1.5 text-left text-sm"
-        @click="
-          manageLayoutsOpen = true;
-          close();
-        "
-      >
-        Manage Layouts…
-      </button>
-      <button
-        type="button"
-        class="text-foreground hover:bg-surface-sunken block w-full px-3 py-1.5 text-left text-sm disabled:cursor-not-allowed disabled:opacity-40"
-        :disabled="!session.dirty"
-        @click="discardChanges"
-      >
-        Discard Changes
-      </button>
-
-      <div class="border-border my-1 border-t" />
-
-      <div class="text-faint px-3 py-1 text-[10px] tracking-[0.18em] uppercase">View</div>
-      <button
-        type="button"
-        class="text-foreground hover:bg-surface-sunken block w-full px-3 py-1.5 text-left text-sm"
-        @click="toggleMenuBar"
-      >
-        {{ chrome.menuBarVisible ? "Hide" : "Show" }} Menu Bar
-      </button>
-      <button
-        type="button"
-        class="text-foreground hover:bg-surface-sunken block w-full px-3 py-1.5 text-left text-sm"
-        @click="toggleStatusBar"
-      >
-        {{ chrome.statusBarVisible ? "Hide" : "Show" }} Status Bar
-      </button>
-      <button
-        type="button"
-        class="text-foreground hover:bg-surface-sunken block w-full px-3 py-1.5 text-left text-sm disabled:cursor-not-allowed disabled:opacity-40"
-        :disabled="!chrome.canEdit"
-        @click="toggleEditMode"
-      >
-        {{ chrome.editMode ? "Exit Edit Mode" : "Edit Chrome…" }}
-      </button>
-    </div>
+      <template #item="{ item, props: itemProps, hasSubmenu }">
+        <a v-bind="itemProps.action" class="flex items-center">
+          <span
+            :class="[
+              'flex w-full items-center gap-2 px-3 py-1.5 text-sm',
+              'text-foreground hover:bg-surface-sunken cursor-pointer rounded',
+              (item as MenuItem & { disabled?: boolean }).disabled
+                ? 'cursor-not-allowed opacity-40'
+                : '',
+            ]"
+          >
+            <span class="flex-1">{{ item.label }}</span>
+            <span
+              v-if="(item as MenuItem & { shortcut?: string }).shortcut"
+              class="text-faint font-mono text-[10px]"
+            >
+              {{ (item as MenuItem & { shortcut?: string }).shortcut }}
+            </span>
+            <span v-if="hasSubmenu" class="text-faint text-xs">▸</span>
+          </span>
+        </a>
+      </template>
+    </ContextMenu>
 
     <ManageWorkspacesDialog v-model:visible="manageWorkspacesOpen" />
     <ManageLayoutsDialog v-model:visible="manageLayoutsOpen" />
