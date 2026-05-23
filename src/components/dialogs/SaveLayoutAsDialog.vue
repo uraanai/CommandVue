@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import Checkbox from "primevue/checkbox";
 import { ref, watch } from "vue";
 
 import Button from "@/components/ui/Button.vue";
 import Dialog from "@/components/ui/Dialog.vue";
 import Input from "@/components/ui/Input.vue";
+import { cn } from "@/utils/cn";
 
 interface Props {
   visible: boolean;
@@ -64,8 +66,21 @@ function submit(): void {
         <Input v-model="description" placeholder="What this layout is for" />
       </label>
       <label class="flex items-center gap-2 text-sm">
-        <input v-model="setAsDefault" type="checkbox" class="accent-accent-600" />
-        <span>Set as workspace default</span>
+        <Checkbox
+          v-model="setAsDefault"
+          binary
+          input-id="save-as-set-default"
+          :pt="{
+            box: {
+              class: cn(
+                'inline-flex h-4 w-4 items-center justify-center rounded border border-border bg-surface',
+                'data-[p-checked=true]:bg-accent-600 data-[p-checked=true]:border-accent-600',
+              ),
+            },
+            icon: { class: 'h-3 w-3 text-white' },
+          }"
+        />
+        <label for="save-as-set-default">Set as workspace default</label>
       </label>
     </div>
     <template #footer>

@@ -6,6 +6,7 @@ import { AlertTriangle } from "@lucide/vue";
 import { computed, ref } from "vue";
 
 import Button from "@/components/ui/Button.vue";
+import Select from "@/components/ui/Select.vue";
 import { panelRegistry } from "@/modules/panels/registry";
 import { UNASSIGNED_PANEL_TYPE } from "@/modules/panels/unassigned";
 import { usePanelStateStore } from "@/stores/panelState";
@@ -33,7 +34,7 @@ const props = defineProps<Props>();
 const panelStateStore = usePanelStateStore();
 const session = useSessionStore();
 
-const selectedType = ref<PanelType>("");
+const selectedType = ref<null | PanelType>(null);
 const busy = ref(false);
 
 const missingType = computed(() => panelStateStore.getState(props.api.id)?.panelType ?? "unknown");
@@ -43,6 +44,10 @@ const candidates = computed(() =>
     .list()
     .filter((d) => d.id !== UNASSIGNED_PANEL_TYPE && d.id !== "components-browser")
     .sort((a, b) => a.title.localeCompare(b.title)),
+);
+
+const candidateOptions = computed(() =>
+  candidates.value.map((d) => ({ label: d.title, value: d.id })),
 );
 
 async function reassign(): Promise<void> {
@@ -92,16 +97,12 @@ async function removePanel(): Promise<void> {
       </p>
       <div class="flex w-full flex-col gap-2">
         <label class="text-faint text-[10px] tracking-[0.18em] uppercase">Reassign to</label>
-        <select
+        <Select
           v-model="selectedType"
-          class="border-border bg-surface-raised text-foreground focus-visible:ring-accent-500 block w-full rounded-md border px-3 py-1.5 text-sm focus-visible:ring-2 focus-visible:outline-none"
+          :options="candidateOptions"
+          placeholder="Choose a panel type…"
           :disabled="busy"
-        >
-          <option value="" disabled>Choose a panel type…</option>
-          <option v-for="def in candidates" :key="def.id" :value="def.id">
-            {{ def.title }}
-          </option>
-        </select>
+        />
         <Button variant="primary" size="sm" :disabled="!selectedType || busy" @click="reassign">
           Reassign
         </Button>

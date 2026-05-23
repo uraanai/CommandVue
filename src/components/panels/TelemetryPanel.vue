@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { Radio, Send, WifiOff } from "@lucide/vue";
+import Column from "primevue/column";
+import DataTable from "primevue/datatable";
 import { computed, onBeforeUnmount, onMounted, watch } from "vue";
 
+import Button from "@/components/ui/Button.vue";
 import { useWebSocketClient } from "@/composables/useWebSocketClient";
 import { useTelemetryStore } from "@/stores/telemetry";
 import { formatTimestamp } from "@/utils/format";
@@ -53,6 +56,15 @@ const statusColor = computed(() => {
 });
 
 const recent = computed(() => telemetry.recentMessages.slice().reverse().slice(0, 50));
+
+const tablePT = {
+  root: { class: "h-full" },
+  tableContainer: { class: "h-full" },
+  table: { class: "w-full font-mono text-[11px]" },
+  bodyRow: { class: "border-border border-b" },
+  bodyCell: { class: "px-2 py-1 align-top" },
+  emptyMessage: { class: "p-3 text-muted text-xs" },
+};
 </script>
 
 <template>
@@ -74,30 +86,34 @@ const recent = computed(() => telemetry.recentMessages.slice().reverse().slice(0
       <span class="text-faint ml-auto truncate text-[10px]" :title="DEFAULT_URL">{{
         DEFAULT_URL
       }}</span>
-      <button
-        type="button"
-        class="bg-accent-600 hover:bg-accent-500 inline-flex items-center gap-1 rounded px-2 py-0.5 text-white"
-        @click="sendMessage('demo.echo', { sentAt: Date.now() })"
-      >
+      <Button variant="primary" size="sm" @click="sendMessage('demo.echo', { sentAt: Date.now() })">
         <Send class="size-3" />
         send
-      </button>
+      </Button>
     </header>
 
-    <div class="text-muted min-h-0 flex-1 overflow-auto font-mono text-[11px]">
-      <p v-if="recent.length === 0" class="p-3">
-        No messages yet. Waiting for echo from <code>{{ DEFAULT_URL }}</code
-        >…
-      </p>
-      <table v-else class="w-full">
-        <tbody>
-          <tr v-for="msg in recent" :key="msg.id" class="border-border border-b">
-            <td class="text-faint w-40 px-2 py-1 align-top">{{ formatTimestamp(msg.ts) }}</td>
-            <td class="text-foreground w-24 px-2 py-1 align-top">{{ msg.type }}</td>
-            <td class="px-2 py-1 align-top break-all">{{ JSON.stringify(msg.payload) }}</td>
-          </tr>
-        </tbody>
-      </table>
+    <div class="text-muted min-h-0 flex-1 overflow-auto">
+      <DataTable :value="recent" data-key="id" size="small" :pt="tablePT">
+        <template #empty>
+          No messages yet. Waiting for echo from <code>{{ DEFAULT_URL }}</code
+          >…
+        </template>
+        <Column header="Time" header-style="width: 10rem">
+          <template #body="{ data }">
+            <span class="text-faint">{{ formatTimestamp(data.ts) }}</span>
+          </template>
+        </Column>
+        <Column field="type" header="Type" header-style="width: 6rem">
+          <template #body="{ data }">
+            <span class="text-foreground">{{ data.type }}</span>
+          </template>
+        </Column>
+        <Column header="Payload">
+          <template #body="{ data }">
+            <span class="break-all">{{ JSON.stringify(data.payload) }}</span>
+          </template>
+        </Column>
+      </DataTable>
     </div>
   </div>
 </template>
