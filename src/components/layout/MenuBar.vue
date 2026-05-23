@@ -2,6 +2,7 @@
 import type { PanelDefinition } from "@/modules/panels/types";
 import type { MenuItem } from "primevue/menuitem";
 
+import FileUpload, { type FileUploadSelectEvent } from "primevue/fileupload";
 import Menubar from "primevue/menubar";
 import { computed, ref } from "vue";
 
@@ -32,6 +33,15 @@ const manageWorkspacesOpen = ref(false);
 const manageLayoutsOpen = ref(false);
 const managePresetsOpen = ref(false);
 const saveAsOpen = ref(false);
+
+// PrimeVue FileUpload — kept hidden via PT; menu items trigger choose()
+// programmatically. customUpload + auto means @select fires immediately with
+// the picked file without any HTTP round-trip.
+//
+// `choose()` and `clear()` are runtime instance methods PrimeVue exposes on
+// FileUpload but doesn't surface on its exported component type — typed
+// manually here.
+const importFileRef = ref<null | { choose: () => void; clear: () => void }>(null);
 
 async function saveLayout(): Promise<void> {
   if (!session.loadedLayoutId) return;
@@ -127,8 +137,8 @@ async function deleteCurrentLayout(): Promise<void> {
     const next = layoutStore.currentLayoutId;
     if (next) await session.loadLayout(next);
   } catch (e) {
-    // InvariantError: last layout in workspace — ignore for now; Phase G
-    // surfaces toasts. Logging keeps the failure visible in dev.
+    // InvariantError: last layout in workspace — log so the failure is
+    // visible in dev. Toast surfacing is a Phase G follow-up.
     console.warn("Cannot delete layout:", e);
   }
 }
@@ -157,26 +167,29 @@ async function onExportWorkspace(): Promise<void> {
   URL.revokeObjectURL(url);
 }
 
-async function onImportWorkspace(): Promise<void> {
-  const input = document.createElement("input");
-  input.type = "file";
-  input.accept = "application/json,.json";
-  input.addEventListener("change", async () => {
-    const file = input.files?.[0];
-    if (!file) return;
-    try {
-      const text = await file.text();
-      const data = JSON.parse(text) as PortableWorkspace;
-      const imported = await importWorkspace(data, { renameOnConflict: true, importChrome: true });
-      await workspace.loadAll();
-      await workspace.setCurrentWorkspace(imported.id);
-      await layoutStore.loadForWorkspace(imported.id);
-      if (layoutStore.currentLayoutId) await session.loadLayout(layoutStore.currentLayoutId);
-    } catch (err) {
-      console.warn("Import failed:", err);
-    }
-  });
-  input.click();
+function triggerImportWorkspace(): void {
+  importFileRef.value?.choose();
+}
+
+async function onImportFileSelect(event: FileUploadSelectEvent): Promise<void> {
+  const fileList = event.files as File[] | undefined;
+  const file = fileList?.[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text) as PortableWorkspace;
+    const imported = await importWorkspace(data, { renameOnConflict: true, importChrome: true });
+    await workspace.loadAll();
+    await workspace.setCurrentWorkspace(imported.id);
+    await layoutStore.loadForWorkspace(imported.id);
+    if (layoutStore.currentLayoutId) await session.loadLayout(layoutStore.currentLayoutId);
+  } catch (err) {
+    console.warn("Import failed:", err);
+  } finally {
+    // FileUpload retains the selection until cleared; clear so the same file
+    // can be re-picked if the user wants to retry.
+    importFileRef.value?.clear();
+  }
 }
 
 function buildAddComponentChildren(): MenuItem[] {
@@ -235,7 +248,7 @@ const menuItems = computed<MenuItem[]>(() => [
         shortcut: formatCombo("mod+shift+s", isMac),
       },
       { separator: true },
-      { label: "Import Workspace…", command: () => void onImportWorkspace() },
+      { label: "Import Workspace…", command: triggerImportWorkspace },
       {
         label: "Export Workspace…",
         command: () => void onExportWorkspace(),
@@ -315,6 +328,19 @@ const menuItems = computed<MenuItem[]>(() => [
       </a>
     </template>
   </Menubar>
+
+  <!-- Hidden PrimeVue FileUpload — triggered via importFileRef.choose() from
+       the File → Import Workspace… menu item. customUpload + auto means
+       @select fires immediately with the picked file; no HTTP round-trip. -->
+  <FileUpload
+    ref="importFileRef"
+    mode="basic"
+    accept="application/json,.json"
+    custom-upload
+    auto
+    :pt="{ root: { class: 'hidden' } }"
+    @select="onImportFileSelect"
+  />
 
   <ManageWorkspacesDialog v-model:visible="manageWorkspacesOpen" />
   <ManageLayoutsDialog v-model:visible="manageLayoutsOpen" />

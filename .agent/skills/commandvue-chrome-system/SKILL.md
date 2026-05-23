@@ -12,6 +12,8 @@ when_to_use: |
 
 # CommandVue Chrome System
 
+> **Library-first reminder:** chrome items use PrimeVue components — never hand-rolled equivalents. The app-icon's right-click menu uses PrimeVue `ContextMenu` (popup, `cm.show(event)`). The workspace switcher uses PrimeVue `Menu` (popup mode). The MenuBar uses PrimeVue `Menubar`. The only justified custom chrome components are the slot-driven layout primitives (`ChromeBar`, `ChromeSlot`, `EditModeOverlay`) — PrimeVue has no slot-system equivalent. See [`CLAUDE.md → Library-first rule`](../../../CLAUDE.md).
+
 The persistent UI surrounding the dock — top bar, status bar, every item in them — is the **chrome**. It's slot-driven and user-configurable via edit mode.
 
 ## Slots and bars

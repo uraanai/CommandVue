@@ -11,6 +11,8 @@ when_to_use: |
 
 # CommandVue Workspace System
 
+> **Library-first reminder:** any UI surface inside this subsystem (management dialogs, save-as flows, import/export wiring) must use PrimeVue components — never hand-rolled equivalents. The portable-JSON import flow specifically uses PrimeVue `FileUpload` (`mode="basic"` + `customUpload` + ref-triggered `choose()`), not a DOM `input[type=file]`. See [`CLAUDE.md → Library-first rule`](../../../CLAUDE.md) and [`workflows/library-first.md`](../../workflows/library-first.md).
+
 The workspace system owns the data model: workspaces contain layouts contain panel-states. Repositories persist to IndexedDB; Pinia stores wrap the repos as read-through caches; one session store bridges the persisted state to the live Dockview instance.
 
 ## The four stores
