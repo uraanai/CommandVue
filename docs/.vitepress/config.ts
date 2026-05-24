@@ -69,6 +69,7 @@ export default defineConfig({
         text: "Building",
         items: [
           { text: "Panels", link: "/panels" },
+          { text: "DataTable", link: "/datatable" },
           { text: "Tools", link: "/tools" },
           { text: "State", link: "/state" },
           { text: "Real-time", link: "/realtime" },
