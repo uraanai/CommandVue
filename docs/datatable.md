@@ -177,6 +177,94 @@ PrimeVue's `DataTable` + `Column` map onto the wrapper as follows:
 
 For `editMode="row"` (manage dialogs), staying on `primevue/datatable` is acceptable — flag the file with the `governance: primevue-datatable` label and justify in the PR.
 
+### Worked example — `EntityListPanel`
+
+The reference migration is `src/components/panels/EntityListPanel.vue`. Before-and-after shape:
+
+**Before** (PrimeVue, ~120 LOC):
+
+```vue
+<script setup lang="ts">
+import Column from "primevue/column";
+import DataTable from "primevue/datatable";
+import { computed } from "vue";
+// ...
+const tablePT = {
+  /* ~10 :pt class overrides */
+};
+</script>
+
+<template>
+  <DataTable
+    :value="data"
+    data-key="id"
+    sort-field="name"
+    :sort-order="1"
+    size="small"
+    :pt="tablePT"
+  >
+    <Column header="" header-style="width: 2rem">
+      <template #body="{ data: row }">...</template>
+    </Column>
+    <Column field="name" header="Callsign" sortable>...</Column>
+    <!-- five more columns -->
+  </DataTable>
+</template>
+```
+
+**After** (wrapper):
+
+```vue
+<script setup lang="ts">
+import DataTable from "@/components/ui/DataTable.vue";
+import { createColumnHelper } from "@/components/ui/datatable/columnHelpers";
+import type { SortingState, VisibilityState, DataTableDensity } from "@/components/ui/datatable/types";
+
+const helper = createColumnHelper<Entity>();
+const columns = computed(() => [
+  helper.display({ id: "symbol", header: "", size: 36, enableSorting: false, enableHiding: false }),
+  helper.accessor("name", { id: "name", header: "Callsign", size: 160 }),
+  helper.accessor("affiliation", { id: "affiliation", header: "Affiliation", size: 120 }),
+  // ...
+]);
+
+const persisted = props.api
+  ? usePanelState<EntityListPanelState>(props.api.id, {
+      serialize: () => ({ sorting: sorting.value, filterText: filterText.value, ... }),
+      restore: (s) => { /* re-hydrate refs */ },
+    })
+  : null;
+</script>
+
+<template>
+  <DataTable
+    :data="data"
+    :columns="columns"
+    row-key="id"
+    :density="density"
+    :sticky-first-column="true"
+    :global-filter="filterText"
+    @sort-change="onSortChange"
+    @global-filter-change="onGlobalFilterChange"
+    @column-visibility-change="onVisibilityChange"
+  >
+    <template #toolbar>...</template>
+    <template #cell-symbol="{ row }">...</template>
+    <template #cell-name="{ row }">...</template>
+    <!-- five more cell slots -->
+  </DataTable>
+</template>
+```
+
+What changed:
+
+- Custom cell rendering moves from `<Column>` body slots to `cell-<columnId>` slots on the wrapper.
+- The `:pt` class-override stack is gone; styling lives in the wrapper's `<style>` block and CSS variables.
+- Panel state (sort / filter / visibility / density) is serialized via `usePanelState`. The wrapper's `@sort-change`, `@global-filter-change`, and `@column-visibility-change` emits drive the `save()` call.
+- Default density is `compact` (high-density list).
+- `sticky-first-column` is on so the symbology icon stays visible during horizontal scroll.
+- Header content and filter-icon alignment is correct by construction — the wrapper's `<th>` uses CSS grid `1fr auto`, eliminating the case-by-case flex misalignment from the PrimeVue version.
+
 ## See also
 
 - `docs/decisions/0001-datatable-library.md` — full policy rationale.

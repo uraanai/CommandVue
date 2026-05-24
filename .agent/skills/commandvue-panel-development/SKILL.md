@@ -11,7 +11,7 @@ when_to_use: |
 
 # CommandVue Panel Development
 
-> **Library-first reminder:** UI inside a panel uses PrimeVue components — never hand-rolled equivalents. Tables → `DataTable`, dropdowns → `Select`, textareas → `Textarea`, color/range/checkbox → `ColorPicker` / `Slider` / `Checkbox`, section grouping → `Fieldset`, badges → `Tag`. Charts use `vue-echarts`; maps use `cesium` / `maplibre-gl`; symbology uses `milsymbol`. See [`CLAUDE.md → Library-first rule`](../../../CLAUDE.md) for the full mapping table and [`workflows/library-first.md`](../../workflows/library-first.md) for the check workflow.
+> **Library-first reminder:** UI inside a panel uses PrimeVue components — never hand-rolled equivalents. Dropdowns → `Select`, textareas → `Textarea`, color/range/checkbox → `ColorPicker` / `Slider` / `Checkbox`, section grouping → `Fieldset`, badges → `Tag`. Charts use `vue-echarts`; maps use `cesium` / `maplibre-gl`; symbology uses `milsymbol`. **Tables are the one governed exception** — tabular data uses the project's `<DataTable>` wrapper at `src/components/ui/DataTable.vue` (TanStack-based default; `primevue/datatable` is the documented escape valve, see [ADR 0001](../../../docs/decisions/0001-datatable-library.md)). See [`CLAUDE.md → Library-first rule`](../../../CLAUDE.md) and [`workflows/library-first.md`](../../workflows/library-first.md).
 
 ## Three things to know first
 
@@ -68,6 +68,19 @@ const { save } = usePanelState<MyState>(props.api.id, {
 ```
 
 State schema design rules: see [`reference/state-schema-rules.md`](./reference/state-schema-rules.md).
+
+## Data tables
+
+When a panel displays tabular data:
+
+1. **Default:** import the `<DataTable>` wrapper from `@/components/ui/DataTable.vue`. Define columns with `createColumnHelper<TData>()` from `@/components/ui/datatable/columnHelpers`.
+2. **Wire serialization:** the panel state should typically include `sorting`, `filterText`, `visibility`, and `density` (see `EntityListPanel.vue` for the canonical pattern). Trigger `usePanelState`'s `save()` from the wrapper's `@sort-change`, `@global-filter-change`, and `@column-visibility-change` emits.
+3. **Density:** default to `compact` for high-density data feeds, `comfortable` for general lists. Surface a `Select` in the wrapper's `#toolbar` slot if users should be able to switch.
+4. **Virtualization:** auto-activates above 100 rows. Tune `estimatedRowHeight` (28 / 36 / 44 for the three densities) for accuracy.
+5. **Sticky first column** is appropriate when the leftmost column is a small visual key (icon, badge, id). Combine with `stickyHeader` (on by default).
+6. **Do NOT use `primevue/datatable`** without a justification in your PR. The repo's labeler auto-applies `governance: primevue-datatable` and ESLint emits a warn-level `no-restricted-imports` notice. The escape valve is reserved for cases where PrimeVue's TreeTable or row-edit-in-place materially reduces code volume.
+
+Reference implementation: `src/components/panels/EntityListPanel.vue`. Full reference: [`docs/datatable.md`](../../../docs/datatable.md). Policy rationale: [`docs/decisions/0001-datatable-library.md`](../../../docs/decisions/0001-datatable-library.md).
 
 ## Live instance registry (for preset application)
 
