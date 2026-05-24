@@ -19,33 +19,33 @@ This rule applies to every UI surface: menus, dropdowns, dialogs, close buttons,
 
 ### Common mappings (memorize)
 
-| Need                                             | Use                                                                       |
-| ------------------------------------------------ | ------------------------------------------------------------------------- |
-| Modal / dialog (with close button)               | PrimeVue `Dialog` (already wrapped by `src/components/ui/Dialog.vue`)     |
-| Right-click context menu                         | PrimeVue `ContextMenu` — never hand-roll outside-click + clientX/Y        |
-| Top menu bar / nested submenus                   | PrimeVue `Menubar`                                                        |
-| Dropdown popup (workspace switcher, action menu) | PrimeVue `Menu` (popup mode) or `TieredMenu`                              |
-| Tabbed UI                                        | PrimeVue `Tabs` + `TabList` + `Tab` + `TabPanels` (wrapped by `ui/Tabs`)  |
-| Tabular data (sortable, filterable, paginated)   | PrimeVue `DataTable` + `Column` — never raw `<table>`                     |
-| Card grid / item gallery                         | PrimeVue `DataView` (`layout="grid"`) or `Fieldset` + plain grid          |
-| Section grouping with legend                     | PrimeVue `Fieldset`                                                       |
-| Inline label / badge                             | PrimeVue `Tag` or `Chip`                                                  |
-| Dropdown select                                  | PrimeVue `Select` (wrapped by `ui/Select`)                                |
-| Multi-select                                     | PrimeVue `MultiSelect`                                                    |
-| Text input                                       | PrimeVue `InputText` (wrapped by `ui/Input`) or `IconField` + `InputIcon` |
-| Number input                                     | PrimeVue `InputNumber`                                                    |
-| Textarea                                         | PrimeVue `Textarea` — never raw `<textarea>`                              |
-| Checkbox / radio                                 | PrimeVue `Checkbox` (`binary` for single) / `RadioButton`                 |
-| Color picker                                     | PrimeVue `ColorPicker` — never `<input type=color>`                       |
-| Range / slider                                   | PrimeVue `Slider` — never `<input type=range>`                            |
-| Date picker                                      | PrimeVue `DatePicker`                                                     |
-| File upload (incl. hidden + programmatic)        | PrimeVue `FileUpload` (`mode="basic"`, ref-triggered `choose()`)          |
-| Button                                           | PrimeVue `Button` (wrapped by `ui/Button` + `ui/IconButton`)              |
-| Toast notification                               | PrimeVue `Toast` (wrapped by `ui/Toast`)                                  |
-| Confirm dialog                                   | PrimeVue `ConfirmDialog` (use for 2-action; custom Dialog for 3+ actions) |
-| Popover                                          | PrimeVue `Popover`                                                        |
-| Divider                                          | PrimeVue `Divider`                                                        |
-| Chart                                            | `vue-echarts` (not PrimeVue Chart — already in locked stack)              |
+| Need                                             | Use                                                                                                                                                    |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Modal / dialog (with close button)               | PrimeVue `Dialog` (already wrapped by `src/components/ui/Dialog.vue`)                                                                                  |
+| Right-click context menu                         | PrimeVue `ContextMenu` — never hand-roll outside-click + clientX/Y                                                                                     |
+| Top menu bar / nested submenus                   | PrimeVue `Menubar`                                                                                                                                     |
+| Dropdown popup (workspace switcher, action menu) | PrimeVue `Menu` (popup mode) or `TieredMenu`                                                                                                           |
+| Tabbed UI                                        | PrimeVue `Tabs` + `TabList` + `Tab` + `TabPanels` (wrapped by `ui/Tabs`)                                                                               |
+| Tabular data (sortable, filterable, paginated)   | `<DataTable>` wrapper at `src/components/ui/DataTable.vue` (TanStack default — see ADR 0001); `primevue/datatable` only as the documented escape valve |
+| Card grid / item gallery                         | PrimeVue `DataView` (`layout="grid"`) or `Fieldset` + plain grid                                                                                       |
+| Section grouping with legend                     | PrimeVue `Fieldset`                                                                                                                                    |
+| Inline label / badge                             | PrimeVue `Tag` or `Chip`                                                                                                                               |
+| Dropdown select                                  | PrimeVue `Select` (wrapped by `ui/Select`)                                                                                                             |
+| Multi-select                                     | PrimeVue `MultiSelect`                                                                                                                                 |
+| Text input                                       | PrimeVue `InputText` (wrapped by `ui/Input`) or `IconField` + `InputIcon`                                                                              |
+| Number input                                     | PrimeVue `InputNumber`                                                                                                                                 |
+| Textarea                                         | PrimeVue `Textarea` — never raw `<textarea>`                                                                                                           |
+| Checkbox / radio                                 | PrimeVue `Checkbox` (`binary` for single) / `RadioButton`                                                                                              |
+| Color picker                                     | PrimeVue `ColorPicker` — never `<input type=color>`                                                                                                    |
+| Range / slider                                   | PrimeVue `Slider` — never `<input type=range>`                                                                                                         |
+| Date picker                                      | PrimeVue `DatePicker`                                                                                                                                  |
+| File upload (incl. hidden + programmatic)        | PrimeVue `FileUpload` (`mode="basic"`, ref-triggered `choose()`)                                                                                       |
+| Button                                           | PrimeVue `Button` (wrapped by `ui/Button` + `ui/IconButton`)                                                                                           |
+| Toast notification                               | PrimeVue `Toast` (wrapped by `ui/Toast`)                                                                                                               |
+| Confirm dialog                                   | PrimeVue `ConfirmDialog` (use for 2-action; custom Dialog for 3+ actions)                                                                              |
+| Popover                                          | PrimeVue `Popover`                                                                                                                                     |
+| Divider                                          | PrimeVue `Divider`                                                                                                                                     |
+| Chart                                            | `vue-echarts` (not PrimeVue Chart — already in locked stack)                                                                                           |
 
 If the need you have isn't on this list, check the PrimeVue catalog before inventing custom markup. New mappings discovered during work should be added here.
 
@@ -73,34 +73,46 @@ This repository is a **template**. Code in this repo should be generic, reusable
 
 Do not substitute libraries from this list without explicit instruction.
 
-| Layer                    | Choice                                                                                                    |
-| ------------------------ | --------------------------------------------------------------------------------------------------------- |
-| Framework                | Vue 3 + Vite                                                                                              |
-| Language                 | TypeScript (strict)                                                                                       |
-| Router                   | Vue Router 4                                                                                              |
-| State                    | Pinia                                                                                                     |
-| Package manager          | pnpm (with workspaces)                                                                                    |
-| UI components            | PrimeVue (unstyled) + Tailwind v4                                                                         |
-| Window/panel manager     | Dockview Vue                                                                                              |
-| Icons                    | @lucide/vue + @iconify-prerendered/vue-mdi + @heroicons/vue                                               |
-| 3D map                   | CesiumJS                                                                                                  |
-| 2D map                   | MapLibre GL                                                                                               |
-| Geospatial math          | @turf/\*, mgrs, h3-js, formatcoords, suncalc                                                              |
-| Operational symbology    | milsymbol, @orbat-mapper/convert-symbology (MIL-STD-2525 / APP-6 SIDC codes)                              |
-| Charting                 | Apache ECharts (primary) + d3-\* modules (escape hatch)                                                   |
-| Real-time                | Native WebSocket via @vueuse/core useWebSocket                                                            |
-| Tables                   | PrimeVue `DataTable` (uniform across the app — replaces @tanstack/vue-table)                              |
-| Virtualization           | @tanstack/vue-virtual                                                                                     |
-| Drag & drop              | @atlaskit/pragmatic-drag-and-drop                                                                         |
-| Storage / offline        | idb (IndexedDB), browser-fs-access                                                                        |
-| Utilities                | @vueuse/core, dayjs, es-toolkit, nanoid, fuzzysort, immer, klona, rfc6902                                 |
-| Markdown                 | markdown-it                                                                                               |
-| Spell-check (code)       | CSpell + dictionaries/\*.txt                                                                              |
-| Spell-check (user input) | Native `spellcheck` attribute                                                                             |
-| Build                    | Vite                                                                                                      |
-| Quality                  | ESLint 9 flat config, Prettier, Vitest, vue-tsc                                                           |
-| Containerization         | Multi-stage Dockerfile + docker-compose.yml                                                               |
-| Documentation site       | VitePress (config: `docs/.vitepress/config.ts`; scripts: `pnpm docs:dev` / `docs:build` / `docs:preview`) |
+| Layer                    | Choice                                                                                                                                                       |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Framework                | Vue 3 + Vite                                                                                                                                                 |
+| Language                 | TypeScript (strict)                                                                                                                                          |
+| Router                   | Vue Router 4                                                                                                                                                 |
+| State                    | Pinia                                                                                                                                                        |
+| Package manager          | pnpm (with workspaces)                                                                                                                                       |
+| UI components            | PrimeVue (unstyled) + Tailwind v4                                                                                                                            |
+| Window/panel manager     | Dockview Vue                                                                                                                                                 |
+| Icons                    | @lucide/vue + @iconify-prerendered/vue-mdi + @heroicons/vue                                                                                                  |
+| 3D map                   | CesiumJS                                                                                                                                                     |
+| 2D map                   | MapLibre GL                                                                                                                                                  |
+| Geospatial math          | @turf/\*, mgrs, h3-js, formatcoords, suncalc                                                                                                                 |
+| Operational symbology    | milsymbol, @orbat-mapper/convert-symbology (MIL-STD-2525 / APP-6 SIDC codes)                                                                                 |
+| Charting                 | Apache ECharts (primary) + d3-\* modules (escape hatch)                                                                                                      |
+| Real-time                | Native WebSocket via @vueuse/core useWebSocket                                                                                                               |
+| Tables                   | `@tanstack/vue-table` via `src/components/ui/DataTable.vue` (default) — `primevue/datatable` as escape valve, see `docs/decisions/0001-datatable-library.md` |
+| Virtualization           | @tanstack/vue-virtual                                                                                                                                        |
+| Drag & drop              | @atlaskit/pragmatic-drag-and-drop                                                                                                                            |
+| Storage / offline        | idb (IndexedDB), browser-fs-access                                                                                                                           |
+| Utilities                | @vueuse/core, dayjs, es-toolkit, nanoid, fuzzysort, immer, klona, rfc6902                                                                                    |
+| Markdown                 | markdown-it                                                                                                                                                  |
+| Spell-check (code)       | CSpell + dictionaries/\*.txt                                                                                                                                 |
+| Spell-check (user input) | Native `spellcheck` attribute                                                                                                                                |
+| Build                    | Vite                                                                                                                                                         |
+| Quality                  | ESLint 9 flat config, Prettier, Vitest, vue-tsc                                                                                                              |
+| Containerization         | Multi-stage Dockerfile + docker-compose.yml                                                                                                                  |
+| Documentation site       | VitePress (config: `docs/.vitepress/config.ts`; scripts: `pnpm docs:dev` / `docs:build` / `docs:preview`)                                                    |
+
+---
+
+## Data tables — TanStack default
+
+`@tanstack/vue-table` is the default data-table library for CommandVue. This is a deliberate, governed exception to the "library-first / PrimeVue-first" mapping above — limited to **tabular data only**. Every other surface (menus, dialogs, file uploads, color pickers, form controls, fieldsets, tags, popovers, etc.) still follows the library-first rule and uses PrimeVue.
+
+- **Default usage:** import the `<DataTable>` wrapper from `src/components/ui/DataTable.vue` (added in Phase 1.2 of Prompt 1).
+- **Wrapper API:** typed columns, sortable headers, resizable columns, virtualized rows via `@tanstack/vue-virtual`, column visibility toggle, three density modes (`compact`, `comfortable`, `spacious`), sticky header, optional sticky first column, toolbar slot.
+- **Escape valve:** `primevue/datatable` is permitted only for narrow cases where its built-in features (TreeTable, full row-edit-in-place, hierarchical grouping) materially reduce code volume. Every such use must be justified in the PR description and triggers the `governance: primevue-datatable` label automatically. An ESLint warn-level `no-restricted-imports` rule surfaces the deviation during local lint and CI.
+- **Decision record:** see `docs/decisions/0001-datatable-library.md` for full rationale.
+- **Current migration state:** see `docs/audits/datatable-usage-inventory.md` for which files still use `primevue/datatable` and which have moved to the wrapper.
 
 ---
 
