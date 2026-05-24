@@ -116,6 +116,12 @@ Do not substitute libraries from this list without explicit instruction.
 
 ---
 
+## UI primitives — Volt vs hand-rolled
+
+See `docs/decisions/0002-volt-vs-handrolled-wrappers.md` for the active decision (currently `Proposed` — will be updated to `Accepted` once the user signs off in Phase 2.2 of Prompt 2). Supporting inventories: `docs/audits/ui-wrappers-inventory.md` and `docs/audits/primevue-component-usage.md`.
+
+---
+
 ## Icon usage rules
 
 - **@lucide/vue** — UI chrome only (buttons, toolbars, panel controls, status indicators).
