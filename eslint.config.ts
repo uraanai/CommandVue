@@ -108,4 +108,20 @@ export default defineConfigWithVueTs(
       "@typescript-eslint/no-unused-vars": "off",
     },
   },
+  {
+    // Volt components are vendored from `npx volt-vue add` and follow upstream
+    // PrimeVue conventions (`interface Props extends <PvProps> {}`, implicit
+    // any in some event handlers, `any` in the passthrough merge util). We
+    // own these files but want to keep upstream parity, so the strict rules
+    // we enforce on the rest of the app are relaxed here.
+    name: "commandvue/volt-vendored",
+    files: ["src/volt/**/*.{ts,vue}"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-empty-object-type": "off",
+      "@typescript-eslint/no-unsafe-function-type": "off",
+      "@typescript-eslint/no-unused-vars": "off",
+      "vue/no-v-html": "off",
+    },
+  },
 );

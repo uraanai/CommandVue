@@ -8,6 +8,16 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 
 ### Added
 
+- **Volt foundation for PrimeVue-first UI primitives.**
+  - Installed 9 Volt components into `src/volt/` via `npx volt-vue add`: `Dialog`, `InputText`, `Checkbox`, `Slider`, `Textarea`, `Fieldset`, `Tag`, `Menu`, `SecondaryButton`. Each lives in the codebase as ownable source rather than a dependency.
+  - Added `tailwindcss-primeui` plugin to `src/assets/styles/main.css` so Volt's `surface-N` palette and `p-filled` / `p-invalid` / `p-fluid` / `p-small` / `p-large` variants resolve.
+  - Added `@primevue/icons` runtime dependency for Volt's default icon imports.
+  - Added `src/components/ui/Menubar.vue`, `ContextMenu.vue`, `FileUpload.vue` — hand-rolled exception wrappers because Volt does not cover these three (verified 2026-05-24). Tracked for promotion if Volt ships them.
+  - Added `src/components/ui/ColorPicker.vue` + `colors.ts` — specialized wrapper over `primevue/colorpicker` with a curated `defaultColors` palette (orbat-mapper-inspired, no `reka-ui` dependency).
+  - Rewrote `src/components/ui/Tooltip.vue` on `floating-vue` (floating-ui under the hood) — replaces the native-`title` placeholder; same `label` API, adds `placement`, `delay`, `disabled` props.
+  - Added `floating-vue` runtime dependency.
+  - Added ESLint override for `src/volt/**` so vendored Volt sources keep upstream parity (relaxes `no-explicit-any` / `no-empty-object-type` / `no-unsafe-function-type` / `vue/no-v-html` for that directory).
+  - Updated `src/components/ui/index.ts` to re-export the new wrappers and the palette.
 - **`<DataTable>` wrapper component — CommandVue's default tabular-data primitive.**
   - `src/components/ui/DataTable.vue` — generic over `TData`, built on `@tanstack/vue-table` (state) + `@tanstack/vue-virtual` (windowing).
   - Three density modes (`compact` / `comfortable` / `spacious`) via CSS data-attribute; sortable, filterable, resizable columns; column visibility toggle; sticky header and optional sticky first column; keyboard accessibility (`aria-sort`, focusable headers, Enter/Space).

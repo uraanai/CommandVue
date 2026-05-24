@@ -5,6 +5,11 @@
 @plugin "@tailwindcss/forms";
 @plugin "@tailwindcss/typography";
 
+/* tailwindcss-primeui ships PrimeVue's surface-0…surface-950 palette and the
+ * p-filled / p-invalid / p-fluid / p-small / p-large variants that Volt
+ * components reference. Volt files at src/volt/*.vue depend on these. */
+@plugin "tailwindcss-primeui";
+
 /* Enable the `dark:` variant on the `data-theme="dark"` attribute.
    Toggled via `useTheme()` (composable) on the <html> element. */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));

@@ -192,3 +192,11 @@ RLS
 auth
 dismissable
 usetoast
+primeui
+closebutton
+maximizebutton
+windowmaximize
+windowminimize
+togglericon
+toggleable
+themable
