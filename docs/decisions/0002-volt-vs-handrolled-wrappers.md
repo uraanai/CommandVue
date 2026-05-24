@@ -1,7 +1,7 @@
 # 0002. Volt vs hand-rolled PrimeVue wrappers
 
-- **Status:** Proposed
-- **Date:** 2026-05-24
+- **Status:** Accepted
+- **Date:** 2026-05-24 (proposed); 2026-05-24 (accepted)
 - **Deciders:** Project maintainer
 - **Decision gate:** This ADR is the gate for Prompt 2 (Volt evaluation, PrimeVue audit and migration). Phases 2.2–2.4 do not begin until the user accepts one of the three options below.
 
@@ -27,7 +27,51 @@ The decision now affects every existing wrapper, every direct-`primevue/*` consu
 
 ## Decision
 
-To be decided by the user. The three options are A, B, and C below; the recommendation at the bottom of this ADR is C with explicit criteria.
+**Accepted: Option C — hybrid.** Density-critical primitives stay hand-rolled in `src/components/ui/*`; general-purpose primitives are installed via Volt at `src/volt/*`. See `## Accepted decision` below for the exact split and the answers to the ADR's open questions.
+
+## Accepted decision
+
+Recorded 2026-05-24 by the project maintainer.
+
+### Option chosen
+
+**Option C — hybrid.** The two-directory split is the active rule going forward.
+
+### The split
+
+**Stays hand-rolled in `src/components/ui/*`:**
+
+- `Button` — density-critical, project uses `size="small"` defaults; severity / variant Tailwind class map is tailored to CommandVue's accent token.
+- `IconButton` — icon-only flavor of Button; same density rationale.
+- `Tabs` — flat `tabs[]` API masks PrimeVue's five-component composition; the masking is a deliberate quality-of-life surface.
+- `Toast` — project-default `top-right` position and group convention.
+- `DataTable` — owned by ADR 0001 (TanStack-based, not PrimeVue); listed here for completeness.
+
+**Adopts Volt at `src/volt/*`:**
+
+- `Dialog`, `Input` (PrimeVue `InputText`), `Select`, `Checkbox`, `Slider`, `Textarea`, `Fieldset`, `Tag`, `Menu`, `Menubar` (if Volt has it), `ContextMenu` (if Volt has it), `FileUpload` (if Volt has it).
+
+The four "(if Volt has it)" items are verified at `volt.primevue.org` during Phase 2.3 before install. If any Volt-coverage gap is confirmed, that component falls back to a hand-rolled wrapper in `src/components/ui/*` with a one-line exception note in the file header.
+
+**Specialized (hand-rolled, but in `src/components/ui/*` not because of density):**
+
+- `ColorPicker` — see Question 3 below. Wraps `primevue/colorpicker` in `src/components/ui/ColorPicker.vue`; ships a curated `defaultColors` palette in a sibling file (pattern borrowed from orbat-mapper's `colors.ts`, implementation kept on PrimeVue, no `reka-ui` dependency).
+
+### Answers to the open questions
+
+**Q1. Density default for Volted components.** Approach **A — accept Volt defaults**. Density-critical primitives (Button, IconButton, Tabs, Toast, DataTable) stay hand-rolled per the split above. Volt-targeted components are mostly one-off form controls and surfaces (Dialog, Input, Fieldset, etc.) where density does not repeat materially. Where a specific call site needs tighter density, pass `size="small"` per use. No upfront modification of Volt files; if a particular Volt file proves problematic in practice, that's a future, narrowly-scoped follow-up — not a Phase 2.3 task.
+
+**Q2. `Tooltip.vue` future.** Wire **floating-ui in Phase 2.3**. The existing placeholder (`title` attribute) is replaced by a wrapper around `floating-vue` or PrimeVue's own tooltip directive, whichever fits cleaner with the existing `<Tooltip>` consumer API. The wrapper lives in `src/components/ui/Tooltip.vue` (specialized hand-rolled, not density-critical but project-API-masked).
+
+**Q3. `ColorPicker`.** Wrap `primevue/colorpicker` in `src/components/ui/ColorPicker.vue`. Adopt orbat-mapper's _palette concept_ (a curated `defaultColors` constant in a sibling `colors.ts`) without taking `reka-ui` as a dependency. orbat-mapper's `PopoverColorPicker.vue` is built on `reka-ui` (`Popover` / `PopoverContent` / `PopoverTrigger` / `PopoverClose`); adopting it directly would contradict the library-first / PrimeVue rule. Future iteration could match orbat-mapper's UX (swatch grid + native color input + hex field inside a popover) using PrimeVue's `Popover`, but the Phase 2.3 deliverable is the minimal wrapper plus the palette.
+
+**Q4. Phase 2.3 PR-split granularity.** **Multiple PRs grouped by area.** Each affected area gets its own migration PR — at minimum: `layout` (`MenuBar`, `WorkspaceSwitcher`), `dialogs` (`SaveLayoutAsDialog`, plus any Volt swaps in the three deferred manage-X dialogs that aren't blocked by their `primevue/datatable` usage), `presets` (`MapOverlayPresetEditor`), `panels` (`MarkdownPanel`, `SymbologyPanel`), `chrome` (`AppIconItem`), and `ui-primitives` (the Volt installs themselves + the new hand-rolled wrappers — `ColorPicker`, `Tooltip`-with-floating-ui — landed as a foundation PR before the consumer-area PRs depend on them). Phase 2.2's audit produces the precise PR list and order.
+
+### Consequences (now in force)
+
+- Phase 2.2 (next) produces the file-by-file audit using the criteria above. The audit's `Recommended action` column resolves to either "wrap in `src/components/ui/<Name>.vue` (density-critical / project-API-masked / specialized)" or "install via `npx volt-vue add <Name>` then import from `@/volt/<Name>.vue`".
+- Phase 2.3 (after audit merges) executes the migrations in multiple PRs grouped by area. Foundation PR (`ui-primitives`) lands first; consumer-area PRs follow.
+- Phase 2.4 (after migrations finish) locks in ESLint rules: raw HTML interactive elements (`<button>`, `<input>`, `<select>`) are warned against; direct `primevue/*` imports from non-primitive files are warned against; the existing `primevue/datatable` warn-level rule stays.
 
 ## Options considered
 
