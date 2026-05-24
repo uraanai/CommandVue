@@ -65,6 +65,18 @@ export default defineConfigWithVueTs(
       ],
       "vue/multi-word-component-names": "off",
       "no-console": ["warn", { allow: ["warn", "error"] }],
+      "no-restricted-imports": [
+        "warn",
+        {
+          paths: [
+            {
+              name: "primevue/datatable",
+              message:
+                "CommandVue defaults to @tanstack/vue-table via the <DataTable> wrapper at src/components/ui/DataTable.vue. Use primevue/datatable only when justified — see docs/decisions/0001-datatable-library.md. Document the justification in your PR.",
+            },
+          ],
+        },
+      ],
       "perfectionist/sort-imports": [
         "error",
         {

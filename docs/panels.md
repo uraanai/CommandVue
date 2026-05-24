@@ -2,6 +2,8 @@
 
 This page is for engineers building or extending panels. For a system-level overview, see [Architecture](/architecture).
 
+> **Tabular data?** Use the `<DataTable>` wrapper from `src/components/ui/DataTable.vue` (TanStack-based default — see [DataTable](/datatable) and the ADR at `docs/decisions/0001-datatable-library.md`). The canonical example is `EntityListPanel.vue`; a reference demo page lives at `/dev/datatable` in dev builds.
+
 ## What a panel is
 
 A **panel** is a Vue component hosted in one Dockview tab. Each instance has:

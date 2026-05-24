@@ -19,33 +19,33 @@ This rule applies to every UI surface: menus, dropdowns, dialogs, close buttons,
 
 ### Common mappings (memorize)
 
-| Need                                             | Use                                                                       |
-| ------------------------------------------------ | ------------------------------------------------------------------------- |
-| Modal / dialog (with close button)               | PrimeVue `Dialog` (already wrapped by `src/components/ui/Dialog.vue`)     |
-| Right-click context menu                         | PrimeVue `ContextMenu` — never hand-roll outside-click + clientX/Y        |
-| Top menu bar / nested submenus                   | PrimeVue `Menubar`                                                        |
-| Dropdown popup (workspace switcher, action menu) | PrimeVue `Menu` (popup mode) or `TieredMenu`                              |
-| Tabbed UI                                        | PrimeVue `Tabs` + `TabList` + `Tab` + `TabPanels` (wrapped by `ui/Tabs`)  |
-| Tabular data (sortable, filterable, paginated)   | PrimeVue `DataTable` + `Column` — never raw `<table>`                     |
-| Card grid / item gallery                         | PrimeVue `DataView` (`layout="grid"`) or `Fieldset` + plain grid          |
-| Section grouping with legend                     | PrimeVue `Fieldset`                                                       |
-| Inline label / badge                             | PrimeVue `Tag` or `Chip`                                                  |
-| Dropdown select                                  | PrimeVue `Select` (wrapped by `ui/Select`)                                |
-| Multi-select                                     | PrimeVue `MultiSelect`                                                    |
-| Text input                                       | PrimeVue `InputText` (wrapped by `ui/Input`) or `IconField` + `InputIcon` |
-| Number input                                     | PrimeVue `InputNumber`                                                    |
-| Textarea                                         | PrimeVue `Textarea` — never raw `<textarea>`                              |
-| Checkbox / radio                                 | PrimeVue `Checkbox` (`binary` for single) / `RadioButton`                 |
-| Color picker                                     | PrimeVue `ColorPicker` — never `<input type=color>`                       |
-| Range / slider                                   | PrimeVue `Slider` — never `<input type=range>`                            |
-| Date picker                                      | PrimeVue `DatePicker`                                                     |
-| File upload (incl. hidden + programmatic)        | PrimeVue `FileUpload` (`mode="basic"`, ref-triggered `choose()`)          |
-| Button                                           | PrimeVue `Button` (wrapped by `ui/Button` + `ui/IconButton`)              |
-| Toast notification                               | PrimeVue `Toast` (wrapped by `ui/Toast`)                                  |
-| Confirm dialog                                   | PrimeVue `ConfirmDialog` (use for 2-action; custom Dialog for 3+ actions) |
-| Popover                                          | PrimeVue `Popover`                                                        |
-| Divider                                          | PrimeVue `Divider`                                                        |
-| Chart                                            | `vue-echarts` (not PrimeVue Chart — already in locked stack)              |
+| Need                                             | Use                                                                                                                                                    |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Modal / dialog (with close button)               | PrimeVue `Dialog` (already wrapped by `src/components/ui/Dialog.vue`)                                                                                  |
+| Right-click context menu                         | PrimeVue `ContextMenu` — never hand-roll outside-click + clientX/Y                                                                                     |
+| Top menu bar / nested submenus                   | PrimeVue `Menubar`                                                                                                                                     |
+| Dropdown popup (workspace switcher, action menu) | PrimeVue `Menu` (popup mode) or `TieredMenu`                                                                                                           |
+| Tabbed UI                                        | PrimeVue `Tabs` + `TabList` + `Tab` + `TabPanels` (wrapped by `ui/Tabs`)                                                                               |
+| Tabular data (sortable, filterable, paginated)   | `<DataTable>` wrapper at `src/components/ui/DataTable.vue` (TanStack default — see ADR 0001); `primevue/datatable` only as the documented escape valve |
+| Card grid / item gallery                         | PrimeVue `DataView` (`layout="grid"`) or `Fieldset` + plain grid                                                                                       |
+| Section grouping with legend                     | PrimeVue `Fieldset`                                                                                                                                    |
+| Inline label / badge                             | PrimeVue `Tag` or `Chip`                                                                                                                               |
+| Dropdown select                                  | PrimeVue `Select` (wrapped by `ui/Select`)                                                                                                             |
+| Multi-select                                     | PrimeVue `MultiSelect`                                                                                                                                 |
+| Text input                                       | PrimeVue `InputText` (wrapped by `ui/Input`) or `IconField` + `InputIcon`                                                                              |
+| Number input                                     | PrimeVue `InputNumber`                                                                                                                                 |
+| Textarea                                         | PrimeVue `Textarea` — never raw `<textarea>`                                                                                                           |
+| Checkbox / radio                                 | PrimeVue `Checkbox` (`binary` for single) / `RadioButton`                                                                                              |
+| Color picker                                     | PrimeVue `ColorPicker` — never `<input type=color>`                                                                                                    |
+| Range / slider                                   | PrimeVue `Slider` — never `<input type=range>`                                                                                                         |
+| Date picker                                      | PrimeVue `DatePicker`                                                                                                                                  |
+| File upload (incl. hidden + programmatic)        | PrimeVue `FileUpload` (`mode="basic"`, ref-triggered `choose()`)                                                                                       |
+| Button                                           | PrimeVue `Button` (wrapped by `ui/Button` + `ui/IconButton`)                                                                                           |
+| Toast notification                               | PrimeVue `Toast` (wrapped by `ui/Toast`)                                                                                                               |
+| Confirm dialog                                   | PrimeVue `ConfirmDialog` (use for 2-action; custom Dialog for 3+ actions)                                                                              |
+| Popover                                          | PrimeVue `Popover`                                                                                                                                     |
+| Divider                                          | PrimeVue `Divider`                                                                                                                                     |
+| Chart                                            | `vue-echarts` (not PrimeVue Chart — already in locked stack)                                                                                           |
 
 If the need you have isn't on this list, check the PrimeVue catalog before inventing custom markup. New mappings discovered during work should be added here.
 
@@ -73,34 +73,46 @@ This repository is a **template**. Code in this repo should be generic, reusable
 
 Do not substitute libraries from this list without explicit instruction.
 
-| Layer                    | Choice                                                                                                    |
-| ------------------------ | --------------------------------------------------------------------------------------------------------- |
-| Framework                | Vue 3 + Vite                                                                                              |
-| Language                 | TypeScript (strict)                                                                                       |
-| Router                   | Vue Router 4                                                                                              |
-| State                    | Pinia                                                                                                     |
-| Package manager          | pnpm (with workspaces)                                                                                    |
-| UI components            | PrimeVue (unstyled) + Tailwind v4                                                                         |
-| Window/panel manager     | Dockview Vue                                                                                              |
-| Icons                    | @lucide/vue + @iconify-prerendered/vue-mdi + @heroicons/vue                                               |
-| 3D map                   | CesiumJS                                                                                                  |
-| 2D map                   | MapLibre GL                                                                                               |
-| Geospatial math          | @turf/\*, mgrs, h3-js, formatcoords, suncalc                                                              |
-| Operational symbology    | milsymbol, @orbat-mapper/convert-symbology (MIL-STD-2525 / APP-6 SIDC codes)                              |
-| Charting                 | Apache ECharts (primary) + d3-\* modules (escape hatch)                                                   |
-| Real-time                | Native WebSocket via @vueuse/core useWebSocket                                                            |
-| Tables                   | PrimeVue `DataTable` (uniform across the app — replaces @tanstack/vue-table)                              |
-| Virtualization           | @tanstack/vue-virtual                                                                                     |
-| Drag & drop              | @atlaskit/pragmatic-drag-and-drop                                                                         |
-| Storage / offline        | idb (IndexedDB), browser-fs-access                                                                        |
-| Utilities                | @vueuse/core, dayjs, es-toolkit, nanoid, fuzzysort, immer, klona, rfc6902                                 |
-| Markdown                 | markdown-it                                                                                               |
-| Spell-check (code)       | CSpell + dictionaries/\*.txt                                                                              |
-| Spell-check (user input) | Native `spellcheck` attribute                                                                             |
-| Build                    | Vite                                                                                                      |
-| Quality                  | ESLint 9 flat config, Prettier, Vitest, vue-tsc                                                           |
-| Containerization         | Multi-stage Dockerfile + docker-compose.yml                                                               |
-| Documentation site       | VitePress (config: `docs/.vitepress/config.ts`; scripts: `pnpm docs:dev` / `docs:build` / `docs:preview`) |
+| Layer                    | Choice                                                                                                                                                       |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Framework                | Vue 3 + Vite                                                                                                                                                 |
+| Language                 | TypeScript (strict)                                                                                                                                          |
+| Router                   | Vue Router 4                                                                                                                                                 |
+| State                    | Pinia                                                                                                                                                        |
+| Package manager          | pnpm (with workspaces)                                                                                                                                       |
+| UI components            | PrimeVue (unstyled) + Tailwind v4                                                                                                                            |
+| Window/panel manager     | Dockview Vue                                                                                                                                                 |
+| Icons                    | @lucide/vue + @iconify-prerendered/vue-mdi + @heroicons/vue                                                                                                  |
+| 3D map                   | CesiumJS                                                                                                                                                     |
+| 2D map                   | MapLibre GL                                                                                                                                                  |
+| Geospatial math          | @turf/\*, mgrs, h3-js, formatcoords, suncalc                                                                                                                 |
+| Operational symbology    | milsymbol, @orbat-mapper/convert-symbology (MIL-STD-2525 / APP-6 SIDC codes)                                                                                 |
+| Charting                 | Apache ECharts (primary) + d3-\* modules (escape hatch)                                                                                                      |
+| Real-time                | Native WebSocket via @vueuse/core useWebSocket                                                                                                               |
+| Tables                   | `@tanstack/vue-table` via `src/components/ui/DataTable.vue` (default) — `primevue/datatable` as escape valve, see `docs/decisions/0001-datatable-library.md` |
+| Virtualization           | @tanstack/vue-virtual                                                                                                                                        |
+| Drag & drop              | @atlaskit/pragmatic-drag-and-drop                                                                                                                            |
+| Storage / offline        | idb (IndexedDB), browser-fs-access                                                                                                                           |
+| Utilities                | @vueuse/core, dayjs, es-toolkit, nanoid, fuzzysort, immer, klona, rfc6902                                                                                    |
+| Markdown                 | markdown-it                                                                                                                                                  |
+| Spell-check (code)       | CSpell + dictionaries/\*.txt                                                                                                                                 |
+| Spell-check (user input) | Native `spellcheck` attribute                                                                                                                                |
+| Build                    | Vite                                                                                                                                                         |
+| Quality                  | ESLint 9 flat config, Prettier, Vitest, vue-tsc                                                                                                              |
+| Containerization         | Multi-stage Dockerfile + docker-compose.yml                                                                                                                  |
+| Documentation site       | VitePress (config: `docs/.vitepress/config.ts`; scripts: `pnpm docs:dev` / `docs:build` / `docs:preview`)                                                    |
+
+---
+
+## Data tables — TanStack default
+
+`@tanstack/vue-table` is the default data-table library for CommandVue. This is a deliberate, governed exception to the "library-first / PrimeVue-first" mapping above — limited to **tabular data only**. Every other surface (menus, dialogs, file uploads, color pickers, form controls, fieldsets, tags, popovers, etc.) still follows the library-first rule and uses PrimeVue.
+
+- **Default usage:** import the `<DataTable>` wrapper from `src/components/ui/DataTable.vue` (added in Phase 1.2 of Prompt 1).
+- **Wrapper API:** typed columns, sortable headers, resizable columns, virtualized rows via `@tanstack/vue-virtual`, column visibility toggle, three density modes (`compact`, `comfortable`, `spacious`), sticky header, optional sticky first column, toolbar slot.
+- **Escape valve:** `primevue/datatable` is permitted only for narrow cases where its built-in features (TreeTable, full row-edit-in-place, hierarchical grouping) materially reduce code volume. Every such use must be justified in the PR description and triggers the `governance: primevue-datatable` label automatically. An ESLint warn-level `no-restricted-imports` rule surfaces the deviation during local lint and CI.
+- **Decision record:** see `docs/decisions/0001-datatable-library.md` for full rationale.
+- **Current migration state:** see `docs/audits/datatable-usage-inventory.md` for which files still use `primevue/datatable` and which have moved to the wrapper.
 
 ---
 
@@ -215,40 +227,60 @@ Conventional Commits, enforced by commitlint:
 
 ---
 
-## Git workflow (mandatory)
+## Branch and workflow conventions
 
-`main` is protected. `enforce_admins: true` is set — direct push to `main` is rejected for **everyone**, including the maintainer. **Every code change goes through a PR**, no exceptions, even one-line doc fixes.
+CommandVue uses a GitFlow-style workflow. **Agents working in this repo must follow it:**
 
-### The required sequence
+- **Never commit directly to `main` or `develop`.** Both are protected.
+- **All feature work begins from `develop`.** Pull latest before branching.
+- **One branch per logical unit of work.** Conventional naming: `feat/`, `fix/`, `docs/`, `refactor/`, `chore/`.
+- **PRs target `develop` by default.** Use `gh pr create --base develop`.
+- **PRs to `main` are release PRs only**, opened from `develop`, titled `release: <version>`.
+- **After each phase, stop and wait for PR merge** before starting the next phase. Do not chain phases without merge confirmation.
+- **PR titles follow Conventional Commits.** Match the type to the work: `feat:` for new capabilities, `fix:` for bug fixes, `docs:` for docs-only, etc.
+
+### The required sequence (feature work)
 
 ```bash
-git checkout main && git pull                      # start from clean main
+git checkout develop && git pull origin develop    # start from clean develop
 git checkout -b <type>/<short-slug>                # feature branch first, BEFORE any edits
 # … edit, commit (lint-staged + commitlint hooks run automatically) …
 git push -u origin <type>/<short-slug>             # push branch
-gh pr create --title "<conventional-commit-style>" --body "<summary + test plan>"
-gh pr merge <n> --rebase --auto                    # queue auto-merge once CI is green
+gh pr create --base develop --title "<conventional-commit-style>" --body "<summary + test plan>"
+# Stop and wait for the user to merge. Do not auto-merge.
 ```
-
-Use `--rebase` (or `--squash`) — **never `--merge`** (a merge commit fails the linear-history check).
 
 **Branch naming:** mirror the Conventional Commit prefix — `feat/...`, `fix/...`, `chore/...`, `docs/...`, `refactor/...`.
 
-**Required CI status checks** (set in branch protection, must be green before merge):
+### Release PRs (develop → main)
+
+Release PRs are the only PRs that target `main`. Open from `develop` with a `release:` title and a changelog summary; squash-merge once CI is green; tag the resulting commit on `main`.
+
+### Branch protection
+
+| Branch    | `enforce_admins` | Linear history | Merge methods                            |
+| --------- | ---------------- | -------------- | ---------------------------------------- |
+| `main`    | `true`           | required       | squash only (enforced by linear history) |
+| `develop` | `false`          | not required   | squash or merge commit                   |
+
+Both branches require the same status checks before merge:
 
 - `Lint · Type-check · Test · Build` — `.github/workflows/ci.yml`, job `quality`
 - `CSpell` — `.github/workflows/cspell.yml`, job `spell`
 
-**Approval policy:** the maintainer (`awaisali88`) self-merges; required approvals is `0`. Do not raise this to 1+ until a second collaborator exists. **Do NOT auto-merge PRs without checking with the user first** — the user approves merges into `main`, the agent only queues them on explicit confirmation.
+Both workflows fire on PRs to either `main` or `develop`.
+
+**Approval policy:** the maintainer (`awaisali88`) self-merges; required approvals is `0`. Do not raise this to 1+ until a second collaborator exists. **Do NOT auto-merge PRs without checking with the user first** — the user approves every merge.
 
 ### Critical "don'ts"
 
-- **Never run `git push origin main`** — it will be rejected, and the attempt itself indicates you missed this section.
-- **Never edit `main` directly.** Confirm `git branch --show-current` is a feature branch before any edit.
-- **Never amend a published commit** or force-push to `main` — both blocked by protection, but also bad practice on a shared branch.
-- **Never skip the PR** for "trivial" changes — the required CI checks only run on PRs. Same path for one-line typo fixes as for major features.
+- **Never run `git push origin main`** or `git push origin develop` — both will be rejected.
+- **Never edit `main` or `develop` directly.** Confirm `git branch --show-current` is a feature branch before any edit.
+- **Never amend a published commit** or force-push — both blocked by protection.
+- **Never skip the PR** for "trivial" changes — required CI checks only run on PRs.
+- **Never use `--merge` for PRs to `main`** — main requires linear history; squash or rebase the merge method.
 
-### If you've already made changes on `main` by mistake
+### If you've already made changes on a protected branch by mistake
 
 1. Don't push, don't panic.
 2. `git checkout -b <type>/<slug>` — your modifications follow you to the new branch.
@@ -256,7 +288,10 @@ Use `--rebase` (or `--squash`) — **never `--merge`** (a merge commit fails the
 
 ### How to inspect / modify branch protection
 
-`gh api repos/uraanai/CommandVue/branches/main/protection`. Settings live there; don't loosen without the user's explicit go-ahead.
+- `gh api repos/uraanai/CommandVue/branches/main/protection`
+- `gh api repos/uraanai/CommandVue/branches/develop/protection`
+
+Settings live there; don't loosen without the user's explicit go-ahead.
 
 ---
 
