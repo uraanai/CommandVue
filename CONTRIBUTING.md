@@ -54,11 +54,51 @@ We use [Conventional Commits](https://www.conventionalcommits.org/), enforced by
 
 Example: `feat(panels): add markdown briefing panel`.
 
-## Branching
+## Branch strategy
 
-- `main` is always shippable. CI must be green on every push.
-- Open PRs from a feature branch (`feat/<short-name>`, `fix/<short-name>`, etc.).
-- Squash on merge unless a per-commit history is meaningful.
+CommandVue uses a GitFlow-style workflow:
+
+| Branch                                               | Purpose                                             | Receives PRs from            |
+| ---------------------------------------------------- | --------------------------------------------------- | ---------------------------- |
+| `main`                                               | Protected. Release-only. Tagged versions live here. | `develop` (release PRs only) |
+| `develop`                                            | Long-lived integration branch. Day-to-day target.   | Feature branches             |
+| `feat/*`, `fix/*`, `docs/*`, `refactor/*`, `chore/*` | Short-lived work branches                           | (branch off `develop`)       |
+
+### Day-to-day workflow
+
+```bash
+git checkout develop
+git pull origin develop
+git checkout -b feat/my-feature
+
+# do work, commit using Conventional Commits
+
+git push -u origin feat/my-feature
+gh pr create --base develop --title "feat: my feature" --body "..."
+```
+
+After review and CI green, merge to `develop`. The branch auto-deletes after merge.
+
+### Release workflow
+
+When `develop` is stable and ready to ship:
+
+```bash
+git checkout develop
+git pull origin develop
+gh pr create --base main --title "release: <version>" --body "<changelog summary>"
+# After merge:
+git checkout main
+git pull origin main
+git tag -a v<version> -m "<release notes>"
+git push origin v<version>
+```
+
+### Branch protection summary
+
+- **`main`**: requires CI (`Lint · Type-check · Test · Build`) and `CSpell` passing, linear history, `enforce_admins: true`, no force-push, no deletion, conversation resolution required. Squash-merge only.
+- **`develop`**: requires the same status checks passing, no force-push, no deletion. Merge commits allowed (preserves PR boundaries during integration).
+- Self-merge is permitted on both branches because the project currently has one active maintainer. Reviewer discipline is by convention.
 
 ## Coding rules
 
