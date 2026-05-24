@@ -8,6 +8,17 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 
 ### Added
 
+- **`<DataTable>` wrapper component — CommandVue's default tabular-data primitive.**
+  - `src/components/ui/DataTable.vue` — generic over `TData`, built on `@tanstack/vue-table` (state) + `@tanstack/vue-virtual` (windowing).
+  - Three density modes (`compact` / `comfortable` / `spacious`) via CSS data-attribute; sortable, filterable, resizable columns; column visibility toggle; sticky header and optional sticky first column; keyboard accessibility (`aria-sort`, focusable headers, Enter/Space).
+  - Supporting modules at `src/components/ui/datatable/`: `types.ts` (public types incl. `DataTableProps`), `columnHelpers.ts` (re-exports `createColumnHelper` + `formatDateColumn` / `formatNumberColumn`), `useDataTableState.ts` (external-state composable for advanced consumers).
+  - Demo route at `/dev/datatable` (gated behind `import.meta.env.DEV` — never ships in production builds) — 1,000 mock rows exercising every feature.
+  - 11 unit tests in `tests/unit/components/ui/DataTable.spec.ts`.
+- **`docs/decisions/0001-datatable-library.md`** — architecture decision record establishing `@tanstack/vue-table` as the default. Explicitly scoped: tabular-data only. Every other UI surface (menus, dialogs, color pickers, file uploads, form controls, fieldsets, tags) still follows the library-first PrimeVue rule.
+- **`docs/datatable.md`** — full props / events / slots reference, common patterns, accessibility notes, performance tuning, and a PrimeVue → wrapper migration guide. Registered in the VitePress sidebar under "Building".
+- **`docs/audits/datatable-usage-inventory.md`** — snapshot of every `primevue/datatable` site at the time of the policy reversal, with migration phase per file.
+- **PR labeler for `primevue/datatable` governance.**
+  - `.github/workflows/datatable-governance.yml` — auto-applies the `governance: primevue-datatable` label when a PR diff introduces or touches a `primevue/datatable` import. (Custom diff-grep approach because `actions/labeler` v5 only supports path globs, not file content.)
 - **Workspace / layout / preset / chrome storage layer (Phase A of the workspace system).**
   - Six typed IndexedDB repositories: `workspaceRepo`, `layoutRepo`, `panelStateRepo`, `presetRepo`, `chromeProfileRepo`, `appMetaRepo` under `src/modules/storage/`.
   - ULID-based ids via the new `ulid` runtime dependency; `src/modules/storage/ids.ts` is now the canonical id source for persisted entities (`src/utils/id.ts` nanoid stays for ephemeral ids).
@@ -26,6 +37,10 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 
 ### Changed
 
+- **`EntityListPanel` migrated to the `<DataTable>` wrapper.** Replaces the prior `primevue/datatable` implementation introduced during PR #65. Header content and filter-icon alignment are now driven by the wrapper's CSS-grid header layout (1fr title + auto icons), eliminating the column-by-column misalignment present in the PrimeVue version. Panel state — sort, global filter text, column visibility, density — persists across workspace reloads via `usePanelState` and the new wrapper events.
+- **ESLint warn-level rule on `primevue/datatable` imports.** `eslint.config.ts` adds a `no-restricted-imports` rule that surfaces the choice during local lint and CI. Severity is `warn`, not `error` — it doesn't block CI; intent is reviewer visibility. Fires currently on `TelemetryPanel.vue` and three manage-X dialogs (tracked in `docs/audits/datatable-usage-inventory.md` for follow-up migration PRs).
+- **`commandvue-panel-development` agent skill updated.** New "Data tables" section teaches future agent sessions to reach for the wrapper, points at `EntityListPanel` as the canonical example, and links to the ADR. The library-first reminder at the top now lists tabular data as the one governed exception.
+- **`CLAUDE.md` library-first mapping and locked-stack tables** point at the wrapper as the canonical path; the new "Data tables — TanStack default" policy section documents the escape valve and links to the ADR (added in Phase 1.1, refined here).
 - **Storage seed: align panel type ids with existing Dockview registrations.** `SEED_PANEL_TYPES` now uses `entities` (not `entity-list`) so the seeded `panel-states` match the strings passed to `app.component()` and `addPanel({ component: ... })`.
 - **Workspace-aware stores and session management (Phase C of the workspace system).**
   - `src/stores/workspace.ts` — `useWorkspaceStore` over `workspaceRepo`; loads workspaces, tracks `currentWorkspaceId`, persists the pointer to `app-meta` (`current-workspace-id`).

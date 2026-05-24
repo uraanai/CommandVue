@@ -1,23 +1,58 @@
 <script setup lang="ts">
-import Column from "primevue/column";
-import DataTable from "primevue/datatable";
-import { computed } from "vue";
+import type {
+  DataTableDensity,
+  SortingState,
+  VisibilityState,
+} from "@/components/ui/datatable/types";
+import type { DockviewPanelApi } from "dockview-vue";
 
+import { computed, ref } from "vue";
+
+import DataTable from "@/components/ui/DataTable.vue";
+import { createColumnHelper } from "@/components/ui/datatable/columnHelpers";
+import Input from "@/components/ui/Input.vue";
+import Select from "@/components/ui/Select.vue";
+import { usePanelState } from "@/composables/usePanelState";
 import { renderSidcToSvg } from "@/modules/symbology/render";
 import { useEntitiesStore, type Entity } from "@/stores/entities";
 import { cn } from "@/utils/cn";
 import { formatLatLon } from "@/utils/format";
 
 /**
- * EntityListPanel — sortable list of tracked entities.
+ * EntityListPanel — sortable, filterable list of tracked entities.
  *
- * Backed by PrimeVue `DataTable` (sortable columns, sticky headers).
- * Replaced the previous `@tanstack/vue-table` implementation during the
- * PrimeVue-first audit — DataTable covers the project's table needs natively
- * and matches the styling already used in the management dialogs.
+ * Built on the project's `<DataTable>` wrapper (TanStack Vue Table + Vue
+ * Virtual) per the ADR at `docs/decisions/0001-datatable-library.md`. Panel
+ * state — sort, global filter text, column visibility, density — persists
+ * across workspace reloads via `usePanelState`.
  */
+
+interface Props {
+  api?: DockviewPanelApi;
+}
+
+interface EntityListPanelState extends Record<string, unknown> {
+  sorting: SortingState;
+  filterText: string;
+  visibility: VisibilityState;
+  density: DataTableDensity;
+}
+
+const props = defineProps<Props>();
+
 const entities = useEntitiesStore();
 const data = computed(() => entities.entities);
+
+const sorting = ref<SortingState>([{ id: "name", desc: false }]);
+const filterText = ref<string>("");
+const visibility = ref<VisibilityState>({});
+const density = ref<DataTableDensity>("compact");
+
+const densityOptions: { label: string; value: DataTableDensity }[] = [
+  { label: "Compact", value: "compact" },
+  { label: "Comfortable", value: "comfortable" },
+  { label: "Spacious", value: "spacious" },
+];
 
 const affiliationClass: Record<Entity["affiliation"], string> = {
   friend: "text-blue-400",
@@ -30,17 +65,71 @@ function symbolSvg(entity: Entity): string {
   return renderSidcToSvg(entity.sidc, { size: 22 });
 }
 
-const tablePT = {
-  root: { class: "h-full" },
-  tableContainer: { class: "h-full" },
-  table: { class: "text-foreground w-full text-xs" },
-  thead: { class: "bg-surface-raised text-muted sticky top-0 z-10" },
-  headerRow: { class: "border-border border-b" },
-  headerCell: { class: "px-2 py-1.5 text-left font-medium select-none cursor-pointer" },
-  bodyRow: { class: "hover:bg-surface-raised border-border border-b" },
-  bodyCell: { class: "px-2 py-1" },
-  sortIcon: { class: "ml-1 inline-flex" },
-};
+const helper = createColumnHelper<Entity>();
+
+const columns = computed(() => [
+  helper.display({
+    id: "symbol",
+    header: "",
+    size: 36,
+    enableSorting: false,
+    enableHiding: false,
+  }),
+  helper.accessor("name", { id: "name", header: "Callsign", size: 160 }),
+  helper.accessor("affiliation", { id: "affiliation", header: "Affiliation", size: 120 }),
+  helper.display({ id: "position", header: "Position", size: 160, enableSorting: false }),
+  helper.accessor("altitudeMeters", { id: "altitudeMeters", header: "Alt (m)", size: 100 }),
+  helper.accessor("speedKnots", { id: "speedKnots", header: "Speed (kn)", size: 110 }),
+  helper.accessor("headingDegrees", { id: "headingDegrees", header: "Heading", size: 110 }),
+]);
+
+const persisted = props.api
+  ? usePanelState<EntityListPanelState>(props.api.id, {
+      serialize: () => ({
+        sorting: sorting.value,
+        filterText: filterText.value,
+        visibility: visibility.value,
+        density: density.value,
+      }),
+      restore: (state) => {
+        if (Array.isArray(state.sorting)) sorting.value = state.sorting;
+        if (typeof state.filterText === "string") filterText.value = state.filterText;
+        if (state.visibility && typeof state.visibility === "object") {
+          visibility.value = state.visibility;
+        }
+        if (
+          state.density === "compact" ||
+          state.density === "comfortable" ||
+          state.density === "spacious"
+        ) {
+          density.value = state.density;
+        }
+      },
+    })
+  : null;
+
+function persistChange(): void {
+  persisted?.save();
+}
+
+function onSortChange(next: SortingState): void {
+  sorting.value = next;
+  persistChange();
+}
+function onGlobalFilterChange(next: string): void {
+  filterText.value = next;
+  persistChange();
+}
+function onVisibilityChange(next: VisibilityState): void {
+  visibility.value = next;
+  persistChange();
+}
+function onDensityChange(value: null | number | string): void {
+  if (value === "compact" || value === "comfortable" || value === "spacious") {
+    density.value = value;
+    persistChange();
+  }
+}
 </script>
 
 <template>
@@ -56,55 +145,63 @@ const tablePT = {
       <span class="text-yellow-400">unknown: {{ entities.totalsByAffiliation.unknown }}</span>
     </header>
 
-    <div class="min-h-0 flex-1 overflow-auto">
+    <div class="min-h-0 flex-1">
       <DataTable
-        :value="data"
-        data-key="id"
-        sort-field="name"
-        :sort-order="1"
-        size="small"
-        :pt="tablePT"
+        :data="data"
+        :columns="columns"
+        row-key="id"
+        :density="density"
+        :sticky-header="true"
+        :sticky-first-column="true"
+        :global-filter="filterText"
+        @sort-change="onSortChange"
+        @global-filter-change="onGlobalFilterChange"
+        @column-visibility-change="onVisibilityChange"
       >
-        <Column header="" header-style="width: 2rem">
-          <template #body="{ data: row }">
-            <!-- eslint-disable-next-line vue/no-v-html -- milsymbol returns sanitized SVG -->
-            <span class="flex h-5 items-center" v-html="symbolSvg(row)" />
-          </template>
-        </Column>
-        <Column field="name" header="Callsign" sortable>
-          <template #body="{ data: row }">
-            <span class="font-medium">{{ row.name }}</span>
-          </template>
-        </Column>
-        <Column field="affiliation" header="Affiliation" sortable>
-          <template #body="{ data: row }">
-            <span :class="cn(affiliationClass[row.affiliation as Entity['affiliation']])">
-              {{ row.affiliation }}
-            </span>
-          </template>
-        </Column>
-        <Column header="Position">
-          <template #body="{ data: row }">
-            <span class="font-mono">
-              {{ formatLatLon(row.position.lat, row.position.lon, 2) }}
-            </span>
-          </template>
-        </Column>
-        <Column field="altitudeMeters" header="Alt (m)" sortable>
-          <template #body="{ data: row }">
-            <span class="font-mono">{{ row.altitudeMeters ?? "—" }}</span>
-          </template>
-        </Column>
-        <Column field="speedKnots" header="Speed (kn)" sortable>
-          <template #body="{ data: row }">
-            <span class="font-mono">{{ row.speedKnots?.toFixed(1) ?? "—" }}</span>
-          </template>
-        </Column>
-        <Column field="headingDegrees" header="Heading" sortable>
-          <template #body="{ data: row }">
-            <span class="font-mono">{{ row.headingDegrees ?? "—" }}°</span>
-          </template>
-        </Column>
+        <template #toolbar>
+          <div class="flex w-full flex-wrap items-center gap-2">
+            <Input v-model="filterText" placeholder="Filter entities…" class="w-48" />
+            <Select
+              :model-value="density"
+              :options="densityOptions"
+              class="w-36"
+              @update:model-value="onDensityChange"
+            />
+          </div>
+        </template>
+
+        <template #cell-symbol="{ row }">
+          <!-- eslint-disable-next-line vue/no-v-html -- milsymbol returns sanitized SVG -->
+          <span class="flex h-5 items-center" v-html="symbolSvg(row as Entity)" />
+        </template>
+
+        <template #cell-name="{ row }">
+          <span class="font-medium">{{ (row as Entity).name }}</span>
+        </template>
+
+        <template #cell-affiliation="{ row }">
+          <span :class="cn(affiliationClass[(row as Entity).affiliation])">
+            {{ (row as Entity).affiliation }}
+          </span>
+        </template>
+
+        <template #cell-position="{ row }">
+          <span class="font-mono">
+            {{ formatLatLon((row as Entity).position.lat, (row as Entity).position.lon, 2) }}
+          </span>
+        </template>
+
+        <template #cell-altitudeMeters="{ value }">
+          <span class="font-mono">{{ value ?? "—" }}</span>
+        </template>
+
+        <template #cell-speedKnots="{ value }">
+          <span class="font-mono">{{ typeof value === "number" ? value.toFixed(1) : "—" }}</span>
+        </template>
+
+        <template #cell-headingDegrees="{ value }">
+          <span class="font-mono">{{ value ?? "—" }}°</span>
+        </template>
       </DataTable>
     </div>
   </div>
