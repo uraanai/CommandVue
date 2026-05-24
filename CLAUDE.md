@@ -116,9 +116,33 @@ Do not substitute libraries from this list without explicit instruction.
 
 ---
 
-## UI primitives — Volt vs hand-rolled
+## UI primitives — PrimeVue-first rule
 
-See `docs/decisions/0002-volt-vs-handrolled-wrappers.md` for the active decision (currently `Proposed` — will be updated to `Accepted` once the user signs off in Phase 2.2 of Prompt 2). Supporting inventories: `docs/audits/ui-wrappers-inventory.md` and `docs/audits/primevue-component-usage.md`.
+CommandVue uses PrimeVue (unstyled mode) as the foundation for all UI primitives. The active decision is **Option C — hybrid** from ADR 0002.
+
+- **Chosen approach:** hybrid — density-critical / project-API-masked primitives stay hand-rolled in `src/components/ui/*`; general-purpose primitives are installed via Volt (`npx volt-vue add <Name>`) to `src/volt/*`. See `docs/decisions/0002-volt-vs-handrolled-wrappers.md` for the full rationale and the file-by-file split.
+- **Default location for new UI primitives:**
+  - Density-critical (used in dense lists/forms) or surfaces a deliberately narrowed API → `src/components/ui/<Name>.vue` (hand-rolled).
+  - General-purpose, one-off, or composed of standard PrimeVue surfaces → `src/volt/<Name>.vue` (installed via Volt).
+  - When in doubt: install via Volt first; promote to hand-rolled only if the consumer surface demands it.
+- **Stays hand-rolled today:** `Button`, `IconButton`, `Select`, `Tabs`, `Toast`, `Tooltip` (specialized — floating-ui), `ColorPicker` (specialized — palette + popover), plus `DataTable` (separate; governed by ADR 0001).
+- **Adopts Volt today:** `Dialog`, `Input` (PrimeVue `InputText`), `Checkbox`, `Slider`, `Textarea`, `Fieldset`, `Tag`, `Menu`, `Menubar`, `ContextMenu`, `FileUpload`.
+- **Forbidden:** raw `<button>`, `<input>`, `<select>`, `<textarea>` outside the UI-primitive definitions themselves. Use the wrapper or the Volt file. ESLint enforces this in Phase 2.4 (warn-level).
+- **Forbidden:** non-PrimeVue UI libraries (Element Plus, Naive UI, Vuetify, reka-ui, etc.) without an ADR justifying the exception. `@tanstack/vue-table` is the documented exception per ADR 0001 — tabular data only.
+
+### When adding a new UI primitive
+
+1. Check the PrimeVue catalog (https://primevue.org). If it exists and matches the use case, decide between the two installation targets above and install/wrap accordingly.
+2. Check the Volt catalog (https://volt.primevue.org). If Volt covers it and the component fits the "general-purpose" criterion, prefer `npx volt-vue add <Name>` over hand-rolling.
+3. If neither has it, document the rationale in the component file's header comment and proceed with a thin hand-rolled wrapper in `src/components/ui/<Name>.vue`.
+4. Downstream apps override styling via Tailwind classes (Volt) or `:pt` passthrough (hand-rolled wrappers). Both resolve to the project's CSS-token vocabulary.
+
+### Active artifacts
+
+- ADR: `docs/decisions/0002-volt-vs-handrolled-wrappers.md` (Accepted 2026-05-24).
+- Compliance audit: `docs/audits/primevue-firstrule-audit-2026-05-24.md`. Tracks Phase 2.3 migration scope.
+- Wrapper inventory: `docs/audits/ui-wrappers-inventory.md`.
+- PrimeVue usage inventory: `docs/audits/primevue-component-usage.md`.
 
 ---
 
