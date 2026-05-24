@@ -190,3 +190,5 @@ postgres
 Postgres
 RLS
 auth
+dismissable
+usetoast
