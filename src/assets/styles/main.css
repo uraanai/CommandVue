@@ -164,6 +164,22 @@
 }
 
 /*
+ * Cursor affordance for interactive elements.
+ *
+ * Browser default for `<button>` is `cursor: default`, which makes
+ * top-bar / status-bar / menubar buttons feel unclickable. PrimeVue's
+ * unstyled mode also doesn't add `cursor: pointer` automatically.
+ * This rule scopes the pointer cursor to non-disabled interactive
+ * elements site-wide so we don't have to add `cursor-pointer` to
+ * every wrapper / consumer.
+ */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+[role="menuitem"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
+/*
  * PrimeVue Menubar — nested fly-out positioning.
  *
  * The Menubar's first-level dropdown opens below its menubar item (top:full,

@@ -2,6 +2,7 @@
 import type { PanelDefinition } from "@/modules/panels/types";
 import type { MenuItem } from "primevue/menuitem";
 
+import { ChevronDown, ChevronRight } from "@lucide/vue";
 import FileUpload, { type FileUploadSelectEvent } from "primevue/fileupload";
 import Menubar from "primevue/menubar";
 import { computed, ref } from "vue";
@@ -302,29 +303,34 @@ const menuItems = computed<MenuItem[]>(() => [
       },
       item: { class: 'block' },
       separator: { class: 'my-1 border-t border-border' },
+      // PrimeVue Menubar ships a built-in mobile-toggle (hamburger). CommandVue
+      // is a desktop-first operations dashboard — hide it so the top bar starts
+      // cleanly at File / Edit / View.
+      button: { class: 'hidden' },
     }"
   >
     <template #item="{ item, props: itemProps, hasSubmenu, root }">
       <a v-bind="itemProps.action" class="flex items-center">
         <span
           :class="[
-            'flex w-full items-center gap-2 px-2 py-1 text-xs',
+            'flex w-full items-center gap-1 rounded',
             root
-              ? 'text-muted hover:text-foreground rounded'
-              : 'text-foreground hover:bg-surface-sunken cursor-pointer rounded px-3 py-1.5 text-sm',
+              ? 'text-muted hover:text-foreground hover:bg-surface-sunken px-2 py-1 text-xs'
+              : 'text-foreground hover:bg-surface-sunken cursor-pointer px-3 py-1.5 text-sm',
             (item as MenuItem & { disabled?: boolean }).disabled
               ? 'cursor-not-allowed opacity-40'
               : '',
           ]"
         >
-          <span class="flex-1">{{ item.label }}</span>
+          <span class="flex-1 leading-none">{{ item.label }}</span>
           <span
             v-if="(item as MenuItem & { shortcut?: string }).shortcut"
             class="text-faint font-mono text-[10px]"
           >
             {{ (item as MenuItem & { shortcut?: string }).shortcut }}
           </span>
-          <span v-if="hasSubmenu" class="text-faint text-xs">▸</span>
+          <ChevronDown v-if="hasSubmenu && root" class="text-faint size-3" />
+          <ChevronRight v-else-if="hasSubmenu" class="text-faint size-3.5" />
         </span>
       </a>
     </template>
