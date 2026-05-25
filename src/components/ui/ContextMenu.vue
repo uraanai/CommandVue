@@ -2,25 +2,36 @@
 import type { MenuItem } from "primevue/menuitem";
 
 import PvContextMenu from "primevue/contextmenu";
-import { ref } from "vue";
+import { twMerge } from "tailwind-merge";
+import { computed, ref } from "vue";
 
 /**
  * ContextMenu — thin wrapper over PrimeVue `ContextMenu` in Unstyled mode.
  *
  * Hand-rolled exception to the Volt-default rule (ADR 0002 Option C): Volt's
  * catalog as of 2026-05-24 has no `ContextMenu` component. Tracked for
- * promotion to `@/volt/ContextMenu.vue` if Volt ships it later. See
- * `docs/decisions/0002-volt-vs-handrolled-wrappers.md` and
- * `docs/audits/primevue-firstrule-audit-2026-05-24.md`.
+ * promotion to `@/volt/ContextMenu.vue` if Volt ships it later.
  *
  * Exposes `show(event)` and `hide()` from the underlying PrimeVue instance so
- * callers can drive it imperatively from a `@contextmenu` handler.
+ * callers can drive it imperatively from a `@contextmenu` handler. Consumers
+ * can supply an `#item` slot template to fully customize each row (shortcuts,
+ * chevrons, custom icons) — same pattern as the project Menubar wrapper.
+ *
+ * The `pt` prop merges into the wrapper's defaults via `twMerge` on class
+ * strings, so consumers can override per-slot styling without losing the
+ * structural shell.
  */
-interface Props {
-  model: MenuItem[];
+interface PtSlot {
+  class?: string;
+  [key: string]: unknown;
 }
 
-defineProps<Props>();
+interface Props {
+  model: MenuItem[];
+  pt?: Record<string, PtSlot>;
+}
+
+const props = defineProps<Props>();
 
 const cm = ref<InstanceType<typeof PvContextMenu> | null>(null);
 
@@ -33,30 +44,46 @@ function hide(): void {
 }
 
 defineExpose({ show, hide });
+
+const baseTheme: Record<string, PtSlot> = {
+  root: {
+    class: "border-border bg-surface-raised z-50 min-w-[220px] rounded-md border py-1 shadow-xl",
+  },
+  rootList: { class: "flex flex-col" },
+  item: { class: "relative" },
+  itemContent: { class: "hover:bg-surface-sunken cursor-pointer transition-colors" },
+  itemLink: {
+    class: "text-foreground flex items-center gap-2 px-3 py-1.5 text-sm",
+  },
+  itemIcon: { class: "text-muted size-3.5" },
+  submenu: {
+    class: "border-border bg-surface-raised z-50 min-w-[220px] rounded-md border py-1 shadow-xl",
+  },
+  submenuIcon: { class: "text-muted ml-auto size-3" },
+  separator: { class: "border-border my-1 border-t" },
+};
+
+const mergedPt = computed(() => {
+  const consumer = props.pt ?? {};
+  const out: Record<string, PtSlot> = {};
+  const keys = new Set([...Object.keys(baseTheme), ...Object.keys(consumer)]);
+  for (const key of keys) {
+    const base = baseTheme[key] ?? {};
+    const over = consumer[key] ?? {};
+    out[key] = {
+      ...base,
+      ...over,
+      class: twMerge(base.class, over.class),
+    };
+  }
+  return out;
+});
 </script>
 
 <template>
-  <PvContextMenu
-    ref="cm"
-    :model="model"
-    :pt="{
-      root: {
-        class:
-          'border-border bg-surface-raised z-50 min-w-[200px] rounded-md border py-1 shadow-lg',
-      },
-      rootList: { class: 'flex flex-col' },
-      item: { class: 'relative' },
-      itemContent: { class: 'hover:bg-surface-sunken cursor-pointer transition-colors' },
-      itemLink: {
-        class: 'text-foreground flex items-center gap-2 px-3 py-1.5 text-xs',
-      },
-      itemIcon: { class: 'text-muted size-3.5' },
-      submenu: {
-        class:
-          'border-border bg-surface-raised absolute top-0 left-full ml-0.5 min-w-[200px] rounded-md border py-1 shadow-lg',
-      },
-      submenuIcon: { class: 'text-muted ml-auto size-3' },
-      separator: { class: 'border-border my-1 border-t' },
-    }"
-  />
+  <PvContextMenu ref="cm" :model="model" unstyled :pt="mergedPt">
+    <template v-if="$slots.item" #item="slotProps">
+      <slot name="item" v-bind="slotProps" />
+    </template>
+  </PvContextMenu>
 </template>

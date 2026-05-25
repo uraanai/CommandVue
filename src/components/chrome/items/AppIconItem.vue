@@ -1,19 +1,19 @@
 <script setup lang="ts">
 import type { MenuItem } from "primevue/menuitem";
 
-import { Hexagon } from "@lucide/vue";
-import ContextMenu from "primevue/contextmenu";
+import { ChevronRight, Hexagon } from "@lucide/vue";
 import { computed, ref } from "vue";
 
 import ManageLayoutsDialog from "@/components/dialogs/ManageLayoutsDialog.vue";
 import ManageWorkspacesDialog from "@/components/dialogs/ManageWorkspacesDialog.vue";
 import SaveLayoutAsDialog from "@/components/dialogs/SaveLayoutAsDialog.vue";
+import Button from "@/components/ui/Button.vue";
+import ContextMenu from "@/components/ui/ContextMenu.vue";
 import { formatCombo } from "@/modules/shortcuts/catalog";
 import { useChromeStore } from "@/stores/chrome";
 import { useLayoutStore } from "@/stores/layout";
 import { useSessionStore } from "@/stores/session";
 import { useWorkspaceStore } from "@/stores/workspace";
-import { cn } from "@/utils/cn";
 
 /**
  * AppIconItem — the always-on chrome item.
@@ -116,32 +116,12 @@ async function onSaveAs(payload: {
 
 <template>
   <div class="flex items-center" @contextmenu="onContextMenu">
-    <button
-      type="button"
-      class="text-foreground hover:bg-surface-sunken flex items-center gap-1.5 rounded px-2 py-1"
-      title="Right-click for app menu"
-    >
+    <Button variant="ghost" size="sm" title="Right-click for app menu">
       <Hexagon class="text-accent-500 size-4" />
       <span class="text-sm font-semibold tracking-tight">CommandVue</span>
-    </button>
+    </Button>
 
-    <ContextMenu
-      ref="cm"
-      :model="menuItems"
-      :pt="{
-        root: {
-          class: cn(
-            'absolute z-[100] min-w-[220px] rounded-md border border-border bg-surface-raised py-1 shadow-xl',
-          ),
-        },
-        submenu: {
-          class: cn(
-            'absolute z-[100] min-w-[220px] rounded-md border border-border bg-surface-raised py-1 shadow-xl',
-          ),
-        },
-        separator: { class: 'my-1 border-t border-border' },
-      }"
-    >
+    <ContextMenu ref="cm" :model="menuItems">
       <template #item="{ item, props: itemProps, hasSubmenu }">
         <a v-bind="itemProps.action" class="flex items-center">
           <span
@@ -160,7 +140,7 @@ async function onSaveAs(payload: {
             >
               {{ (item as MenuItem & { shortcut?: string }).shortcut }}
             </span>
-            <span v-if="hasSubmenu" class="text-faint text-xs">▸</span>
+            <ChevronRight v-if="hasSubmenu" class="text-faint size-3.5" />
           </span>
         </a>
       </template>
