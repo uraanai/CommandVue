@@ -8,6 +8,15 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 
 ### Added
 
+- **PrimeVue-first rule enforcement (Phase 2.4 — capstone of Prompt 2).**
+  - ESLint `vue/no-restricted-html-elements` warns on raw `<button>`, `<input>`, `<select>`, `<textarea>` in `.vue` templates outside `src/components/ui/**` and `src/volt/**`. Message points at the wrapper to use plus `docs/contributing-ui.md`.
+  - ESLint `@typescript-eslint/no-restricted-imports` warns on direct `primevue/*` component imports from consumer files. `allowTypeImports: true` lets `import type { ... } from "primevue/*"` through automatically. Helper modules (`primevue/menuitem`, `primevue/config`, `primevue/api`, `primevue/usetoast`, `primevue/useconfirm`) are excluded via negation patterns; `primevue/datatable` and `primevue/column` are excluded because the more specific ADR 0001 named rule already covers them.
+  - New ESLint override `commandvue/ui-primitives` disables the two rules above for `src/components/ui/**` and `src/volt/**` so the primitives themselves can use raw HTML and direct `primevue/*` imports.
+  - New GitHub Actions workflow `.github/workflows/ui-primitive-governance.yml` — scans PR diffs for added raw HTML interactive elements outside the primitive directories and applies the `governance: raw-html-element` label. Mirrors the datatable-governance pattern; informational, not blocking.
+  - PR template gains two governance checkboxes for raw-HTML deviations and direct `primevue/*` consumer imports.
+  - New `docs/contributing-ui.md` — full contributor reference: when to use Volt vs hand-rolled wrappers, complete mappings table, styling patterns, enforcement layers, deviation workflow. Registered in the VitePress sidebar under "Building".
+  - `CONTRIBUTING.md` gains a "## UI primitives" section summarizing the rule with a pointer to the new doc.
+  - Four agent skills (`commandvue-panel-development`, `commandvue-chrome-system`, `commandvue-preset-development`, `commandvue-workspace-system`) gain an "Enforcement (Phase 2.4)" paragraph pointing at the new doc and ADR 0002.
 - **Volt foundation for PrimeVue-first UI primitives.**
   - Installed 9 Volt components into `src/volt/` via `npx volt-vue add`: `Dialog`, `InputText`, `Checkbox`, `Slider`, `Textarea`, `Fieldset`, `Tag`, `Menu`, `SecondaryButton`. Each lives in the codebase as ownable source rather than a dependency.
   - Added `tailwindcss-primeui` plugin to `src/assets/styles/main.css` so Volt's `surface-N` palette and `p-filled` / `p-invalid` / `p-fluid` / `p-small` / `p-large` variants resolve.

@@ -13,6 +13,8 @@ when_to_use: |
 
 > **Library-first reminder:** any UI surface inside this subsystem (management dialogs, save-as flows, import/export wiring) must use PrimeVue components — never hand-rolled equivalents. The portable-JSON import flow specifically uses PrimeVue `FileUpload` (`mode="basic"` + `customUpload` + ref-triggered `choose()`), not a DOM `input[type=file]`. See [`CLAUDE.md → Library-first rule`](../../../CLAUDE.md) and [`workflows/library-first.md`](../../workflows/library-first.md).
 
+> **Enforcement (Phase 2.4):** ESLint warns on raw `<button>`, `<input>`, `<select>`, `<textarea>` and on direct `primevue/*` component imports from consumer files (type-only imports are allowed). The `UI primitive governance` GitHub Action labels deviating PRs. Management dialogs and import/export flows consume `src/volt/Dialog.vue`, `src/volt/FileUpload.vue`, `src/components/ui/Button.vue` — never raw HTML. Full how-to: [`docs/contributing-ui.md`](../../../docs/contributing-ui.md). Rationale: [ADR 0002](../../../docs/decisions/0002-volt-vs-handrolled-wrappers.md).
+
 The workspace system owns the data model: workspaces contain layouts contain panel-states. Repositories persist to IndexedDB; Pinia stores wrap the repos as read-through caches; one session store bridges the persisted state to the live Dockview instance.
 
 ## The four stores

@@ -65,7 +65,11 @@ export default defineConfigWithVueTs(
       ],
       "vue/multi-word-component-names": "off",
       "no-console": ["warn", { allow: ["warn", "error"] }],
-      "no-restricted-imports": [
+      // Use the @typescript-eslint variant so `allowTypeImports` is honoured —
+      // `import type { MenuItem } from "primevue/menuitem"` is fine, but
+      // `import FileUpload from "primevue/fileupload"` in consumer code is not.
+      "no-restricted-imports": "off",
+      "@typescript-eslint/no-restricted-imports": [
         "warn",
         {
           paths: [
@@ -73,8 +77,42 @@ export default defineConfigWithVueTs(
               name: "primevue/datatable",
               message:
                 "CommandVue defaults to @tanstack/vue-table via the <DataTable> wrapper at src/components/ui/DataTable.vue. Use primevue/datatable only when justified — see docs/decisions/0001-datatable-library.md. Document the justification in your PR.",
+              allowTypeImports: true,
             },
           ],
+          patterns: [
+            {
+              // Restrict direct imports of PrimeVue *components* from consumer
+              // code. The negation entries below carve out paths that are not
+              // components and have no wrapper, plus the DataTable escape
+              // valve which already fires its more specific named rule above:
+              //   - menuitem      → types only (MenuItem interface)
+              //   - config / api  → app bootstrap singleton + util constants
+              //   - usetoast / useconfirm → composables consumed by wrappers
+              //   - datatable / column → governed by ADR 0001 (named rule above)
+              group: [
+                "primevue/*",
+                "!primevue/menuitem",
+                "!primevue/config",
+                "!primevue/api",
+                "!primevue/usetoast",
+                "!primevue/useconfirm",
+                "!primevue/datatable",
+                "!primevue/column",
+              ],
+              message:
+                "Direct primevue/* component imports are restricted to UI primitive files (src/components/ui/** and src/volt/**). Consumer code should import the project wrapper or Volt component instead — see docs/contributing-ui.md and docs/decisions/0002-volt-vs-handrolled-wrappers.md.",
+              allowTypeImports: true,
+            },
+          ],
+        },
+      ],
+      "vue/no-restricted-html-elements": [
+        "warn",
+        {
+          element: ["button", "input", "select", "textarea"],
+          message:
+            "Raw HTML interactive elements are restricted. Use the project's UI primitive wrappers in src/components/ui/* (Button, IconButton, Input, Select) or the Volt-vendored components in src/volt/* (Textarea, Checkbox, …). See docs/contributing-ui.md.",
         },
       ],
       "perfectionist/sort-imports": [
@@ -122,6 +160,24 @@ export default defineConfigWithVueTs(
       "@typescript-eslint/no-unsafe-function-type": "off",
       "@typescript-eslint/no-unused-vars": "off",
       "vue/no-v-html": "off",
+    },
+  },
+  {
+    // UI primitive layer — these files are the wrappers themselves, so raw
+    // HTML interactive elements and direct `primevue/*` imports are not only
+    // allowed, they're expected. The restrictions in `commandvue/rules` apply
+    // to *consumers* of these primitives.
+    //
+    // Mirrors the file split documented in ADR 0002:
+    //   - src/components/ui/*       → hand-rolled wrappers (Button, IconButton, …)
+    //   - src/volt/*                → Volt-vendored primitives
+    //   - src/components/ui/datatable/* → TanStack-backed DataTable internals
+    name: "commandvue/ui-primitives",
+    files: ["src/components/ui/**/*.{ts,vue}", "src/volt/**/*.{ts,vue}"],
+    rules: {
+      "no-restricted-imports": "off",
+      "@typescript-eslint/no-restricted-imports": "off",
+      "vue/no-restricted-html-elements": "off",
     },
   },
 );
