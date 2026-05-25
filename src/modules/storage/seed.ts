@@ -34,7 +34,7 @@ export const SEED_PANEL_TYPES = [
 export const DEFAULT_CHROME_SLOT_ASSIGNMENTS: Record<ChromeSlot, ChromeItemId[]> = {
   "top-left": ["app-icon", "menu-bar"],
   "top-center": [],
-  "top-right": ["workspace-switcher"],
+  "top-right": ["theme-toggle", "workspace-switcher"],
   "status-left": ["current-workspace-label", "current-layout-label", "dirty-indicator"],
   "status-center": [],
   "status-right": ["websocket-status", "clock", "edit-mode-toggle"],

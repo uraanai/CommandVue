@@ -51,6 +51,12 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 - **`SaveLayoutAsDialog` Checkbox swapped to `@/volt/Checkbox.vue`.** Drops the inline `:pt` overrides and the now-unused `cn` import.
 - **`ManagePresetsDialog` Tabs use the project `<Tabs>` wrapper.** The 5 direct `primevue/tabs*` imports are gone; tab labels render via the wrapper's new `#tab-{id}` named slots (icons + counts preserved).
 - **Extended `<Tabs>` wrapper with per-tab label slots.** New optional `#tab-{id}` named slot lets consumers customize a single tab's label with icons, badges, counts. Falls back to `{{ tab.label }}` when not provided. No breaking change.
+- **Migrated `AppIconItem`, `EditModeToggleItem`, `ChromeSlot`, and `ErrorBoundary` to PrimeVue-first primitives (PR 6 + folded PR 7 of Phase 2.3).**
+  - `AppIconItem`: `primevue/contextmenu` → `@/components/ui/ContextMenu.vue` wrapper; raw `<button>` trigger → `<Button variant="ghost">`. Unicode `▸` submenu indicator → Lucide `ChevronRight`.
+  - `EditModeToggleItem`: raw `<button>` → `<Button variant="ghost">`.
+  - `ChromeSlot`: hand-rolled "+ Add item" popup (trigger + outside-click + item list) rebuilt as a single Volt `Menu` (popup mode) per ADR 0002 audit decision **1a**. Drops the local `addOpen` ref. Trigger + remove-`×` badges now use `<IconButton>`. The trigger is disabled when no items remain to add.
+  - `ErrorBoundary`: raw "Try again" `<button>` → `<Button variant="primary">` (folds in PR 7 of Phase 2.3 — single-file change in the common area).
+- **Extended `ContextMenu` wrapper with `pt` prop + `#item` slot forwarding.** Mirrors the Menubar wrapper pattern from PR 5: consumer PT classes twMerge against wrapper defaults; consumers can supply a custom `#item` template for rich rendering (shortcuts, chevrons, etc.).
 - **Migrated `MenuBar`, `WorkspaceSwitcher`, `TitleBar`, and `CommandPalette` to PrimeVue-first primitives (PR 5 of Phase 2.3).**
   - `MenuBar`: `primevue/menubar` → `@/components/ui/Menubar.vue` wrapper (now accepts a `pt` prop that twMerge's with wrapper defaults so consumers can override per-slot classes without duplicating the structural fixes); `primevue/fileupload` → `@/components/ui/FileUpload.vue` wrapper (the manual `choose()` / `clear()` ref typing is gone because the wrapper exposes them via `defineExpose`).
   - `WorkspaceSwitcher`: `primevue/menu` → `@/volt/Menu.vue`; trigger raw `<button>` → `@/components/ui/Button.vue` (`variant="ghost"`).

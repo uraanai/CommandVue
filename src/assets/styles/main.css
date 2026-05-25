@@ -194,7 +194,35 @@ button:not(:disabled),
  * overrides PrimeVue's inline `top` / `left` styles set at runtime.
  */
 [data-pc-section="submenu"] [data-pc-section="submenu"] {
+  position: absolute !important;
   top: 0 !important;
   left: 100% !important;
   margin-left: 0.25rem;
+}
+
+/*
+ * PrimeVue ContextMenu — every submenu opens to the right.
+ *
+ * Unlike Menubar (whose first-level dropdown drops below the horizontal bar),
+ * a ContextMenu's outer list is already vertical, so EVERY nested submenu —
+ * starting from depth-1 — should fly out to the right of its parent
+ * menuitem. PrimeVue's default `top:full; left:0` positioning instead opens
+ * the submenu in-place, pushing the parent's later items down.
+ *
+ * Scoping by `[data-pc-name="contextmenu"]` ensures Menubar's first-level
+ * dropdown keeps its "open below" placement.
+ */
+[data-pc-name="contextmenu"] [data-pc-section="submenu"] {
+  position: absolute !important;
+  top: 0 !important;
+  left: 100% !important;
+  margin-left: 0.25rem;
+}
+
+/*
+ * The submenu's parent item needs `position: relative` so the absolute
+ * positioning above is relative to the item (not the viewport / root list).
+ */
+[data-pc-name="contextmenu"] [data-pc-section="item"] {
+  position: relative;
 }

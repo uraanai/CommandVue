@@ -25,8 +25,8 @@ import DataView from "@/volt/DataView.vue";
  * grouped layout `DataView` doesn't natively support.
  */
 interface Props {
-  containerApi: DockviewApi;
-  api: DockviewPanelApi;
+  containerApi?: DockviewApi;
+  api?: DockviewPanelApi;
 }
 
 const props = defineProps<Props>();
@@ -71,7 +71,7 @@ const grouped = computed(() => {
 
 async function addPanelOfType(def: PanelDefinition): Promise<void> {
   const layoutId = layoutStore.currentLayoutId;
-  if (!layoutId) return;
+  if (!layoutId || !props.containerApi) return;
   const panelId = newId();
   await panelStateStore.createPanel({
     layoutId,

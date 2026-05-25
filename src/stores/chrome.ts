@@ -44,6 +44,26 @@ export const useChromeStore = defineStore("chrome", () => {
     profiles.value = await chromeProfileRepo.list();
     const def = profiles.value.find((p) => p.isDefault);
     currentProfileId.value = def?.id ?? profiles.value[0]?.id ?? null;
+    await ensureItemPresent("theme-toggle", "top-right");
+  }
+
+  /**
+   * One-shot migration helper — used to add new built-in items to existing
+   * chrome profiles that were seeded before the item existed. Idempotent: if
+   * the item is already in any slot, this is a no-op.
+   *
+   * Called from `loadProfiles` so new built-ins land automatically without
+   * requiring users to reset their chrome customization.
+   */
+  async function ensureItemPresent(itemId: ChromeItemId, slot: ChromeSlot): Promise<void> {
+    for (const profile of profiles.value) {
+      const present = Object.values(profile.slotAssignments).some((list) => list.includes(itemId));
+      if (present) continue;
+      const next: typeof profile.slotAssignments = { ...profile.slotAssignments };
+      next[slot] = [...(next[slot] ?? []), itemId];
+      await chromeProfileRepo.update(profile.id, { slotAssignments: next });
+    }
+    profiles.value = await chromeProfileRepo.list();
   }
 
   async function setCurrentProfile(id: Ulid): Promise<void> {

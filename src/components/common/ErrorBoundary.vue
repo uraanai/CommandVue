@@ -2,6 +2,8 @@
 import { TriangleAlert } from "@lucide/vue";
 import { onErrorCaptured, ref } from "vue";
 
+import Button from "@/components/ui/Button.vue";
+
 /**
  * Local error boundary built on Vue 3's `onErrorCaptured`. Wraps a slot;
  * when a child throws, renders a fallback with a Reset button that clears
@@ -28,13 +30,7 @@ function reset(): void {
     <TriangleAlert class="text-danger size-10" />
     <h3 class="text-foreground text-sm font-medium">Something went wrong</h3>
     <p class="text-muted max-w-prose text-xs">{{ error.message }}</p>
-    <button
-      type="button"
-      class="bg-accent-600 hover:bg-accent-500 rounded px-3 py-1 text-xs text-white transition-colors"
-      @click="reset"
-    >
-      Try again
-    </button>
+    <Button variant="primary" size="sm" @click="reset"> Try again </Button>
   </div>
   <slot v-else />
 </template>

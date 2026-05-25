@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import type { ChromeItemId, ChromeSlot } from "@/types/chrome";
+import type { MenuItem } from "primevue/menuitem";
 
 import { Plus, X } from "@lucide/vue";
 import { computed, defineAsyncComponent, ref } from "vue";
 
+import IconButton from "@/components/ui/IconButton.vue";
 import { chromeItemRegistry } from "@/modules/chrome/registry";
 import { useChromeStore } from "@/stores/chrome";
+import Menu from "@/volt/Menu.vue";
 
 interface Props {
   slotName: ChromeSlot;
@@ -15,7 +18,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), { align: "start" });
 
 const chrome = useChromeStore();
-const addOpen = ref(false);
+const addMenu = ref<InstanceType<typeof Menu> | null>(null);
 
 const itemIds = computed<ChromeItemId[]>(() => chrome.slotItems(props.slotName));
 
@@ -33,16 +36,30 @@ function loadItem(id: ChromeItemId) {
   return defineAsyncComponent(def.component);
 }
 
-function addableItems(): { id: ChromeItemId; title: string }[] {
+const addableItems = computed<{ id: ChromeItemId; title: string }[]>(() => {
   const present = new Set(itemIds.value);
   return chromeItemRegistry
     .listForSlot(props.slotName)
     .filter((def) => !present.has(def.id))
     .map((def) => ({ id: def.id, title: def.title }));
+});
+
+// Per ADR 0002 audit decision 1a: the "+ Add item" popup is a single Volt
+// Menu (popup mode) rather than a hand-rolled outside-click dropdown. The
+// trigger button is disabled when there's nothing to add — cleaner than
+// opening an empty menu.
+const addMenuItems = computed<MenuItem[]>(() =>
+  addableItems.value.map((entry) => ({
+    label: entry.title,
+    command: () => void addItem(entry.id),
+  })),
+);
+
+function toggleAddMenu(event: MouseEvent): void {
+  addMenu.value?.toggle(event);
 }
 
 async function addItem(id: ChromeItemId): Promise<void> {
-  addOpen.value = false;
   await chrome.addItemToSlot(id, props.slotName);
 }
 
@@ -69,44 +86,28 @@ async function removeItem(id: ChromeItemId): Promise<void> {
       :class="chrome.editMode ? 'ring-accent-500/40 rounded px-0.5 ring-1' : ''"
     >
       <component :is="loadItem(id)" v-if="loadItem(id)" />
-      <button
+      <IconButton
         v-if="chrome.editMode && chromeItemRegistry.get(id)?.removable"
-        type="button"
-        class="bg-danger absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full text-[8px] text-white"
-        title="Remove from slot"
+        label="Remove from slot"
+        size="sm"
+        class="bg-danger absolute -top-1.5 -right-1.5 h-3.5 w-3.5 rounded-full p-0 text-white hover:bg-red-500"
         @click="removeItem(id)"
       >
         <X class="size-2.5" />
-      </button>
+      </IconButton>
     </div>
 
     <div v-if="chrome.editMode" class="relative">
-      <button
-        type="button"
-        class="text-muted hover:bg-surface-sunken flex items-center gap-1 rounded px-1.5 py-0.5 text-xs"
-        title="Add item to this slot"
-        @click="addOpen = !addOpen"
+      <IconButton
+        label="Add item to this slot"
+        variant="ghost"
+        size="sm"
+        :disabled="addableItems.length === 0"
+        @click="toggleAddMenu"
       >
         <Plus class="size-3" />
-      </button>
-      <div
-        v-if="addOpen"
-        class="border-border bg-surface-raised absolute z-50 mt-1 min-w-[200px] rounded-md border py-1 shadow-lg"
-        :class="align === 'end' ? 'right-0' : 'left-0'"
-      >
-        <div v-if="addableItems().length === 0" class="text-muted px-3 py-2 text-xs">
-          No more items available
-        </div>
-        <button
-          v-for="entry in addableItems()"
-          :key="entry.id"
-          type="button"
-          class="text-foreground hover:bg-surface-sunken block w-full px-3 py-1.5 text-left text-sm"
-          @click="addItem(entry.id)"
-        >
-          {{ entry.title }}
-        </button>
-      </div>
+      </IconButton>
+      <Menu ref="addMenu" :model="addMenuItems" popup />
     </div>
   </div>
 </template>
