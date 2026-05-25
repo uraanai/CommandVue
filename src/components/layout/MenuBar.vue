@@ -298,8 +298,9 @@ const menuItems = computed<MenuItem[]>(() => [
       rootList: { class: 'flex items-stretch gap-0' },
       submenu: {
         class:
-          'absolute z-50 min-w-[220px] rounded-md border border-border bg-surface-raised py-1 shadow-lg',
+          'absolute z-50 flex min-w-[220px] flex-col rounded-md border border-border bg-surface-raised py-1 shadow-lg',
       },
+      item: { class: 'block' },
       separator: { class: 'my-1 border-t border-border' },
     }"
   >

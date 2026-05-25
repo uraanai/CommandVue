@@ -6,9 +6,12 @@
 @plugin "@tailwindcss/typography";
 
 /* tailwindcss-primeui ships PrimeVue's surface-0…surface-950 palette and the
- * p-filled / p-invalid / p-fluid / p-small / p-large variants that Volt
- * components reference. Volt files at src/volt/*.vue depend on these. */
-@plugin "tailwindcss-primeui";
+ * `p-modal:` / `p-filled:` / `p-invalid:` / `p-fluid:` / `p-small:` /
+ * `p-large:` / `p-maximized:` etc. data-attribute variants that Volt files
+ * reference. The package's Tailwind v4 entry is a CSS file (exposed via
+ * `exports.style`); `@plugin` loads the v3 JS plugin which is missing the
+ * variants, so use `@import` to pull in the v4 stylesheet directly. */
+@import "tailwindcss-primeui";
 
 /* Enable the `dark:` variant on the `data-theme="dark"` attribute.
    Toggled via `useTheme()` (composable) on the <html> element. */
