@@ -62,6 +62,7 @@ export default defineConfig({
         text: "Overview",
         items: [
           { text: "Introduction", link: "/" },
+          { text: "Concepts", link: "/concepts" },
           { text: "Architecture", link: "/architecture" },
         ],
       },

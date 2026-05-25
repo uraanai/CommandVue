@@ -102,7 +102,18 @@ const menuItems = computed<MenuItem[]>(() => [
 ]);
 
 function onContextMenu(event: MouseEvent): void {
-  cm.value?.show(event);
+  // PrimeVue Menubar dismisses on outside `click` (not on `contextmenu`),
+  // so a right-click on the app icon would leave any open File/Edit/View
+  // dropdown visible underneath the new context menu. Synthesize a click
+  // outside the menubar to trip its dismissal handler, then open the
+  // context menu on the next microtask.
+  document.body.dispatchEvent(
+    new MouseEvent("click", { bubbles: true, cancelable: true, view: window }),
+  );
+  // Small delay lets PrimeVue's outside-click handler tear down before we
+  // open the new menu; without it, our menu opens first and PrimeVue's
+  // click then closes us.
+  setTimeout(() => cm.value?.show(event), 0);
 }
 
 async function onSaveAs(payload: {

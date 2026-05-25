@@ -71,7 +71,14 @@ const grouped = computed(() => {
 
 async function addPanelOfType(def: PanelDefinition): Promise<void> {
   const layoutId = layoutStore.currentLayoutId;
-  if (!layoutId || !props.containerApi) return;
+  if (!layoutId) return;
+  // Dockview wires `containerApi` through to panels via props, but the
+  // session store keeps a singleton `DockviewApi` reference that the menubar
+  // also uses. Prefer the prop (no extra coupling) and fall back to the
+  // session-store API if Dockview hasn't wired the prop yet — both routes
+  // address the same Dockview instance.
+  const api = props.containerApi ?? session.getDockviewApi();
+  if (!api) return;
   const panelId = newId();
   await panelStateStore.createPanel({
     layoutId,
@@ -79,7 +86,7 @@ async function addPanelOfType(def: PanelDefinition): Promise<void> {
     assignmentState: "configured",
     id: panelId,
   });
-  props.containerApi.addPanel({
+  api.addPanel({
     id: panelId,
     component: def.id,
     title: def.title,

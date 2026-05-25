@@ -8,6 +8,8 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 
 ### Added
 
+- **`docs/concepts.md` walkthrough page** — top-level overview of how workspaces, layouts, panels, chrome, and presets fit together, with annotated screenshots from a fresh launch. Registered in the VitePress sidebar under "Overview".
+- **Theme-aware scrollbar styling** — `*::-webkit-scrollbar-*` + `scrollbar-color` rules read from the semantic surface + border tokens so scrollbar thumbs flip automatically with `data-theme`.
 - **Light / Dark / Auto theme toggle (Phase 3.2 of Prompt 3).**
   - `useTheme()` composable rewritten as a three-mode controller: `light` / `dark` / `auto`. Auto follows `prefers-color-scheme` and re-resolves automatically when the OS preference changes.
   - `setMode(next)` / `cycleMode()` actions. Cycle order: light → dark → auto → light. `resolvedTheme` always returns a concrete `light` | `dark`.
@@ -73,6 +75,13 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
   - `src/modules/panels/unassigned.ts` — reserved synthetic type `__unassigned__` for empty panels.
   - Wired into `main.ts` before mount; sits alongside the existing `app.component()` registrations (Dockview still resolves components from Vue's global registry).
   - 9 new unit tests covering registry surface and built-in registration.
+
+### Fixed
+
+- **Manage Layouts "Make Default" button** — clicking the star now refreshes the workspace store so the UI reflects the new default immediately. Previously the IDB write succeeded but the star indicator stayed on the old default until the user switched workspaces.
+- **Components Panel cards** — clicking a panel card now reliably spawns the panel even when the panel's `containerApi` prop is briefly undefined during mount; falls back to `useSessionStore().getDockviewApi()`. Previously silently no-op'd.
+- **Workspace dropdown hover** — Volt `Menu` had both `p-1` list padding *and* a `rounded-sm` `bg-surface-100` hover fill on the inner div, producing a visible "double-frame" effect on hover. Dropped both so the hover fills the full row of the popup edge-to-edge.
+- **Menu bar dismissal on right-click** — opening the app-icon context menu while a top-bar dropdown was visible now dismisses the dropdown first (synthesises a click outside the menubar to trigger PrimeVue's outside-click handler before opening the context menu).
 
 ### Changed
 

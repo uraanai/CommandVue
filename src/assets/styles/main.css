@@ -76,6 +76,53 @@
   --p-primary-contrast-color: var(--color-on-interactive);
 }
 
+/*
+ * ==========================================================================
+ * Theme-aware scrollbars.
+ *
+ * Browser-default scrollbars are pure-white in light mode and OS-grey in
+ * dark mode — both clash with the operations-dashboard surfaces. Use the
+ * semantic surface + border tokens so the scrollbar automatically flips
+ * with `data-theme`.
+ *
+ * Firefox: `scrollbar-color` (thumb track). `scrollbar-width: thin` is the
+ * closest cross-browser equivalent to WebKit's narrow scrollbar.
+ *
+ * WebKit / Chromium / Edge: the `::-webkit-scrollbar-*` pseudo-elements.
+ * `border` on the thumb gives it the appearance of "floating" inside the
+ * track for a softer look.
+ * ==========================================================================
+ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-strong);
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-text-tertiary);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 @layer base {
   html {
     color-scheme: light dark;

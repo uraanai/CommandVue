@@ -7,6 +7,7 @@ import { computed, ref, shallowRef } from "vue";
 import { appMetaRepo } from "@/modules/storage/appMetaRepo";
 import { layoutRepo } from "@/modules/storage/layoutRepo";
 import { workspaceRepo } from "@/modules/storage/workspaceRepo";
+import { useWorkspaceStore } from "@/stores/workspace";
 
 const CURRENT_LAYOUT_KEY = "current-layout-id";
 
@@ -76,6 +77,11 @@ export const useLayoutStore = defineStore("layout", () => {
 
   async function setDefaultForWorkspace(workspaceId: Ulid, layoutId: Ulid): Promise<void> {
     await workspaceRepo.update(workspaceId, { defaultLayoutId: layoutId });
+    // The Manage Layouts dialog reads `workspace.currentWorkspace.defaultLayoutId`
+    // for the "default" star indicator. Refresh the workspace store so the UI
+    // reflects the new pointer immediately instead of waiting for the next
+    // workspace load.
+    await useWorkspaceStore().refreshAll();
   }
 
   async function deleteLayout(id: Ulid): Promise<void> {
