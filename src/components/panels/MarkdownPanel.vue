@@ -95,6 +95,13 @@ function toggleEdit(): void {
         <span>{{ editing ? "Done" : "Edit" }}</span>
       </Button>
     </header>
+    <!--
+      The Volt Textarea sets its own root `pt` with full color tokens, but the
+      consumer `pt` here replaces that root entry rather than merging with it —
+      so the surface + text + border colors have to be repeated. Without them
+      the textarea falls back to browser-default white background, which makes
+      the editor unreadable in dark mode.
+    -->
     <Textarea
       v-if="editing"
       v-model="content"
@@ -102,7 +109,8 @@ function toggleEdit(): void {
       placeholder="# Briefing…"
       :pt="{
         root: {
-          class: 'min-h-0 flex-1 resize-none rounded-none border-0 p-3 font-mono text-xs',
+          class:
+            'bg-surface text-foreground placeholder:text-muted min-h-0 flex-1 resize-none rounded-none border-0 p-3 font-mono text-xs',
         },
       }"
       @input="saveFn?.()"
