@@ -193,6 +193,7 @@ auth
 dismissable
 usetoast
 useconfirm
+Cascadia
 primeui
 closebutton
 maximizebutton

@@ -8,6 +8,17 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 
 ### Added
 
+- **Three-layer design token foundation (Phase 3.1 of Prompt 3).**
+  - Primitive token layer (`@theme` in `src/assets/styles/tokens.css`) — OKLCH neutral scale (slate 50→950) + six accent palettes (blue, teal, green, amber, red, violet), spacing scale (`--space-0` → `--space-48`), typography (font families, font size scale, font weights, line heights), border radii, shadows, motion (durations + easings), z-index. Mirrors Tailwind v4's default palette values.
+  - Semantic token layer (`:root` in `tokens.css`) — surface (base/raised/overlay/sunken), border (subtle/default/strong), text (primary/secondary/tertiary/disabled/inverse), interactive (default/hover/active/subtle + `on-interactive`), status (success/warning/danger/info with `-subtle` companions), focus ring, semantic spacing (`--space-panel-padding`, …), semantic typography.
+  - Component token layer (`:root` in `tokens.css`) — `--datatable-*`, `--dockpanel-*`, `--menubar-*`, `--statusbar-*`, `--dialog-*`, `--tooltip-*`, `--button-*`.
+  - Density modes (`[data-density="compact" | "comfortable" | "spacious"]`) driving six `--density-*` tokens (row height, cell padding, control height, icon size, font size).
+  - Dark-theme overrides (`html[data-theme="dark"]`) for every semantic + component token used in Phase 3.1 — full coverage extension lands in Phase 3.2.
+  - Tailwind v4 `@theme` bridge in `main.css` — exposes semantic names (`bg-surface`, `text-fg`, `border-border-default`, `bg-interactive`, `bg-success-subtle`, …) as utility classes.
+- **`docs/design-tokens.md`** — full reference for the token vocabulary, with architecture diagram, per-layer catalogues, usage rules, Tailwind class examples, "adding a token" how-to, and migration guidance. Registered in VitePress sidebar under "Look & feel".
+- **`.agent/skills/commandvue-theming-system/`** — new agent skill (`SKILL.md` + `reference/token-categories.md` + `reference/component-styling-pattern.md`) for future agent sessions working in this area.
+- **Verification protocol section in `CLAUDE.md`** — documents the two-stage (Playwright MCP automated + human design review) verification model now standing for all agent-driven phases.
+- **`.verification-screenshots/`** gitignored — Stage 1 screenshot output target.
 - **PrimeVue-first rule enforcement (Phase 2.4 — capstone of Prompt 2).**
   - ESLint `vue/no-restricted-html-elements` warns on raw `<button>`, `<input>`, `<select>`, `<textarea>` in `.vue` templates outside `src/components/ui/**` and `src/volt/**`. Message points at the wrapper to use plus `docs/contributing-ui.md`.
   - ESLint `@typescript-eslint/no-restricted-imports` warns on direct `primevue/*` component imports from consumer files. `allowTypeImports: true` lets `import type { ... } from "primevue/*"` through automatically. Helper modules (`primevue/menuitem`, `primevue/config`, `primevue/api`, `primevue/usetoast`, `primevue/useconfirm`) are excluded via negation patterns; `primevue/datatable` and `primevue/column` are excluded because the more specific ADR 0001 named rule already covers them.
@@ -56,6 +67,9 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 
 ### Changed
 
+- **`src/assets/styles/tokens.css` rewritten** as the single-source three-layer authority. Light defaults previously in `main.css`'s `@theme` block now live alongside the new primitive scales. `main.css` retains the Tailwind `@theme` bridge, the PrimeVue runtime palette (`--p-surface-*`, `--p-primary-*`), base styles, the `@custom-variant dark` declaration, the cursor-pointer rule, and the menubar/contextmenu submenu positioning rules. Legacy semantic aliases (`--color-surface`, `--color-foreground`, `--color-muted`, `--color-border`, `--color-success`, …) are preserved so existing `bg-surface` / `text-foreground` / `bg-success` classes keep working.
+- **`Tooltip.vue`** `box-shadow` hardcoded value → `var(--shadow-md)` (first sample migration to design tokens).
+- **`ChartPanel.vue`** documents the hardcoded ECharts color literals with a Phase 3.2 TODO — ECharts can't read CSS variables directly; the JS bridge ships with the Light/Dark/Auto toggle.
 - **Migrated all 7 dialogs to the Volt `Dialog`.** `ApplyPresetDialog`, `EditPresetDialog`, `ManageLayoutsDialog`, `ManagePresetsDialog`, `ManageWorkspacesDialog`, `SaveLayoutAsDialog`, `UnsavedChangesDialog` now import `Dialog` from `@/volt/Dialog.vue`. The legacy project wrapper at `src/components/ui/Dialog.vue` is removed (also dropped from `src/components/ui/index.ts`); update-visible handlers gain explicit `(v: boolean)` annotations under strict TS.
 - **`SaveLayoutAsDialog` Checkbox swapped to `@/volt/Checkbox.vue`.** Drops the inline `:pt` overrides and the now-unused `cn` import.
 - **`ManagePresetsDialog` Tabs use the project `<Tabs>` wrapper.** The 5 direct `primevue/tabs*` imports are gone; tab labels render via the wrapper's new `#tab-{id}` named slots (icons + counts preserved).

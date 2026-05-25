@@ -50,6 +50,12 @@ onBeforeUnmount(() => {
   resizeObserver = null;
 });
 
+// ECharts can't read CSS variables directly; colors here are hardcoded to
+// slate/blue primitive values so the chart works in dark mode (the active
+// theme today). Phase 3.2 ships the Light/Dark/Auto toggle plus a JS bridge
+// that resolves `--color-*` tokens at runtime and re-applies `option` on
+// theme change. Until then, keep the values literal but aligned with the
+// `slate-*` / `blue-*` primitive scale in `tokens.css`.
 const option = computed(() => ({
   grid: { top: 24, right: 18, bottom: 28, left: 38 },
   tooltip: { trigger: "axis" },

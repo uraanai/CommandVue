@@ -78,7 +78,7 @@ withDefaults(defineProps<Props>(), {
   padding: 0.25rem 0.5rem;
   font-size: 0.75rem;
   line-height: 1rem;
-  box-shadow: 0 4px 12px rgb(0 0 0 / 0.12);
+  box-shadow: var(--shadow-md);
 }
 .v-popper--theme-tooltip .v-popper__arrow-outer {
   border-color: var(--color-surface-raised);
