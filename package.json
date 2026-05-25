@@ -136,7 +136,7 @@
     "jsdom": "^29.1.1",
     "lint-staged": "^17.0.5",
     "mersenne-twister": "^1.1.0",
-    "npm-run-all2": "^9.0.0",
+    "npm-run-all2": "^9.0.1",
     "prettier": "^3.4.2",
     "prettier-plugin-tailwindcss": "^0.8.0",
     "tailwindcss": "^4.0.0",
