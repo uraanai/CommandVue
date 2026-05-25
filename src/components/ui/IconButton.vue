@@ -29,8 +29,11 @@ const variantClass: Record<Variant, string> = {
   solid: "bg-surface-raised text-foreground border border-border hover:bg-surface-sunken",
 };
 
+// `sm` uses 5px padding (not p-1 = 4px) so the total height — 5 + 14 + 5 = 24px
+// — matches the regular `Button` size="sm" (py-1 + text-xs = 8 + 16 = 24px),
+// keeping IconButtons aligned next to text Buttons in the chrome bar.
 const sizeClass: Record<Size, string> = {
-  sm: "p-1 [&_svg]:size-3.5",
+  sm: "p-[5px] [&_svg]:size-3.5",
   md: "p-1.5 [&_svg]:size-4",
   lg: "p-2 [&_svg]:size-5",
 };

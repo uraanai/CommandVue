@@ -110,7 +110,7 @@ function toggleEdit(): void {
     <div v-else class="min-h-0 flex-1 overflow-auto p-4">
       <!-- eslint-disable-next-line vue/no-v-html -- markdown-it instantiated with html: false; output is sanitized -->
       <article
-        class="prose prose-sm prose-invert dark:prose-invert [&_a]:text-accent-400 [&_code]:bg-surface-raised [&_code]:text-foreground [&_table]:border-border [&_th]:border-border [&_td]:border-border [&_blockquote]:border-accent-500 max-w-none [&_blockquote]:border-l [&_blockquote]:pl-3 [&_table]:border [&_td]:border-b [&_th]:border-b"
+        class="prose prose-sm dark:prose-invert [&_a]:text-accent-500 dark:[&_a]:text-accent-400 [&_code]:bg-surface-raised [&_code]:text-foreground [&_table]:border-border [&_th]:border-border [&_td]:border-border [&_blockquote]:border-accent-500 max-w-none [&_blockquote]:border-l [&_blockquote]:pl-3 [&_table]:border [&_td]:border-b [&_th]:border-b"
         v-html="html"
       />
     </div>
