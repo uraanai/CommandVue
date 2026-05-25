@@ -109,6 +109,25 @@ export const BUILTIN_CHROME_ITEMS: readonly ChromeItemDefinition[] = [
     removable: true,
     singleton: true,
   },
+  {
+    id: "theme-toggle",
+    title: "Theme Toggle (Light/Dark)",
+    description:
+      "Flip between light and dark mode. Two-mode for now; Prompt 3 will add an Auto option.",
+    icon: "sun",
+    allowedSlots: [
+      "top-left",
+      "top-center",
+      "top-right",
+      "status-left",
+      "status-center",
+      "status-right",
+    ],
+    defaultSlot: "top-right",
+    component: () => import("@/components/chrome/items/ThemeToggleItem.vue"),
+    removable: true,
+    singleton: true,
+  },
 ] as const;
 
 let registered = false;
