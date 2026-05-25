@@ -33,12 +33,20 @@ import TimesIcon from "@primevue/icons/times";
 import WindowMaximizeIcon from "@primevue/icons/windowmaximize";
 import WindowMinimizeIcon from "@primevue/icons/windowminimize";
 import Dialog, { type DialogPassThroughOptions, type DialogProps } from "primevue/dialog";
-import { computed, ref } from "vue";
+import { computed } from "vue";
 
 import SecondaryButton from "./SecondaryButton.vue";
 import { ptViewMerge } from "./utils";
 
-interface Props extends /* @vue-ignore */ DialogProps {}
+interface Props extends /* @vue-ignore */ DialogProps {
+  /**
+   * Dim + blur the page behind the dialog. Default `false` — CommandVue is a
+   * map-first application and most modals should keep the map visible. Set
+   * `true` for dialogs where focus should be enforced (e.g. confirm-destroy
+   * prompts).
+   */
+  blurBackdrop?: boolean;
+}
 const props = defineProps<Props>();
 
 // CommandVue project convention: modal is true by default (matches the legacy
@@ -46,7 +54,16 @@ const props = defineProps<Props>();
 // which leaves the mask invisible. Consumers can still pass `:modal="false"`.
 const modalValue = computed(() => (props as { modal?: boolean }).modal ?? true);
 
-const theme = ref<DialogPassThroughOptions>({
+// CommandVue project convention: the mask is invisible by default so the map
+// behind a dialog stays at full readability. Consumers opt in to the dim +
+// blur by passing `:blur-backdrop="true"`.
+const maskClass = computed(() =>
+  props.blurBackdrop
+    ? "p-modal:fixed p-modal:inset-0 p-modal:bg-brand-950/60 p-modal:backdrop-blur-sm"
+    : "p-modal:fixed p-modal:inset-0",
+);
+
+const theme = computed<DialogPassThroughOptions>(() => ({
   // CommandVue convention: min-w 360px, max-w 720px, comfortable default
   // width 480px (mirrors the legacy project Dialog wrapper's `min-w-[320px]
   // max-w-[600px]` constraint). Without these the unstyled dialog adopts the
@@ -61,16 +78,13 @@ const theme = ref<DialogPassThroughOptions>({
   headerActions: `flex items-center gap-2`,
   content: `overflow-y-auto pt-0 px-5 pb-5 p-maximized:grow`,
   footer: `shrink-0 pt-0 px-5 pb-5 flex justify-end gap-2`,
-  // CommandVue uses `--color-brand-950` instead of `bg-black` because the
-  // project's `@theme` block doesn't register the standard Tailwind
-  // `--color-black`. The same token drives the CommandPalette overlay so the
-  // two overlays match visually.
-  mask: `p-modal:bg-brand-950/60 p-modal:fixed p-modal:inset-0 p-modal:backdrop-blur-sm`,
+  // Computed; see `maskClass` for the no-blur / blur-on toggle.
+  mask: maskClass.value,
   transition: {
     enterFromClass: "opacity-0 scale-75",
     enterActiveClass: "transition-all duration-150 ease-[cubic-bezier(0,0,0.2,1)]",
     leaveActiveClass: "transition-all duration-150 ease-[cubic-bezier(0.4,0,0.2,1)]",
     leaveToClass: "opacity-0 scale-75",
   },
-});
+}));
 </script>

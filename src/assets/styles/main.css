@@ -81,6 +81,59 @@
   --spacing-statusbar: 1.75rem;
 }
 
+/*
+ * PrimeVue surface palette — required by Volt components.
+ *
+ * `tailwindcss-primeui`'s v4 entry aliases `--color-surface-0` → `--p-surface-0`
+ * (and the rest of the 50…950 scale). Tailwind v4's `bg-surface-N` utility
+ * compiles to `background-color: var(--color-surface-N)` which then resolves
+ * to `var(--p-surface-N)`. PrimeVue's runtime theme system normally sets the
+ * `--p-surface-*` family, but CommandVue runs PrimeVue in unstyled mode without
+ * a theme preset — so we define the scale here.
+ *
+ * Volt files use `bg-surface-0 dark:bg-surface-900` etc., so the SAME scale
+ * works for both modes (the `dark:` variant picks the right band).
+ *
+ * Values mirror Tailwind's `slate` palette to align with the project's existing
+ * brand-* / accent-* neutrals.
+ */
+@theme {
+  --color-p-surface-0: #ffffff;
+  --color-p-surface-50: #f8fafc;
+  --color-p-surface-100: #f1f5f9;
+  --color-p-surface-200: #e2e8f0;
+  --color-p-surface-300: #cbd5e1;
+  --color-p-surface-400: #94a3b8;
+  --color-p-surface-500: #64748b;
+  --color-p-surface-600: #475569;
+  --color-p-surface-700: #334155;
+  --color-p-surface-800: #1e293b;
+  --color-p-surface-900: #0f172a;
+  --color-p-surface-950: #020617;
+}
+
+:root {
+  --p-surface-0: #ffffff;
+  --p-surface-50: #f8fafc;
+  --p-surface-100: #f1f5f9;
+  --p-surface-200: #e2e8f0;
+  --p-surface-300: #cbd5e1;
+  --p-surface-400: #94a3b8;
+  --p-surface-500: #64748b;
+  --p-surface-600: #475569;
+  --p-surface-700: #334155;
+  --p-surface-800: #1e293b;
+  --p-surface-900: #0f172a;
+  --p-surface-950: #020617;
+
+  /* Primary palette — Volt's Button etc. use `bg-primary` for the active
+   * fill. Align with CommandVue's accent-* scale. */
+  --p-primary-color: var(--color-accent-500);
+  --p-primary-hover-color: var(--color-accent-400);
+  --p-primary-active-color: var(--color-accent-600);
+  --p-primary-contrast-color: #ffffff;
+}
+
 @layer base {
   html {
     color-scheme: light dark;
@@ -108,4 +161,24 @@
     outline: 2px solid var(--color-accent-500);
     outline-offset: 2px;
   }
+}
+
+/*
+ * PrimeVue Menubar — nested fly-out positioning.
+ *
+ * The Menubar's first-level dropdown opens below its menubar item (top:full,
+ * left:0). Second-level submenus (e.g. View → Add Component → Charts/Data/…)
+ * inherit the same positioning by default and end up overlapping the
+ * first-level dropdown. The rule below positions any nested submenu to the
+ * right of its parent menuitem instead, leaving the first-level dropdown
+ * intact behind it.
+ *
+ * Specificity uses double `[data-pc-section="submenu"]` to scope strictly to
+ * nested levels; the first-level container only matches one. `!important`
+ * overrides PrimeVue's inline `top` / `left` styles set at runtime.
+ */
+[data-pc-section="submenu"] [data-pc-section="submenu"] {
+  top: 0 !important;
+  left: 100% !important;
+  margin-left: 0.25rem;
 }
