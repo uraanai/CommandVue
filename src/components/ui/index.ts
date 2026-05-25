@@ -1,7 +1,6 @@
 export { default as Button } from "./Button.vue";
 export { default as ColorPicker } from "./ColorPicker.vue";
 export { default as ContextMenu } from "./ContextMenu.vue";
-export { default as Dialog } from "./Dialog.vue";
 export { default as FileUpload } from "./FileUpload.vue";
 export { default as IconButton } from "./IconButton.vue";
 export { default as Input } from "./Input.vue";

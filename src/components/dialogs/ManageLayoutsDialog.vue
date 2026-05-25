@@ -5,11 +5,11 @@ import DataTable, { type DataTableRowEditSaveEvent } from "primevue/datatable";
 import { ref, watch } from "vue";
 
 import Button from "@/components/ui/Button.vue";
-import Dialog from "@/components/ui/Dialog.vue";
 import Input from "@/components/ui/Input.vue";
 import { useLayoutStore } from "@/stores/layout";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { cn } from "@/utils/cn";
+import Dialog from "@/volt/Dialog.vue";
 
 interface Props {
   visible: boolean;
@@ -64,7 +64,7 @@ async function remove(id: string): Promise<void> {
   <Dialog
     :visible="visible"
     header="Manage layouts"
-    @update:visible="(v) => emit('update:visible', v)"
+    @update:visible="(v: boolean) => emit('update:visible', v)"
   >
     <div class="flex flex-col gap-3">
       <p class="text-muted text-xs">
