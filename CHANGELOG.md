@@ -51,6 +51,11 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 - **`SaveLayoutAsDialog` Checkbox swapped to `@/volt/Checkbox.vue`.** Drops the inline `:pt` overrides and the now-unused `cn` import.
 - **`ManagePresetsDialog` Tabs use the project `<Tabs>` wrapper.** The 5 direct `primevue/tabs*` imports are gone; tab labels render via the wrapper's new `#tab-{id}` named slots (icons + counts preserved).
 - **Extended `<Tabs>` wrapper with per-tab label slots.** New optional `#tab-{id}` named slot lets consumers customize a single tab's label with icons, badges, counts. Falls back to `{{ tab.label }}` when not provided. No breaking change.
+- **Migrated `MenuBar`, `WorkspaceSwitcher`, `TitleBar`, and `CommandPalette` to PrimeVue-first primitives (PR 5 of Phase 2.3).**
+  - `MenuBar`: `primevue/menubar` → `@/components/ui/Menubar.vue` wrapper (now accepts a `pt` prop that twMerge's with wrapper defaults so consumers can override per-slot classes without duplicating the structural fixes); `primevue/fileupload` → `@/components/ui/FileUpload.vue` wrapper (the manual `choose()` / `clear()` ref typing is gone because the wrapper exposes them via `defineExpose`).
+  - `WorkspaceSwitcher`: `primevue/menu` → `@/volt/Menu.vue`; trigger raw `<button>` → `@/components/ui/Button.vue` (`variant="ghost"`).
+  - `TitleBar`: command-palette trigger raw `<button>` → `@/components/ui/Button.vue` (`variant="ghost"`).
+  - `CommandPalette`: search raw `<input>` → `@/components/ui/Input.vue` wrapper with a small `focusInput()` helper that walks `$el` to find the underlying input element; close raw `<button>` → `@/components/ui/IconButton.vue`. Result-row buttons kept raw with a documented file-header exception per ADR 0002 audit decision **2b** (virtualization-style list affordances).
 - **Migrated `MarkdownPanel`, `SymbologyPanel`, and `ComponentsPanel` to PrimeVue-first primitives (PR 4 of Phase 2.3).**
   - `MarkdownPanel`: `primevue/textarea` → `@/volt/Textarea.vue` (drops the inline `:pt` styling — Volt's defaults handle theme + cursor).
   - `SymbologyPanel`: `primevue/fieldset` → `@/volt/Fieldset.vue`; `primevue/tag` → `@/volt/Tag.vue` (drops the local `fieldsetPT` / `tagPT` constants).

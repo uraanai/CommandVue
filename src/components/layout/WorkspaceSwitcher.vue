@@ -3,7 +3,6 @@ import type { Ulid } from "@/types/workspace";
 import type { MenuItem } from "primevue/menuitem";
 
 import { Check, ChevronDown, FolderCog, Plus } from "@lucide/vue";
-import Menu from "primevue/menu";
 import { computed, ref } from "vue";
 
 import ManageWorkspacesDialog from "@/components/dialogs/ManageWorkspacesDialog.vue";
@@ -11,10 +10,11 @@ import SaveLayoutAsDialog from "@/components/dialogs/SaveLayoutAsDialog.vue";
 import UnsavedChangesDialog, {
   type UnsavedChoice,
 } from "@/components/dialogs/UnsavedChangesDialog.vue";
+import Button from "@/components/ui/Button.vue";
 import { useLayoutStore } from "@/stores/layout";
 import { useSessionStore } from "@/stores/session";
 import { useWorkspaceStore } from "@/stores/workspace";
-import { cn } from "@/utils/cn";
+import Menu from "@/volt/Menu.vue";
 
 const workspace = useWorkspaceStore();
 const layoutStore = useLayoutStore();
@@ -95,9 +95,9 @@ async function onSaveAs(payload: {
 
 <template>
   <div class="relative">
-    <button
-      type="button"
-      class="text-muted hover:text-foreground hover:bg-surface-sunken flex items-center gap-1.5 rounded px-2 py-1 text-xs transition-colors"
+    <Button
+      variant="ghost"
+      size="sm"
       aria-haspopup="true"
       aria-controls="workspace-switcher-menu"
       @click="toggle"
@@ -105,26 +105,10 @@ async function onSaveAs(payload: {
       <span class="text-foreground font-medium">
         {{ workspace.currentWorkspace?.name ?? "—" }}
       </span>
-      <ChevronDown class="size-3.5" />
-    </button>
+      <ChevronDown class="text-muted size-3.5" />
+    </Button>
 
-    <Menu
-      id="workspace-switcher-menu"
-      ref="menuRef"
-      :model="menuItems"
-      popup
-      :pt="{
-        root: {
-          class: cn(
-            'absolute z-[100] mt-1 min-w-[220px] rounded-md border border-border bg-surface-raised py-1 shadow-lg',
-          ),
-        },
-        submenuLabel: {
-          class: 'text-faint px-3 py-1 text-[10px] tracking-[0.18em] uppercase',
-        },
-        separator: { class: 'my-1 border-t border-border' },
-      }"
-    >
+    <Menu id="workspace-switcher-menu" ref="menuRef" :model="menuItems" popup>
       <template #item="{ item, props: itemProps }">
         <a v-bind="itemProps.action" class="flex items-center">
           <span

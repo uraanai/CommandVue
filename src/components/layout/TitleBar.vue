@@ -3,6 +3,7 @@ import { Hexagon, Moon, Ruler, Search, RotateCcw, Sun } from "@lucide/vue";
 import { inject } from "vue";
 import { RouterLink } from "vue-router";
 
+import Button from "@/components/ui/Button.vue";
 import IconButton from "@/components/ui/IconButton.vue";
 import { useTheme } from "@/composables/useTheme";
 import { formatCombo, SHORTCUTS } from "@/modules/shortcuts/catalog";
@@ -74,15 +75,15 @@ const paletteHint = formatCombo(
     </div>
 
     <div class="ml-auto flex items-center gap-1">
-      <button
-        type="button"
-        class="text-muted hover:text-foreground hover:bg-surface-sunken flex items-center gap-1.5 rounded px-2 py-1 text-xs transition-colors"
+      <Button
+        variant="ghost"
+        size="sm"
         :aria-label="`Open command palette (${paletteHint})`"
         @click="ui.openCommandPalette()"
       >
         <Search class="size-3.5" />
         <span class="font-mono text-[10px]">{{ paletteHint }}</span>
-      </button>
+      </Button>
       <IconButton
         v-if="resetLayout"
         label="Reset dock layout"

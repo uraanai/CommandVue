@@ -4,10 +4,21 @@ import fuzzysort from "fuzzysort";
 import { computed, nextTick, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
+import IconButton from "@/components/ui/IconButton.vue";
+import Input from "@/components/ui/Input.vue";
 import { formatCombo, SHORTCUTS } from "@/modules/shortcuts/catalog";
 import { TOOLS } from "@/modules/tools";
 import { useToolsStore } from "@/stores/tools";
 import { useUiStore } from "@/stores/ui";
+
+/**
+ * Result-row buttons (the per-command list items below the search input) are
+ * deliberate hand-rolled `<button>` elements per ADR 0002 audit decision 2b:
+ * they're virtualization-style row affordances, not free-floating buttons,
+ * and wrapping each in `<Button variant="ghost">` would add per-row component
+ * overhead with no UX gain. The close button and search input ARE migrated to
+ * the project wrappers (`IconButton` / `Input`) below.
+ */
 
 interface CommandItem {
   id: string;
@@ -23,7 +34,18 @@ const router = useRouter();
 
 const query = ref("");
 const selectedIndex = ref(0);
-const inputRef = ref<HTMLInputElement | null>(null);
+// The Input wrapper renders a PrimeVue InputText whose root IS the underlying
+// `<input>` element. `inputRef.value.$el` is the DOM input we focus on open.
+const inputRef = ref<{ $el?: HTMLElement } | null>(null);
+
+function focusInput(): void {
+  const el = inputRef.value?.$el;
+  if (el instanceof HTMLInputElement) {
+    el.focus();
+    return;
+  }
+  el?.querySelector?.("input")?.focus();
+}
 
 function shortcutHint(actionId: string): string | undefined {
   const s = SHORTCUTS.find((x) => x.action === actionId);
@@ -107,7 +129,7 @@ watch(
     if (open) {
       query.value = "";
       selectedIndex.value = 0;
-      void nextTick(() => inputRef.value?.focus());
+      void nextTick(() => focusInput());
     }
   },
 );
@@ -159,22 +181,16 @@ function onInputKey(event: KeyboardEvent): void {
       >
         <div class="border-border flex items-center gap-2 border-b px-3 py-2">
           <Search class="text-faint size-4 shrink-0" />
-          <input
+          <Input
             ref="inputRef"
             v-model="query"
-            type="text"
             placeholder="Search tools, routes, actions…"
-            class="text-foreground placeholder:text-faint flex-1 bg-transparent text-sm focus:outline-none"
+            class="flex-1 border-0 bg-transparent text-sm focus:outline-none focus-visible:ring-0"
             @keydown="onInputKey"
           />
-          <button
-            type="button"
-            class="text-faint hover:text-foreground rounded p-0.5"
-            aria-label="Close command palette"
-            @click="close"
-          >
+          <IconButton label="Close command palette" variant="ghost" size="sm" @click="close">
             <X class="size-4" />
-          </button>
+          </IconButton>
         </div>
 
         <div class="max-h-[50vh] overflow-auto py-1">
