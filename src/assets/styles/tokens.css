@@ -290,19 +290,30 @@
   --z-popover: 60;
   --z-toast: 70;
   --z-tooltip: 80;
-}
 
-/* ==========================================================================
- * LAYER 2 — SEMANTIC TOKENS (light defaults)
- *
- * Names with meaning. Reference primitive tokens only.
- * Dark theme overrides at the bottom of this file.
- * ========================================================================== */
+  /* ==========================================================================
+   * LAYER 2 — SEMANTIC TOKENS (light defaults)
+   *
+   * Inside `@theme` so Tailwind v4 generates utility classes like
+   * `bg-surface-raised`, `text-text-primary`, `border-border-default`,
+   * `bg-status-success`, etc. Dark overrides + density overrides live in
+   * regular CSS selectors at the bottom of this file — they override the
+   * @theme defaults via cascade because `:root` and attribute selectors have
+   * equal-or-higher specificity than what Tailwind emits.
+   *
+   * Reference primitive tokens above only. Themes (Phase 3.3) override these
+   * via JSON-driven inline styles applied at runtime.
+   * ========================================================================== */
 
-:root {
-  /* Surface — base canvas, raised cards, overlays, sunken wells */
-  --color-surface-base: #ffffff;
-  --color-surface-raised: var(--color-slate-50);
+  /* Surface — base canvas, raised cards, overlays, sunken wells.
+   *
+   * Hierarchy in light mode (operations-dashboard convention):
+   *   - base    → subtly tinted body so elevated surfaces visibly pop
+   *   - raised  → white cards / chrome / popover bodies
+   *   - overlay → white (modals, dropdowns)
+   *   - sunken  → tinted wells, hovered rows, separators */
+  --color-surface-base: var(--color-slate-50);
+  --color-surface-raised: #ffffff;
   --color-surface-overlay: #ffffff;
   --color-surface-sunken: var(--color-slate-100);
 
@@ -339,7 +350,7 @@
   --color-focus-ring: var(--color-blue-500);
   --shadow-focus-ring: 0 0 0 2px var(--color-focus-ring);
 
-  /* Semantic spacing */
+  /* Semantic spacing — for layout-level usage (panels, forms, sections) */
   --space-panel-padding: var(--space-4);
   --space-panel-gap: var(--space-2);
   --space-form-gap: var(--space-3);
@@ -350,9 +361,9 @@
   --font-family-body: var(--font-family-sans);
 
   /* --- Backwards-compatibility semantic aliases ---
-   * The pre-Phase-3.1 names. Many components use these via the Tailwind
-   * bridge (e.g. `bg-surface`, `text-foreground`). Keep them mapped to the
-   * new semantic tokens so existing utility classes keep working. */
+   * Map old class names (`bg-surface`, `text-foreground`, `bg-success`, …)
+   * onto the new semantic tokens so existing utility classes keep working
+   * while migration to the new names happens incrementally. */
   --color-surface: var(--color-surface-base);
   --color-foreground: var(--color-text-primary);
   --color-muted: var(--color-text-secondary);
@@ -495,14 +506,12 @@ html[data-theme="dark"] {
   /* Focus */
   --color-focus-ring: var(--color-blue-400);
 
-  /* Backwards-compatibility alias overrides */
-  --color-surface: var(--color-surface-base);
-  --color-surface-raised: var(--color-surface-raised);
-  --color-surface-sunken: var(--color-surface-sunken);
-  --color-foreground: var(--color-text-primary);
-  --color-muted: var(--color-text-secondary);
-  --color-faint: var(--color-text-tertiary);
-  --color-border: var(--color-border-default);
+  /* The backwards-compatibility aliases (--color-surface, --color-foreground,
+   * --color-muted, --color-border, etc.) defined in the @theme block point at
+   * --color-surface-base / --color-text-primary / etc. — and those are
+   * overridden above. The aliases flip automatically; no per-alias dark
+   * overrides needed here (and self-referencing them would break the var
+   * chain). */
 
   /* Component overrides */
   --datatable-header-bg: var(--color-slate-800);

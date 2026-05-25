@@ -19,52 +19,24 @@
 
 /*
  * ==========================================================================
- * Tailwind v4 @theme bridge — semantic + component tokens → utility classes.
+ * Tailwind v4 @theme — additional utility-name bridges.
  *
- * The primitive scales and semantic tokens live in `tokens.css`. The bridge
- * below wires the semantic names into Tailwind so utilities like
- * `bg-surface`, `text-fg`, `border-border-default`, `bg-interactive`, etc.
- * resolve correctly. The values are `var(--color-...)` references so a single
- * change in `tokens.css` (or a future theme override) propagates everywhere.
+ * The full primitive + semantic + component token system lives in
+ * `tokens.css` (where the @theme block already exposes them as utilities).
+ * The bridge below adds short-name aliases for new tokens — `bg-fg`,
+ * `bg-success-subtle`, etc. — without re-declaring tokens that already exist
+ * in `tokens.css`. Self-referencing the same CSS var would produce a
+ * circular fallback (resolving to nothing); the values here reference the
+ * underlying semantic tokens, not utility-name aliases.
  * ==========================================================================
  */
 @theme {
-  /* Surface */
-  --color-surface: var(--color-surface-base);
-  --color-surface-raised: var(--color-surface-raised);
-  --color-surface-overlay: var(--color-surface-overlay);
-  --color-surface-sunken: var(--color-surface-sunken);
-
-  /* Border */
-  --color-border-subtle: var(--color-border-subtle);
-  --color-border-default: var(--color-border-default);
-  --color-border-strong: var(--color-border-strong);
-
-  /* Text (new semantic names) */
+  /* Text — short aliases for the new text-* semantic names */
   --color-fg: var(--color-text-primary);
   --color-fg-muted: var(--color-text-secondary);
   --color-fg-faint: var(--color-text-tertiary);
   --color-fg-disabled: var(--color-text-disabled);
   --color-fg-inverse: var(--color-text-inverse);
-
-  /* Interactive */
-  --color-interactive: var(--color-interactive);
-  --color-interactive-hover: var(--color-interactive-hover);
-  --color-interactive-active: var(--color-interactive-active);
-  --color-interactive-subtle: var(--color-interactive-subtle);
-
-  /* Status */
-  --color-success: var(--color-status-success);
-  --color-success-subtle: var(--color-status-success-subtle);
-  --color-warning: var(--color-status-warning);
-  --color-warning-subtle: var(--color-status-warning-subtle);
-  --color-danger: var(--color-status-danger);
-  --color-danger-subtle: var(--color-status-danger-subtle);
-  --color-info: var(--color-status-info);
-  --color-info-subtle: var(--color-status-info-subtle);
-
-  /* Focus */
-  --color-focus-ring: var(--color-focus-ring);
 
   /* Animation — fadeIn keyframe used by `animate-fade-in` */
   --animate-fade-in: fadeIn var(--motion-duration-normal) var(--motion-easing-standard);
