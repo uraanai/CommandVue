@@ -18,120 +18,90 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /*
- * Design tokens — light-theme baseline + raw palette.
- * Dark-theme overrides live in `./tokens.css`.
- * See `docs/theming.md` for the brand override walkthrough.
+ * ==========================================================================
+ * Tailwind v4 @theme bridge — semantic + component tokens → utility classes.
+ *
+ * The primitive scales and semantic tokens live in `tokens.css`. The bridge
+ * below wires the semantic names into Tailwind so utilities like
+ * `bg-surface`, `text-fg`, `border-border-default`, `bg-interactive`, etc.
+ * resolve correctly. The values are `var(--color-...)` references so a single
+ * change in `tokens.css` (or a future theme override) propagates everywhere.
+ * ==========================================================================
  */
 @theme {
-  /* Brand palette (slate-tinted neutrals, fixed across themes). */
-  --color-brand-50: #f8fafc;
-  --color-brand-100: #f1f5f9;
-  --color-brand-200: #e2e8f0;
-  --color-brand-300: #cbd5e1;
-  --color-brand-400: #94a3b8;
-  --color-brand-500: #64748b;
-  --color-brand-600: #475569;
-  --color-brand-700: #334155;
-  --color-brand-800: #1e293b;
-  --color-brand-900: #0f172a;
-  --color-brand-950: #020617;
+  /* Surface */
+  --color-surface: var(--color-surface-base);
+  --color-surface-raised: var(--color-surface-raised);
+  --color-surface-overlay: var(--color-surface-overlay);
+  --color-surface-sunken: var(--color-surface-sunken);
 
-  /* Accent palette (active states, focus rings, links). */
-  --color-accent-50: #eff6ff;
-  --color-accent-100: #dbeafe;
-  --color-accent-200: #bfdbfe;
-  --color-accent-300: #93c5fd;
-  --color-accent-400: #60a5fa;
-  --color-accent-500: #3b82f6;
-  --color-accent-600: #2563eb;
-  --color-accent-700: #1d4ed8;
-  --color-accent-800: #1e40af;
-  --color-accent-900: #1e3a8a;
+  /* Border */
+  --color-border-subtle: var(--color-border-subtle);
+  --color-border-default: var(--color-border-default);
+  --color-border-strong: var(--color-border-strong);
 
-  /* Semantic tokens (light-theme baseline; overridden in tokens.css). */
-  --color-surface: #ffffff;
-  --color-surface-raised: #f8fafc;
-  --color-surface-sunken: #f1f5f9;
-  --color-foreground: #0f172a;
-  --color-muted: #475569;
-  --color-faint: #94a3b8;
-  --color-border: #e2e8f0;
-  --color-border-strong: #cbd5e1;
+  /* Text (new semantic names) */
+  --color-fg: var(--color-text-primary);
+  --color-fg-muted: var(--color-text-secondary);
+  --color-fg-faint: var(--color-text-tertiary);
+  --color-fg-disabled: var(--color-text-disabled);
+  --color-fg-inverse: var(--color-text-inverse);
 
-  /* Status colors. */
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
-  --color-danger: #ef4444;
-  --color-info: #3b82f6;
+  /* Interactive */
+  --color-interactive: var(--color-interactive);
+  --color-interactive-hover: var(--color-interactive-hover);
+  --color-interactive-active: var(--color-interactive-active);
+  --color-interactive-subtle: var(--color-interactive-subtle);
 
-  /* Typography. */
-  --font-sans:
-    "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-mono: ui-monospace, "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  /* Status */
+  --color-success: var(--color-status-success);
+  --color-success-subtle: var(--color-status-success-subtle);
+  --color-warning: var(--color-status-warning);
+  --color-warning-subtle: var(--color-status-warning-subtle);
+  --color-danger: var(--color-status-danger);
+  --color-danger-subtle: var(--color-status-danger-subtle);
+  --color-info: var(--color-status-info);
+  --color-info-subtle: var(--color-status-info-subtle);
 
-  /* Motion. */
-  --duration-fast: 120ms;
-  --duration-normal: 200ms;
-  --duration-slow: 400ms;
-  --ease-out: cubic-bezier(0, 0, 0.2, 1);
-  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  /* Focus */
+  --color-focus-ring: var(--color-focus-ring);
 
-  /* Layout chrome heights. */
-  --spacing-titlebar: 3rem;
-  --spacing-statusbar: 1.75rem;
+  /* Animation — fadeIn keyframe used by `animate-fade-in` */
+  --animate-fade-in: fadeIn var(--motion-duration-normal) var(--motion-easing-standard);
 }
 
-/*
- * PrimeVue surface palette — required by Volt components.
- *
- * `tailwindcss-primeui`'s v4 entry aliases `--color-surface-0` → `--p-surface-0`
- * (and the rest of the 50…950 scale). Tailwind v4's `bg-surface-N` utility
- * compiles to `background-color: var(--color-surface-N)` which then resolves
- * to `var(--p-surface-N)`. PrimeVue's runtime theme system normally sets the
- * `--p-surface-*` family, but CommandVue runs PrimeVue in unstyled mode without
- * a theme preset — so we define the scale here.
- *
- * Volt files use `bg-surface-0 dark:bg-surface-900` etc., so the SAME scale
- * works for both modes (the `dark:` variant picks the right band).
- *
- * Values mirror Tailwind's `slate` palette to align with the project's existing
- * brand-* / accent-* neutrals.
- */
-@theme {
-  --color-p-surface-0: #ffffff;
-  --color-p-surface-50: #f8fafc;
-  --color-p-surface-100: #f1f5f9;
-  --color-p-surface-200: #e2e8f0;
-  --color-p-surface-300: #cbd5e1;
-  --color-p-surface-400: #94a3b8;
-  --color-p-surface-500: #64748b;
-  --color-p-surface-600: #475569;
-  --color-p-surface-700: #334155;
-  --color-p-surface-800: #1e293b;
-  --color-p-surface-900: #0f172a;
-  --color-p-surface-950: #020617;
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
+/* PrimeVue runtime palette — read by PrimeVue's unstyled-mode theme system
+ * at JS runtime (separate from the Tailwind `@theme` block above). Mirrors
+ * the slate scale from `tokens.css`. */
 :root {
   --p-surface-0: #ffffff;
-  --p-surface-50: #f8fafc;
-  --p-surface-100: #f1f5f9;
-  --p-surface-200: #e2e8f0;
-  --p-surface-300: #cbd5e1;
-  --p-surface-400: #94a3b8;
-  --p-surface-500: #64748b;
-  --p-surface-600: #475569;
-  --p-surface-700: #334155;
-  --p-surface-800: #1e293b;
-  --p-surface-900: #0f172a;
-  --p-surface-950: #020617;
+  --p-surface-50: oklch(98.4% 0.003 247.858);
+  --p-surface-100: oklch(96.8% 0.007 247.896);
+  --p-surface-200: oklch(92.9% 0.013 255.508);
+  --p-surface-300: oklch(86.9% 0.022 252.894);
+  --p-surface-400: oklch(70.4% 0.04 256.788);
+  --p-surface-500: oklch(55.4% 0.046 257.417);
+  --p-surface-600: oklch(44.6% 0.043 257.281);
+  --p-surface-700: oklch(37.2% 0.044 257.287);
+  --p-surface-800: oklch(27.9% 0.041 260.031);
+  --p-surface-900: oklch(20.8% 0.042 265.755);
+  --p-surface-950: oklch(12.9% 0.042 264.695);
 
   /* Primary palette — Volt's Button etc. use `bg-primary` for the active
-   * fill. Align with CommandVue's accent-* scale. */
-  --p-primary-color: var(--color-accent-500);
-  --p-primary-hover-color: var(--color-accent-400);
-  --p-primary-active-color: var(--color-accent-600);
-  --p-primary-contrast-color: #ffffff;
+   * fill. Align with CommandVue's accent (blue) scale. */
+  --p-primary-color: var(--color-interactive);
+  --p-primary-hover-color: var(--color-interactive-hover);
+  --p-primary-active-color: var(--color-interactive-active);
+  --p-primary-contrast-color: var(--color-on-interactive);
 }
 
 @layer base {
@@ -142,13 +112,13 @@
 
   body {
     margin: 0;
-    background-color: var(--color-surface);
-    color: var(--color-foreground);
-    font-family: var(--font-sans);
+    background-color: var(--color-surface-base);
+    color: var(--color-text-primary);
+    font-family: var(--font-family-body);
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     transition:
-      background-color var(--duration-normal) var(--ease-in-out),
-      color var(--duration-normal) var(--ease-in-out);
+      background-color var(--motion-duration-normal) var(--motion-easing-standard),
+      color var(--motion-duration-normal) var(--motion-easing-standard);
   }
 
   *,
@@ -158,7 +128,7 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-accent-500);
+    outline: 2px solid var(--color-focus-ring);
     outline-offset: 2px;
   }
 }

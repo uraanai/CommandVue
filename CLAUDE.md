@@ -347,6 +347,25 @@ When multiple major bumps land in one session, plan to spend the **back half** o
 
 ---
 
+## Verification protocol — automated + human review
+
+Every phase of every prompt ends with two verification stages, in this order:
+
+1. **Automated functional verification** — Claude Code uses Playwright MCP to drive a real browser through the changes and assert on observable state (DOM attributes, computed styles, console output, screenshots at named checkpoints). Binary pass/fail. No design judgment. **Claude Code does not open a PR until this stage is fully green.** If any assertion fails, fix the underlying issue and re-run until it passes; do not embed failing results in the PR description.
+2. **Human design review** — A short, focused checklist (3–7 items max) of subjective quality checks that automation cannot make: typography balance, color harmony, density feel, hover-state polish. The user runs this after the PR is open.
+
+**Tool availability:** At the start of each phase's verification, Claude Code probes for `mcp__plugin_playwright_playwright__*` tools. If unavailable, run `ToolSearch` with `query: "playwright browser"` to load them. If still unavailable, fall back to a manual smoke-test checklist, state this explicitly in the PR description, and do not embed Stage 1 results.
+
+**Screenshots:** Capture to `.verification-screenshots/<branch-name>/<checkpoint-name>.png`. The directory is gitignored. PR descriptions reference screenshots by relative path — reviewers open them locally rather than viewing them inline.
+
+**Stage 1 result table:** Embedded in every PR description as a structured Markdown table — assertion id, description, result, screenshot. Plus console-error count, console-warning count, and a PASS/FAIL summary line. The table reflects actual Playwright run results, never "expected pass."
+
+**Stage 2 review section:** Closes the PR description. 3–7 design-judgment checkboxes plus a 2–3 sentence "things to specifically scrutinize for this phase" callout.
+
+**Rule:** This protocol applies to all current and future agent-driven work on CommandVue. No exceptions without explicit user override.
+
+---
+
 ## What not to do
 
 - Do not add Socket.IO. Native WebSocket only.

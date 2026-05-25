@@ -81,6 +81,7 @@ export default defineConfig({
         items: [
           { text: "Styling", link: "/styling" },
           { text: "Theming", link: "/theming" },
+          { text: "Design tokens", link: "/design-tokens" },
           { text: "Icons", link: "/icons" },
         ],
       },
