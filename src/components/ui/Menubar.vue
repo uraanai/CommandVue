@@ -25,20 +25,24 @@ defineProps<Props>();
 <template>
   <PvMenubar
     :model="model"
+    unstyled
     :pt="{
       root: { class: 'border-border bg-surface-raised text-foreground border-b' },
-      rootList: { class: 'flex items-center gap-0.5 px-1.5 py-1' },
+      rootList: { class: 'flex list-none items-center gap-0.5 p-0 px-1.5 py-1' },
       item: { class: 'relative' },
       itemContent: {
         class:
-          'hover:bg-surface-sunken focus-visible:ring-accent-500 cursor-pointer rounded transition-colors focus-visible:ring-2 focus-visible:outline-none',
+          'hover:bg-surface-sunken focus-visible:ring-accent-500 rounded transition-colors focus-visible:ring-2 focus-visible:outline-none',
       },
-      itemLink: { class: 'text-foreground flex items-center gap-2 px-2 py-1 text-xs' },
+      itemLink: {
+        class:
+          'text-foreground flex w-full cursor-pointer items-center gap-2 px-2 py-1 text-xs no-underline',
+      },
       itemLabel: { class: 'leading-none' },
       itemIcon: { class: 'text-muted size-3.5' },
       submenu: {
         class:
-          'border-border bg-surface-raised absolute z-50 mt-1 min-w-[200px] rounded-md border py-1 shadow-lg',
+          'border-border bg-surface-raised absolute top-full left-0 z-50 m-0 mt-1 flex min-w-[200px] list-none flex-col rounded-md border p-0 py-1 shadow-lg',
       },
       submenuIcon: { class: 'text-muted ml-auto size-3' },
       separator: { class: 'border-border my-1 border-t' },

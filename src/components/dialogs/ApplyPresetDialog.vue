@@ -4,12 +4,12 @@ import type { Ulid } from "@/types/workspace";
 import { computed, ref, watch } from "vue";
 
 import Button from "@/components/ui/Button.vue";
-import Dialog from "@/components/ui/Dialog.vue";
 import Select from "@/components/ui/Select.vue";
 import { presetTypeRegistry } from "@/modules/presets/registry";
 import { usePanelStateStore } from "@/stores/panelState";
 import { usePresetStore } from "@/stores/preset";
 import { useWorkspaceStore } from "@/stores/workspace";
+import Dialog from "@/volt/Dialog.vue";
 
 interface Props {
   visible: boolean;
@@ -56,7 +56,7 @@ async function apply(): Promise<void> {
   <Dialog
     :visible="visible"
     header="Apply preset"
-    @update:visible="(v) => emit('update:visible', v)"
+    @update:visible="(v: boolean) => emit('update:visible', v)"
   >
     <div v-if="!panel" class="text-muted text-sm">No panel selected.</div>
     <div v-else-if="candidates.length === 0" class="text-muted text-sm">

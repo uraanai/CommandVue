@@ -3,7 +3,12 @@ import "dockview-vue/dist/styles/dockview.css";
 
 import "@/assets/styles/dockview.css";
 
-import { DockviewVue, type DockviewApi, type DockviewReadyEvent } from "dockview-vue";
+import {
+  DockviewVue,
+  type DockviewApi,
+  type DockviewReadyEvent,
+  type DockviewTheme,
+} from "dockview-vue";
 import { onUnmounted, provide } from "vue";
 
 import { useLayoutStore } from "@/stores/layout";
@@ -40,6 +45,20 @@ function discardChanges(): void {
 
 provide(resetLayoutKey, discardChanges);
 
+/**
+ * Project-owned Dockview theme. The `className` matches the rule block in
+ * `src/assets/styles/dockview.css` where the `--dv-*` variables are bound to
+ * CommandVue's semantic tokens (so light + dark themes flow through the same
+ * class). Passing this as a prop tells dockview-vue to apply our class to its
+ * inner `.dv-shell` element instead of the default `dockview-theme-abyss`,
+ * which previously won the cascade and forced the dark-tab look in both
+ * light and dark modes.
+ */
+const commandvueTheme: DockviewTheme = {
+  name: "commandvue",
+  className: "dockview-theme-commandvue",
+};
+
 onUnmounted(() => {
   session.unbindDockview();
 });
@@ -52,5 +71,5 @@ maybePromptUnload(session.getDockviewApi());
 </script>
 
 <template>
-  <DockviewVue class="dockview-theme-commandvue h-full w-full" @ready="onReady" />
+  <DockviewVue :theme="commandvueTheme" class="h-full w-full" @ready="onReady" />
 </template>
