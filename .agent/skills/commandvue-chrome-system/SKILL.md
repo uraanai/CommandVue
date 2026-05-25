@@ -14,6 +14,8 @@ when_to_use: |
 
 > **Library-first reminder:** chrome items use PrimeVue components — never hand-rolled equivalents. The app-icon's right-click menu uses PrimeVue `ContextMenu` (popup, `cm.show(event)`). The workspace switcher uses PrimeVue `Menu` (popup mode). The MenuBar uses PrimeVue `Menubar`. The only justified custom chrome components are the slot-driven layout primitives (`ChromeBar`, `ChromeSlot`, `EditModeOverlay`) — PrimeVue has no slot-system equivalent. See [`CLAUDE.md → Library-first rule`](../../../CLAUDE.md).
 
+> **Enforcement (Phase 2.4):** ESLint warns on raw `<button>`, `<input>`, `<select>`, `<textarea>` and on direct `primevue/*` component imports from consumer files (type-only imports are allowed). The `UI primitive governance` GitHub Action labels deviating PRs. New chrome items consume `src/components/ui/*` (`Button`, `IconButton`, `Select`) and `src/volt/*` (`Menu`, `Menubar`, `ContextMenu`, …) rather than raw HTML. Full how-to: [`docs/contributing-ui.md`](../../../docs/contributing-ui.md). Rationale: [ADR 0002](../../../docs/decisions/0002-volt-vs-handrolled-wrappers.md).
+
 The persistent UI surrounding the dock — top bar, status bar, every item in them — is the **chrome**. It's slot-driven and user-configurable via edit mode.
 
 ## Slots and bars

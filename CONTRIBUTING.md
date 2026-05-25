@@ -112,6 +112,25 @@ The full project guidelines live in [`CLAUDE.md`](./CLAUDE.md) — read that fir
 - **Tailwind utilities for layout/spacing** — no scoped styles for these concerns.
 - **Tokens in `src/assets/styles/tokens.css`** — do not hardcode hex values in components.
 
+## UI primitives
+
+CommandVue is **PrimeVue-first**. Every UI surface — buttons, menus, dialogs, file pickers, color pickers, sliders, textareas, fieldsets, tags, popovers — is built on top of PrimeVue (in unstyled mode) and styled with Tailwind v4. Don't reinvent the wheel; the wrapper already exists.
+
+Primitives live in one of two places, per [ADR 0002](./docs/decisions/0002-volt-vs-handrolled-wrappers.md):
+
+- `src/components/ui/*` — hand-rolled wrappers for density-critical, specialized, or API-masked primitives (`Button`, `IconButton`, `Select`, `Tabs`, `Toast`, `Tooltip`, `ColorPicker`, `DataTable`).
+- `src/volt/*` — primitives installed via `npx volt-vue add <Name>` (`Dialog`, `Input`, `Checkbox`, `Slider`, `Textarea`, `Fieldset`, `Tag`, `Menu`, `Menubar`, `ContextMenu`, `FileUpload`).
+
+**Before writing markup for a new UI element, check whether the wrapper already exists.** The mapping table and the full how-to are in [`docs/contributing-ui.md`](./docs/contributing-ui.md).
+
+Three layers of enforcement back the rule (all warn-level — your build won't fail):
+
+- ESLint flags raw `<button>`, `<input>`, `<select>`, `<textarea>` outside the primitive directories, and direct `primevue/*` component imports from consumer files (type-only imports are allowed automatically).
+- The `UI primitive governance` GitHub Action labels PRs that add raw HTML interactive elements with `governance: raw-html-element`.
+- The PR template has a checkbox for each governance deviation — tick it and justify in the PR body if you have a documented reason to deviate.
+
+If you genuinely need a deviation, add an `eslint-disable-next-line` comment with a one-line justification, tick the corresponding PR-template checkbox, and write the rationale in the PR body. The warning, the disable comment, and the PR description form a single audit trail.
+
 ## Terminology guidance
 
 CommandVue is a civilian-friendly operations-dashboard template. Keep user-facing copy (docs, comments, README, panel labels) neutral and operations-focused. The active phrasing is:

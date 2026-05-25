@@ -51,6 +51,8 @@
 <!-- Tick any that apply to this PR. -->
 
 - [ ] This PR introduces a usage of `primevue/datatable` (default is `@tanstack/vue-table`; justify below)
+- [ ] This PR adds a raw HTML interactive element (`<button>`, `<input>`, `<select>`, `<textarea>`) outside `src/components/ui/**` or `src/volt/**` (justify below — see `docs/contributing-ui.md`)
+- [ ] This PR imports `primevue/*` directly from a consumer file (non-UI-primitive directory) for something other than the documented helper modules (justify below)
 - [ ] This PR adds a new external dependency (justify below)
 - [ ] This PR modifies content under `dictionaries/` (terminology change)
 - [ ] This PR modifies `CLAUDE.md`, `.agent/skills/`, or `docs/supabase-migration.md` (knowledge artifacts)

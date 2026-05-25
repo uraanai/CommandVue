@@ -1,0 +1,57 @@
+name: UI primitive governance
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    branches: [main, develop]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  flag-ui-primitive-deviations:
+    name: Flag raw HTML interactive elements
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Detect raw HTML interactive elements in PR diff
+        id: detect
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          # Look at added lines (lines starting with "+", excluding the diff
+          # header "+++") in changed .vue files, EXCLUDING the UI-primitive
+          # directories where raw HTML is the expected pattern. Match opening
+          # tags for the four restricted interactive elements.
+          if git diff --unified=0 "$BASE_SHA" "$HEAD_SHA" -- \
+              '*.vue' \
+              ':!src/components/ui/**' \
+              ':!src/volt/**' \
+            | grep -E '^\+[^+]' \
+            | grep -qE '<(button|input|select|textarea)(\s|>|/>)'; then
+            echo "has_raw_html=true" >> "$GITHUB_OUTPUT"
+            echo "PR diff adds raw HTML interactive element(s) outside the UI-primitive directories."
+          else
+            echo "has_raw_html=false" >> "$GITHUB_OUTPUT"
+            echo "No raw HTML interactive elements detected in PR diff."
+          fi
+
+      - name: Apply governance label
+        if: steps.detect.outputs.has_raw_html == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr edit "$PR_NUMBER" --add-label "governance: raw-html-element"

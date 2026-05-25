@@ -192,6 +192,7 @@ RLS
 auth
 dismissable
 usetoast
+useconfirm
 primeui
 closebutton
 maximizebutton

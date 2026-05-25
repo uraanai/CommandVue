@@ -13,6 +13,8 @@ when_to_use: |
 
 > **Library-first reminder:** preset _editor_ components (`src/components/presets/editors/*.vue`) must use PrimeVue form controls: `ColorPicker` for color fields, `Slider` for ranges, `Checkbox` for booleans, `Select` for enums, `Textarea` for multi-line text. Never use raw `<input type=color/range/checkbox>` or `<select>` — they look out-of-place next to the rest of the app and miss out on accessibility. See [`CLAUDE.md → Library-first rule`](../../../CLAUDE.md).
 
+> **Enforcement (Phase 2.4):** ESLint warns on raw `<button>`, `<input>`, `<select>`, `<textarea>` and on direct `primevue/*` component imports from consumer files (type-only imports are allowed). The `UI primitive governance` GitHub Action labels deviating PRs. Pick `src/components/ui/ColorPicker.vue`, `src/volt/Slider.vue`, `src/volt/Checkbox.vue`, `src/components/ui/Select.vue`, `src/volt/Textarea.vue` — never raw HTML. Full how-to: [`docs/contributing-ui.md`](../../../docs/contributing-ui.md). Rationale: [ADR 0002](../../../docs/decisions/0002-volt-vs-handrolled-wrappers.md).
+
 A **preset** is a typed bundle of visual configuration applied to panels at runtime. Two layers:
 
 | Layer             | What it is                                   | Where it lives                          |

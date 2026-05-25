@@ -13,6 +13,8 @@ when_to_use: |
 
 > **Library-first reminder:** UI inside a panel uses PrimeVue components — never hand-rolled equivalents. Dropdowns → `Select`, textareas → `Textarea`, color/range/checkbox → `ColorPicker` / `Slider` / `Checkbox`, section grouping → `Fieldset`, badges → `Tag`. Charts use `vue-echarts`; maps use `cesium` / `maplibre-gl`; symbology uses `milsymbol`. **Tables are the one governed exception** — tabular data uses the project's `<DataTable>` wrapper at `src/components/ui/DataTable.vue` (TanStack-based default; `primevue/datatable` is the documented escape valve, see [ADR 0001](../../../docs/decisions/0001-datatable-library.md)). See [`CLAUDE.md → Library-first rule`](../../../CLAUDE.md) and [`workflows/library-first.md`](../../workflows/library-first.md).
 
+> **Enforcement (Phase 2.4):** ESLint warns on raw `<button>`, `<input>`, `<select>`, `<textarea>` and on direct `primevue/*` component imports from consumer files (type-only imports are allowed). The `UI primitive governance` GitHub Action labels deviating PRs. Picking the wrong primitive is now visible in CI — pick `src/components/ui/*` or `src/volt/*`, not raw HTML. Full how-to: [`docs/contributing-ui.md`](../../../docs/contributing-ui.md). Rationale: [ADR 0002](../../../docs/decisions/0002-volt-vs-handrolled-wrappers.md).
+
 ## Three things to know first
 
 1. **Dockview-vue 6 resolves panels by string id from Vue's global component registry.** The Panel Registry sits **alongside** `app.component()`, not in place of it.

@@ -69,6 +69,7 @@ export default defineConfig({
         text: "Building",
         items: [
           { text: "Panels", link: "/panels" },
+          { text: "UI primitives", link: "/contributing-ui" },
           { text: "DataTable", link: "/datatable" },
           { text: "Tools", link: "/tools" },
           { text: "State", link: "/state" },
