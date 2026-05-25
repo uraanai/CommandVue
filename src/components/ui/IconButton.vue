@@ -1,13 +1,20 @@
 <script setup lang="ts">
 import PvButton from "primevue/button";
-import { computed } from "vue";
+import { computed, useAttrs } from "vue";
 
 import { cn } from "@/utils/cn";
 
 /**
  * IconButton — icon-only Button wrapper over PrimeVue Button.
  * Always sets `aria-label` from the required `label` prop.
+ *
+ * Consumer `class="…"` is merged into the underlying button via `cn()` so
+ * conflicting Tailwind utilities (e.g. `p-0` vs the default `p-[5px]`) resolve
+ * predictably through `tailwind-merge`. `inheritAttrs` is disabled so that
+ * fallthrough class doesn't ALSO land on the root unmerged.
  */
+defineOptions({ inheritAttrs: false });
+
 type Variant = "ghost" | "solid";
 type Size = "sm" | "md" | "lg";
 
@@ -23,6 +30,8 @@ const props = withDefaults(defineProps<Props>(), {
   size: "md",
   disabled: false,
 });
+
+const attrs = useAttrs();
 
 const variantClass: Record<Variant, string> = {
   ghost: "bg-transparent text-foreground hover:bg-surface-raised",
@@ -45,8 +54,16 @@ const rootClass = computed(() =>
     "disabled:cursor-not-allowed disabled:opacity-50",
     variantClass[props.variant],
     sizeClass[props.size],
+    attrs.class as string | undefined,
   ),
 );
+
+const forwardedAttrs = computed(() => {
+  // Strip `class` from $attrs — it's already merged into rootClass via cn().
+  // Everything else (data-*, aria-*, @click, …) still falls through.
+  const { class: _omit, ...rest } = attrs;
+  return rest;
+});
 </script>
 
 <template>
@@ -54,6 +71,7 @@ const rootClass = computed(() =>
     type="button"
     :disabled="disabled"
     :aria-label="label"
+    v-bind="forwardedAttrs"
     :pt="{
       root: { class: rootClass },
       label: { class: 'inline-flex items-center' },
