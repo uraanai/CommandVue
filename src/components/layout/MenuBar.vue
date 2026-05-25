@@ -3,14 +3,15 @@ import type { PanelDefinition } from "@/modules/panels/types";
 import type { MenuItem } from "primevue/menuitem";
 
 import { ChevronDown, ChevronRight } from "@lucide/vue";
-import FileUpload, { type FileUploadSelectEvent } from "primevue/fileupload";
-import Menubar from "primevue/menubar";
+import { type FileUploadSelectEvent } from "primevue/fileupload";
 import { computed, ref } from "vue";
 
 import ManageLayoutsDialog from "@/components/dialogs/ManageLayoutsDialog.vue";
 import ManagePresetsDialog from "@/components/dialogs/ManagePresetsDialog.vue";
 import ManageWorkspacesDialog from "@/components/dialogs/ManageWorkspacesDialog.vue";
 import SaveLayoutAsDialog from "@/components/dialogs/SaveLayoutAsDialog.vue";
+import FileUpload from "@/components/ui/FileUpload.vue";
+import Menubar from "@/components/ui/Menubar.vue";
 import { panelRegistry } from "@/modules/panels/registry";
 import { UNASSIGNED_PANEL_TYPE } from "@/modules/panels/unassigned";
 import { formatCombo } from "@/modules/shortcuts/catalog";
@@ -35,14 +36,12 @@ const manageLayoutsOpen = ref(false);
 const managePresetsOpen = ref(false);
 const saveAsOpen = ref(false);
 
-// PrimeVue FileUpload — kept hidden via PT; menu items trigger choose()
+// FileUpload — kept hidden by the wrapper; menu items trigger `choose()`
 // programmatically. customUpload + auto means @select fires immediately with
-// the picked file without any HTTP round-trip.
-//
-// `choose()` and `clear()` are runtime instance methods PrimeVue exposes on
-// FileUpload but doesn't surface on its exported component type — typed
-// manually here.
-const importFileRef = ref<null | { choose: () => void; clear: () => void }>(null);
+// the picked file without any HTTP round-trip. The wrapper exposes `choose`
+// and `clear` via `defineExpose` so the manual ref typing the previous
+// direct-PrimeVue usage required is no longer needed.
+const importFileRef = ref<InstanceType<typeof FileUpload> | null>(null);
 
 async function saveLayout(): Promise<void> {
   if (!session.loadedLayoutId) return;
@@ -295,18 +294,11 @@ const menuItems = computed<MenuItem[]>(() => [
   <Menubar
     :model="menuItems"
     :pt="{
-      root: { class: 'flex items-stretch gap-0 px-2 py-0 bg-transparent border-0' },
+      // Override the wrapper's default top-bar surface; the layout MenuBar
+      // sits inside the chrome bar which already paints surface-raised + a
+      // bottom border, so we keep this one transparent.
+      root: { class: 'flex items-stretch gap-0 border-0 bg-transparent px-2 py-0' },
       rootList: { class: 'flex items-stretch gap-0' },
-      submenu: {
-        class:
-          'absolute z-50 flex min-w-[220px] flex-col rounded-md border border-border bg-surface-raised py-1 shadow-lg',
-      },
-      item: { class: 'block' },
-      separator: { class: 'my-1 border-t border-border' },
-      // PrimeVue Menubar ships a built-in mobile-toggle (hamburger). CommandVue
-      // is a desktop-first operations dashboard — hide it so the top bar starts
-      // cleanly at File / Edit / View.
-      button: { class: 'hidden' },
     }"
   >
     <template #item="{ item, props: itemProps, hasSubmenu, root }">
@@ -336,18 +328,11 @@ const menuItems = computed<MenuItem[]>(() => [
     </template>
   </Menubar>
 
-  <!-- Hidden PrimeVue FileUpload — triggered via importFileRef.choose() from
-       the File → Import Workspace… menu item. customUpload + auto means
-       @select fires immediately with the picked file; no HTTP round-trip. -->
-  <FileUpload
-    ref="importFileRef"
-    mode="basic"
-    accept="application/json,.json"
-    custom-upload
-    auto
-    :pt="{ root: { class: 'hidden' } }"
-    @select="onImportFileSelect"
-  />
+  <!-- Hidden FileUpload — triggered via importFileRef.choose() from
+       the File → Import Workspace… menu item. The wrapper defaults to
+       basic+customUpload+auto+hidden so consumers only need to pass accept
+       and a select handler. -->
+  <FileUpload ref="importFileRef" accept="application/json,.json" @select="onImportFileSelect" />
 
   <ManageWorkspacesDialog v-model:visible="manageWorkspacesOpen" />
   <ManageLayoutsDialog v-model:visible="manageLayoutsOpen" />
