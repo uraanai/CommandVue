@@ -71,7 +71,21 @@ For Tailwind-only consumers, the row-height tokens are available as inline `styl
 - `useTheme()` (composable, `src/composables/useTheme.ts`) owns `data-theme` on `<html>`.
 - Dark overrides live under `html[data-theme="dark"] { … }` in `tokens.css`. They override **semantic + component tokens**, never primitives.
 - Tailwind's `dark:` variant resolves on `[data-theme="dark"]` (via `@custom-variant` in `main.css`). `dark:bg-surface-raised` works, but in most cases you don't need it because the semantic token already flips automatically.
-- Phase 3.2 (this prompt) extends `useTheme()` with a three-way Light/Dark/Auto toggle and the anti-FOUC inline script.
+
+## Three-way theme toggle (Phase 3.2)
+
+Modes: `light` / `dark` / `auto`. Auto follows `prefers-color-scheme` and re-resolves live on OS change. Cycle order: `light → dark → auto → light`.
+
+**Persistence is dual-write:**
+
+- `appMetaRepo` (IDB) is authoritative under key `commandvue:theme`. Stores the _mode_.
+- `localStorage` mirrors the _resolved_ theme (light|dark) for the anti-FOUC inline script in `index.html`.
+
+**Bootstrap:** `initializeTheme()` is called from `main.ts` once before `app.mount()`. Hydrates the in-memory mode ref from IDB, wires the matchMedia listener, applies the resolved theme. The anti-FOUC script in `index.html` runs first synchronously to avoid a flash.
+
+**Accessibility:** `useTheme().setMode()` announces via a visually-hidden `aria-live="polite"` region (`#commandvue-theme-announce`).
+
+Full reference: [`docs/design-tokens.md → Theme toggle`](../../../docs/design-tokens.md). Tests: `tests/unit/composables/useTheme.spec.ts`.
 
 ## Common operations
 

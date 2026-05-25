@@ -8,6 +8,15 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 
 ### Added
 
+- **Light / Dark / Auto theme toggle (Phase 3.2 of Prompt 3).**
+  - `useTheme()` composable rewritten as a three-mode controller: `light` / `dark` / `auto`. Auto follows `prefers-color-scheme` and re-resolves automatically when the OS preference changes.
+  - `setMode(next)` / `cycleMode()` actions. Cycle order: light → dark → auto → light. `resolvedTheme` always returns a concrete `light` | `dark`.
+  - Dual-write persistence: `appMetaRepo` (IDB) under key `commandvue:theme` is authoritative (stores the mode); `localStorage` mirrors the resolved theme for the anti-FOUC inline script.
+  - Anti-FOUC inline `<script>` in `index.html` runs synchronously in `<head>` before any CSS loads; reads the localStorage mirror or falls back to `prefers-color-scheme` so the first paint matches user choice.
+  - `initializeTheme()` runs from `main.ts` before `app.mount()` — hydrates the in-memory mode from IDB, wires the matchMedia listener, applies the resolved theme.
+  - `ThemeToggleItem` chrome item replaced with the new three-way cycle (Sun → Moon → Monitor). `aria-label` and `title` describe the next mode for discoverability.
+  - Mode changes announce via a visually-hidden `role="status" aria-live="polite"` region (`#commandvue-theme-announce`).
+  - 13 new unit tests in `tests/unit/composables/useTheme.spec.ts` covering default state, mode setting, cycle order, system-preference resolution, dual-write persistence, listener teardown, idempotent init, aria-live region creation.
 - **Three-layer design token foundation (Phase 3.1 of Prompt 3).**
   - Primitive token layer (`@theme` in `src/assets/styles/tokens.css`) — OKLCH neutral scale (slate 50→950) + six accent palettes (blue, teal, green, amber, red, violet), spacing scale (`--space-0` → `--space-48`), typography (font families, font size scale, font weights, line heights), border radii, shadows, motion (durations + easings), z-index. Mirrors Tailwind v4's default palette values.
   - Semantic token layer (`:root` in `tokens.css`) — surface (base/raised/overlay/sunken), border (subtle/default/strong), text (primary/secondary/tertiary/disabled/inverse), interactive (default/hover/active/subtle + `on-interactive`), status (success/warning/danger/info with `-subtle` companions), focus ring, semantic spacing (`--space-panel-padding`, …), semantic typography.

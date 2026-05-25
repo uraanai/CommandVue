@@ -7,6 +7,7 @@ import { createPinia } from "pinia";
 import PrimeVue from "primevue/config";
 import { createApp, defineAsyncComponent } from "vue";
 
+import { initializeTheme } from "@/composables/useTheme";
 import { registerBuiltinChromeItems } from "@/modules/chrome/builtin";
 import { registerBuiltinPanels } from "@/modules/panels/builtin";
 import { MISSING_PANEL_TYPE, registerMissingPanel } from "@/modules/panels/missing";
@@ -21,6 +22,14 @@ import { router } from "./router";
 // supported by Vite for entry modules; ensures the Operations workspace,
 // Default layout, and Default chrome profile exist before App.vue mounts.
 await seedIfEmpty();
+
+// Theme bootstrap. Hydrates `useTheme()`'s in-memory mode from IDB (the
+// authoritative store), wires the prefers-color-scheme listener for auto
+// mode, and re-applies the resolved theme to `data-theme` on <html>. The
+// anti-FOUC inline script in `index.html` already set a paint-safe value;
+// this call reconciles IDB with that and fixes the rare case where the
+// localStorage mirror diverged from IDB (private mode, storage cleared, …).
+await initializeTheme();
 
 // Populate the panel registry before mount. The registry sits alongside the
 // global `app.component()` registrations below — Dockview resolves panel
