@@ -3,12 +3,11 @@ import type { DockviewPanelApi } from "dockview-vue";
 
 import { Pencil, Save } from "@lucide/vue";
 import MarkdownIt from "markdown-it";
-import Textarea from "primevue/textarea";
 import { computed, ref } from "vue";
 
 import Button from "@/components/ui/Button.vue";
 import { usePanelState } from "@/composables/usePanelState";
-import { cn } from "@/utils/cn";
+import Textarea from "@/volt/Textarea.vue";
 
 interface Props {
   api?: DockviewPanelApi;
@@ -103,12 +102,7 @@ function toggleEdit(): void {
       placeholder="# Briefing…"
       :pt="{
         root: {
-          class: cn(
-            'bg-surface text-foreground placeholder:text-faint',
-            'min-h-0 flex-1 resize-none p-3 font-mono text-xs',
-            'focus:outline-none focus-visible:outline-none',
-            'border-0',
-          ),
+          class: 'min-h-0 flex-1 resize-none rounded-none border-0 p-3 font-mono text-xs',
         },
       }"
       @input="saveFn?.()"

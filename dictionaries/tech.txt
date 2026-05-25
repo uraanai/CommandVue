@@ -200,3 +200,8 @@ windowminimize
 togglericon
 toggleable
 themable
+paginatorcontainer
+angledoubleleft
+angledoubleright
+angleleft
+angleright
