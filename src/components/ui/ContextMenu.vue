@@ -53,7 +53,10 @@ const baseTheme: Record<string, PtSlot> = {
   item: { class: "relative" },
   itemContent: { class: "hover:bg-surface-sunken cursor-pointer transition-colors" },
   itemLink: {
-    class: "text-foreground flex items-center gap-2 px-3 py-1.5 text-sm",
+    // Density-driven padding + font-size so right-click menus rescale with
+    // `data-density` on `<html>`.
+    class:
+      "text-foreground flex items-center gap-2 px-[var(--density-cell-padding-x)] py-[var(--density-cell-padding-y)] text-[length:var(--density-font-size)]",
   },
   itemIcon: { class: "text-muted size-3.5" },
   submenu: {

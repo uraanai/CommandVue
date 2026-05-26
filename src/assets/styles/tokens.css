@@ -207,9 +207,11 @@
   --space-40: 10rem;
   --space-48: 12rem;
 
-  /* Chrome heights — semantic spacing surfaced as `--spacing-titlebar`
-   * (used by `h-titlebar` Tailwind utility) and `--spacing-statusbar`. */
-  --spacing-titlebar: 3rem;
+  /* Chrome heights — surfaced as `--spacing-titlebar` and
+   * `--spacing-statusbar` so the `h-titlebar` and `h-statusbar` Tailwind
+   * utilities resolve. The values themselves are overridden in the density
+   * section below so the bars shrink/grow with `data-density`. */
+  --spacing-titlebar: 2.5rem;
   --spacing-statusbar: 1.75rem;
 
   /* --------------------------------------------------------------------------
@@ -374,13 +376,32 @@
   --color-danger: var(--color-status-danger);
   --color-info: var(--color-status-info);
 
-  /* --- Density defaults (comfortable) --- */
+  /* --- Density defaults (comfortable) ---
+   *
+   * Every interactive primitive consumes from this set. Switching `data-
+   * density` on `<html>` re-resolves the chain so the entire app shifts —
+   * chrome bars, buttons, inputs, menu items, table rows, panel headers
+   * all reflect the new density.
+   *
+   * `--density-titlebar-height` and `--density-statusbar-height` are the
+   * Phase-3.3 additions; the rest already shipped in Phase 3.1. Tailwind
+   * still exposes `--spacing-titlebar` and `--spacing-statusbar` (legacy
+   * names from before density existed); we keep both in sync via aliases
+   * below so consumers can use whichever they're used to. */
   --density-row-height: 2.25rem;
   --density-cell-padding-y: var(--space-2);
   --density-cell-padding-x: var(--space-3);
   --density-control-height: 2rem;
   --density-icon-size: 1rem;
   --density-font-size: var(--text-sm);
+  --density-titlebar-height: 2.5rem;
+  --density-statusbar-height: 1.75rem;
+  --density-panel-header-height: 2.25rem;
+
+  /* Legacy aliases — keep older `h-titlebar` / `h-statusbar` consumers
+   * working as the density tokens drive the source of truth. */
+  --spacing-titlebar: var(--density-titlebar-height);
+  --spacing-statusbar: var(--density-statusbar-height);
 }
 
 [data-density="compact"] {
@@ -390,6 +411,11 @@
   --density-control-height: 1.625rem;
   --density-icon-size: 0.875rem;
   --density-font-size: var(--text-xs);
+  --density-titlebar-height: 2rem;
+  --density-statusbar-height: 1.5rem;
+  --density-panel-header-height: 1.75rem;
+  --spacing-titlebar: var(--density-titlebar-height);
+  --spacing-statusbar: var(--density-statusbar-height);
 }
 
 [data-density="spacious"] {
@@ -399,6 +425,11 @@
   --density-control-height: 2.5rem;
   --density-icon-size: 1.125rem;
   --density-font-size: var(--text-base);
+  --density-titlebar-height: 3rem;
+  --density-statusbar-height: 2.25rem;
+  --density-panel-header-height: 2.75rem;
+  --spacing-titlebar: var(--density-titlebar-height);
+  --spacing-statusbar: var(--density-statusbar-height);
 }
 
 /* ==========================================================================

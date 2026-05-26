@@ -87,6 +87,24 @@ Modes: `light` / `dark` / `auto`. Auto follows `prefers-color-scheme` and re-res
 
 Full reference: [`docs/design-tokens.md → Theme toggle`](../../../docs/design-tokens.md). Tests: `tests/unit/composables/useTheme.spec.ts`.
 
+## Built-in theme variants (Phase 3.3)
+
+Six bundled themes under `src/assets/themes/*.json` — `compact-light`, `compact-dark`, `command-center-light`, `command-center-dark`, `admin-panel-light`, `admin-panel-dark`. Each overrides 30-50 semantic + component tokens; primitives stay constant.
+
+**Registry:** `src/modules/themes/registry.ts` — singleton (`themeRegistry`). `register`, `unregister`, `get`, `list`, `listBuiltIn`, `listByMode`, `subscribe`. Built-in registration via `registerBuiltinThemes()` in `src/modules/themes/builtin.ts`, called once from `main.ts` before mount.
+
+**Application engine:** `src/modules/themes/apply.ts` — `applyTheme(theme)` writes `--{key}` inline styles on `<html>`, tracks applied keys in `data-theme-applied` for clean teardown on the next swap, and sets the three identity attributes (`data-theme-id`, `data-theme`, `data-density`). `clearTheme()` removes overrides + identity attributes but preserves `data-theme` (owned by `useTheme`).
+
+**Store:** `src/stores/theme.ts` — `useThemeStore()` with `currentThemeId`, `loadInitial(workspaceId)`, `setTheme(id, workspaceId?)`, `setWorkspaceTheme(workspaceId, id, activeId)`, `clearWorkspaceTheme(workspaceId, activeId)`. Precedence: workspace-bound > global pointer > `compact-light` fallback. Persisted via `appMetaRepo` (keys `commandvue:theme-id` and `commandvue:workspace-theme-{wsId}`).
+
+**Variant pairing:** themes share a base id with `-light` / `-dark` suffix. `useTheme.setMode()` calls `bridgeVariant()` after writing `data-theme`; if the current theme has a paired variant for the resolved mode, it swaps via `themeStore.setTheme()`. The bridge no-ops when no theme is active, when the id has no suffix, or when the paired id isn't in the registry.
+
+**Workspace integration:** `useSessionStore.switchWorkspace()` calls `themeStore.loadInitial(workspaceId)` after `workspaceStore.setCurrentWorkspace()` so the new workspace's bound theme applies before the layout's panels mount.
+
+**Picker:** `src/components/dialogs/ThemePickerDialog.vue` — Volt Dialog with one card per registered theme. Swatches resolved at render time via a hidden helper element so `var()` references collapse to concrete colors.
+
+Full reference: [`docs/themes.md`](../../../docs/themes.md). Tests: `tests/unit/themes/registry.spec.ts`, `tests/unit/themes/apply.spec.ts`.
+
 ## Common operations
 
 ### "I need a color and I'm tempted to hardcode it"

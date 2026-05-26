@@ -423,29 +423,40 @@ const tableStyle = computed(() => ({
 </template>
 
 <style>
+/*
+ * Default row metrics inherit from the global `--density-*` tokens (set on
+ * <html> via `data-density`). The per-table `data-density` attribute is
+ * still honoured for explicit instance-level overrides — those entries
+ * below re-resolve against the global tokens too, so when a consumer sets
+ * `:density="compact"` on a table sitting inside a `data-density="spacious"`
+ * shell, the table compacts. Themes that change the density-mode tokens
+ * automatically flow through.
+ */
 .commandvue-datatable {
-  --cv-dt-row-h: 36px;
-  --cv-dt-cell-py: 6px;
-  --cv-dt-cell-px: 8px;
-  --cv-dt-font-size: 12px;
+  --cv-dt-row-h: var(--density-row-height);
+  --cv-dt-cell-py: var(--density-cell-padding-y);
+  --cv-dt-cell-px: var(--density-cell-padding-x);
+  --cv-dt-font-size: var(--density-font-size);
 }
+/* Per-table `<DataTable :density="X">` overrides — re-resolve the same
+ * tokens locally so the table can opt out of the global density mode. */
 .commandvue-datatable[data-density="compact"] {
-  --cv-dt-row-h: 28px;
-  --cv-dt-cell-py: 2px;
-  --cv-dt-cell-px: 6px;
-  --cv-dt-font-size: 11px;
+  --density-row-height: 1.75rem;
+  --density-cell-padding-y: 0.25rem;
+  --density-cell-padding-x: 0.5rem;
+  --density-font-size: 0.75rem;
 }
 .commandvue-datatable[data-density="comfortable"] {
-  --cv-dt-row-h: 36px;
-  --cv-dt-cell-py: 6px;
-  --cv-dt-cell-px: 8px;
-  --cv-dt-font-size: 12px;
+  --density-row-height: 2.25rem;
+  --density-cell-padding-y: 0.5rem;
+  --density-cell-padding-x: 0.75rem;
+  --density-font-size: 0.875rem;
 }
 .commandvue-datatable[data-density="spacious"] {
-  --cv-dt-row-h: 44px;
-  --cv-dt-cell-py: 10px;
-  --cv-dt-cell-px: 12px;
-  --cv-dt-font-size: 14px;
+  --density-row-height: 2.75rem;
+  --density-cell-padding-y: 0.75rem;
+  --density-cell-padding-x: 1rem;
+  --density-font-size: 1rem;
 }
 
 .commandvue-datatable .cv-dt-table {

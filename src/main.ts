@@ -14,6 +14,7 @@ import { MISSING_PANEL_TYPE, registerMissingPanel } from "@/modules/panels/missi
 import { registerUnassignedPanel, UNASSIGNED_PANEL_TYPE } from "@/modules/panels/unassigned";
 import { registerBuiltinPresetTypes } from "@/modules/presets/builtin";
 import { seedIfEmpty } from "@/modules/storage/seed";
+import { registerBuiltinThemes } from "@/modules/themes/builtin";
 
 import App from "./App.vue";
 import { router } from "./router";
@@ -62,6 +63,7 @@ registerUnassignedPanel();
 registerMissingPanel();
 registerBuiltinChromeItems();
 registerBuiltinPresetTypes();
+registerBuiltinThemes();
 
 const app = createApp(App);
 

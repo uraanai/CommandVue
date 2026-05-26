@@ -38,11 +38,12 @@ const variantClass: Record<Variant, string> = {
   solid: "bg-surface-raised text-foreground border border-border hover:bg-surface-sunken",
 };
 
-// `sm` uses 5px padding (not p-1 = 4px) so the total height — 5 + 14 + 5 = 24px
-// — matches the regular `Button` size="sm" (py-1 + text-xs = 8 + 16 = 24px),
-// keeping IconButtons aligned next to text Buttons in the chrome bar.
+// `sm` is the density-driven default — height + padding + icon size all pull
+// from `--density-*` so the icon button rescales with `data-density` on
+// `<html>`. The svg-size selector pulls `--density-icon-size`. `md` and `lg`
+// stay fixed for callout uses.
 const sizeClass: Record<Size, string> = {
-  sm: "p-[5px] [&_svg]:size-3.5",
+  sm: "p-[var(--density-cell-padding-y)] min-h-[var(--density-control-height)] min-w-[var(--density-control-height)] [&_svg]:size-[var(--density-icon-size)]",
   md: "p-1.5 [&_svg]:size-4",
   lg: "p-2 [&_svg]:size-5",
 };

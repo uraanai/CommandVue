@@ -83,6 +83,7 @@ export default defineConfig({
           { text: "Styling", link: "/styling" },
           { text: "Theming", link: "/theming" },
           { text: "Design tokens", link: "/design-tokens" },
+          { text: "Themes", link: "/themes" },
           { text: "Icons", link: "/icons" },
         ],
       },
