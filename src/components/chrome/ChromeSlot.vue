@@ -239,14 +239,22 @@ onBeforeUnmount(() => teardownAll());
         class="bg-accent-500 pointer-events-none absolute top-0 -right-1 z-10 h-full w-0.5 rounded"
       />
       <component :is="loadItem(id)" v-if="loadItem(id)" />
+      <!--
+        The remove badge is a fixed tiny overlay, not a density-scaled control.
+        `IconButton size="sm"` pulls `min-h`/`min-w`/`[&_svg]:size` from the
+        `--density-*` tokens, which would otherwise inflate this badge to the
+        full control height (~26px). `h-*`/`w-*` can't override `min-h`/`min-w`
+        (different tailwind-merge groups), so neutralize them with `min-h-0` /
+        `min-w-0` and pin the icon size explicitly.
+      -->
       <IconButton
         v-if="chrome.editMode && chromeItemRegistry.get(id)?.removable"
         label="Remove from slot"
         size="sm"
-        class="bg-danger absolute -top-1.5 -right-1.5 h-3.5 w-3.5 rounded-full p-0 text-white hover:bg-red-500"
+        class="bg-danger absolute -top-1.5 -right-1.5 h-4 min-h-0 w-4 min-w-0 rounded-full p-0 text-white hover:bg-red-500 [&_svg]:size-2.5"
         @click="removeItem(id)"
       >
-        <X class="size-2.5" />
+        <X />
       </IconButton>
     </div>
 

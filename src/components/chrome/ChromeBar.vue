@@ -17,9 +17,17 @@ const rightSlot: ChromeSlot = props.position === "top" ? "top-right" : "status-r
 </script>
 
 <template>
+  <!--
+    `min-h` (not a fixed `h`) on the status bar: an interactive control sized
+    to `--density-control-height` (e.g. the Edit toggle, ~26px compact) is
+    taller than `--density-statusbar-height` (~24px). A fixed height would clip
+    it and inflate the grid row, dragging every item below centre. `min-h` lets
+    the bar grow to its tallest control so `items-center` truly centres. The top
+    bar keeps `py-1` (it has no fixed height and already fits its controls).
+  -->
   <div
-    class="border-border bg-surface-raised relative grid grid-cols-3 items-center border-b py-1"
-    :class="position === 'status' ? 'h-[var(--spacing-statusbar)] border-t border-b-0' : ''"
+    class="border-border bg-surface-raised relative grid grid-cols-3 items-center"
+    :class="position === 'status' ? 'min-h-[var(--spacing-statusbar)] border-t' : 'border-b py-1'"
   >
     <ChromeSlotView :slot-name="leftSlot" align="start" />
     <ChromeSlotView :slot-name="centerSlot" align="center" />
