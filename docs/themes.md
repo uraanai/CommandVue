@@ -96,6 +96,23 @@ When `applyTheme(theme)` runs:
 
 The Tailwind `@theme` defaults in `tokens.css` apply when no `:root` inline override exists, so a theme that overrides only 10 tokens cleanly inherits the other ~80.
 
+## Roadmap — not yet supported (Prompt 4)
+
+Phase 3.3 ships the **runtime foundation** for themes. The Prompt-3 brief explicitly defers the in-app **authoring** surface to Prompt 4 — _"Do not start runtime theme authoring in this prompt"_. So today there's no UI path to:
+
+- **Upload a custom theme JSON file** from the picker. A user who wants to add their own theme has to either edit source (`src/assets/themes/` + register in `builtin.ts`) or call `themeRegistry.register(theme)` from a downstream extension hook.
+- **Validate a `PortableTheme` payload at runtime.** The `PortableTheme` TypeScript type exists for the bundled JSON loader, but there's no runtime validator — malformed input would either crash at `JSON.parse` or pass through with bad token keys that the apply engine silently writes (then ignores).
+- **Edit a theme inside the app.** No in-app editor for token tweaking. Source-level JSON edits + page reload is the only path.
+- **Export / duplicate / save-as.** The picker only applies; it doesn't read out the current theme as JSON or clone an existing built-in into a new custom theme.
+- **Bind workspace cleanup.** Workspace deletion doesn't cascade-clear the workspace-bound theme key (`commandvue:workspace-theme-{wsId}`); the orphan persists until manually cleared.
+
+Prompt 4 builds all of this on top of the registry + apply engine the runtime already exposes. The foundation is deliberate: `PortableTheme`, `themeRegistry.register()`, and the `applyTheme()` engine were designed so the authoring layer is mechanical to add — no architectural pivots needed.
+
+If you need a workaround today:
+
+- **Downstream apps** can register custom themes by importing `themeRegistry` in their own `main.ts` (after `registerBuiltinThemes()`) and calling `themeRegistry.register({...})` with a hand-constructed `Theme` object.
+- **Template forks** can drop new JSON files alongside the six built-ins and add them to `BUILTIN_PORTABLE` in `src/modules/themes/builtin.ts`.
+
 ## References
 
 - [`docs/design-tokens.md`](./design-tokens.md) — token foundation + Light/Dark/Auto toggle docs
