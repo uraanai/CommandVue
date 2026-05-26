@@ -1,5 +1,6 @@
 # Project-specific words for CommandVue.
 
+customizer
 commandvue
 CommandVue
 dockpanel

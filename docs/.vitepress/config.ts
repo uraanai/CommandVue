@@ -84,6 +84,7 @@ export default defineConfig({
           { text: "Theming", link: "/theming" },
           { text: "Design tokens", link: "/design-tokens" },
           { text: "Themes", link: "/themes" },
+          { text: "Theme generation", link: "/theme-generation-algorithm" },
           { text: "Icons", link: "/icons" },
         ],
       },

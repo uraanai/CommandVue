@@ -105,6 +105,18 @@ Six bundled themes under `src/assets/themes/*.json` — `compact-light`, `compac
 
 Full reference: [`docs/themes.md`](../../../docs/themes.md). Tests: `tests/unit/themes/registry.spec.ts`, `tests/unit/themes/apply.spec.ts`.
 
+## Theme generation (Prompt 4 Phase B)
+
+`src/modules/themes/generate.ts` is the Linear-style generation engine: 3–4 high-level inputs → the full ~50-token semantic set. All color math runs in OKLCH via [culori](https://culorijs.org) (see [ADR 0003](../../../docs/decisions/0003-theme-generation-color-library.md)).
+
+- **`generateTheme(input)`** → `{ tokens, contrastReport }`. Inputs: `baseColor`, `accentColor`, `contrast` (30–100), `mode`, `density`, optional `fontFamily`. Surfaces brighten with elevation in light mode / lighten in dark; text + border lightness are **solved** via binary search to hit a target WCAG ratio (accessibility is computed, not eyeballed); colors are gamut-mapped into sRGB.
+- **What it emits:** semantic colors + backwards-compat aliases + color-bearing component overrides. **It never emits `--density-*` tokens** — density rides the `data-density` attribute, and emitting them would break density switching. Sizing/radius/font-size component tokens cascade from the density layer + primitives.
+- **`generatePairedVariant(theme)`** regenerates the opposite-mode variant from the same `generation` inputs (mode flipped, density carried) — the bridge for Light/Dark/Auto on user-authored themes.
+- **Contrast report:** headline ratios (`textOnSurface`, `textOnRaised`, `onInteractive`) + `failures[]`. A good theme has `failures: []`.
+- **Inspect output:** `pnpm theme:demo` writes four sample themes to `.verification-screenshots/feat-theme-generation-engine/sample-output.json`.
+
+Full reference: [`docs/theme-generation-algorithm.md`](../../../docs/theme-generation-algorithm.md). Tests: `tests/unit/themes/generate.spec.ts`.
+
 ## Common operations
 
 ### "I need a color and I'm tempted to hardcode it"

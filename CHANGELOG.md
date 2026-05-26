@@ -8,6 +8,17 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 
 ### Added
 
+- **Theme generation engine (Prompt 4 Phase B).**
+  - `culori` added as the color library for OKLCH color math (`@types/culori` as a dev dependency); rationale in [`docs/decisions/0003-theme-generation-color-library.md`](docs/decisions/0003-theme-generation-color-library.md).
+  - `src/modules/themes/generate.ts` — `generateTheme(input)` takes 3–4 high-level inputs (base color, accent color, contrast 30–100, mode, density, optional font) and emits the full ~50-token semantic set: surfaces, text, borders, the interactive scale, status colors, focus ring, backwards-compat aliases, and color-bearing component overrides. All math runs in OKLCH for perceptual uniformity.
+  - **Accessibility is computed, not eyeballed.** Text and border lightness are solved via binary search to hit a target WCAG ratio (the 30–100 contrast input maps to 4.5:1 → 12:1). Text is anchored against the worst-case surface so the AA target holds on every elevation. `on-interactive` is white when it clears AA, else a solved dark text (e.g. amber accents).
+  - **Every color is gamut-mapped into sRGB** (`clampChroma` + a strict `inGamut` tightening pass; chroma is floored when formatting so printed values can't drift out of gamut).
+  - Status colors use fixed semantic hue families (success ≈ 145°, warning ≈ 75°, danger ≈ 27°, info ≈ 250°), each with a `-subtle` variant.
+  - Deliberately does **not** emit `--density-*` tokens — density rides the `data-density` cascade; emitting them would break density switching.
+  - `generatePairedVariant(theme)` regenerates a generated theme's opposite-mode counterpart from the same inputs — the Light/Dark/Auto bridge for user-authored themes.
+  - `pnpm theme:demo` (dev-only `scripts/demo-theme-generation.ts`) emits four sample themes to `.verification-screenshots/feat-theme-generation-engine/sample-output.json` for human inspection.
+  - [`docs/theme-generation-algorithm.md`](docs/theme-generation-algorithm.md) documents the per-scale math, contrast verification, gamut handling, limitations, and where the engine refines the prompt's surface-elevation text to match the shipped built-ins.
+  - 16 unit tests in `tests/unit/themes/generate.spec.ts` (token coverage, known-token names only, WCAG AA in light + dark, contrast monotonicity, determinism, sRGB gamut, status-hue families, elevation ordering, paired variants, edge cases).
 - **Custom theme storage foundation (Prompt 4 Phase A).**
   - New IndexedDB object store `custom-themes` (database version 2, ULID keys, indexed by `name` + `source`). Upgrade is additive — existing workspaces / layouts / presets / chrome profiles untouched.
   - **Version-skew guard in `getDb()`.** Bumping `DB_VERSION` (1 → 2) made the boot brittle: if a browser profile already holds the DB at a _higher_ version than the running build — e.g. a developer tests this branch (v2) then runs an older build (v1) in the same profile, or an end user is rolled back — IndexedDB throws `VersionError: The requested version (1) is less than the existing version (2)` and the app fails to boot. `getDb()` now catches that and reopens at the existing version with no upgrade. Safe because migrations are additive and never edited after release, so a higher version is always a superset of the stores the build knows about; it never deletes data. Covered by `tests/unit/storage/db.spec.ts`.
