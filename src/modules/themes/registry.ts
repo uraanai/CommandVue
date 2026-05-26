@@ -48,7 +48,7 @@ export const themeRegistry = {
 
   /** Built-in themes only (the six shipped variants today). */
   listBuiltIn(): readonly Theme[] {
-    return Array.from(themes.values()).filter((t) => t.isBuiltIn);
+    return Array.from(themes.values()).filter((t) => t.source === "built-in");
   },
 
   /** Themes whose intrinsic `mode` matches the filter. */

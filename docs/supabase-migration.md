@@ -331,3 +331,18 @@ Cesium / Entity-list / Chart / Telemetry panels are unchanged — their state is
 `src/components/panels/MissingPanelPlaceholder.vue` + `src/modules/panels/missing.ts` reserve the `__missing__` synthetic id. DockLayout's `rebuildFromPanelStates` falls back to this when a panel-state references an unregistered `panelType` (common after import from a different build). The user can Reassign (keeps the panel id intact, preserves preset refs) or Remove.
 
 **Migration impact:** none. The fallback runs entirely client-side against the panel registry. After migration, the server returns the panel-state row as-is; the client decides whether the type resolves.
+
+### custom-themes store (Prompt 4 Phase A)
+
+New IndexedDB object store added at database version 2 (`src/modules/storage/db.ts`). ULID primary keys, indexed by `name` and `source`. Holds only `source` ∈ { `user`, `imported`, `generated` } themes — built-ins ship as JSON and are registered, never stored. Written through `themeRepo`, which enforces 8 invariants at write time (ULID id, name uniqueness per source, source enum, known-token names, CSS-injection safety, mode, density, generation-block shape).
+
+**Supabase mapping (future):**
+
+- Table: `themes`
+- Row schema: `id` (ulid PK), `user_id` (fk users), `name`, `description`, `author`, `source`, `mode`, `density`, `tokens` (jsonb), `generation` (jsonb nullable), `created_at` (bigint unix-ms), `updated_at` (bigint unix-ms)
+- RLS: a user sees only their own themes, plus org-shared themes once org sharing lands.
+- Migration: read every `custom-themes` row from IndexedDB, upsert into `themes` by `id`.
+
+**Known-token validation:** currently enforced at write time in `themeRepo` against `src/modules/themes/knownTokens.ts`. When server-authoritative, the same allow-list should run on the Supabase side via a database trigger or edge function — the token allow-list is the safety boundary that keeps arbitrary CSS (and injection vectors) out of the rendered document.
+
+**Workspace-binding cleanup:** `themeRepo.delete` scans `app-meta` keys with prefix `commandvue:workspace-theme-` and clears any binding pointing at the deleted theme. Server-side this becomes an `ON DELETE` cascade / trigger from `themes` to the workspace-binding column.
