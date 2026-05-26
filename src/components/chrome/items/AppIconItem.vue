@@ -134,25 +134,29 @@ async function onSaveAs(payload: {
 
     <ContextMenu ref="cm" :model="menuItems">
       <template #item="{ item, props: itemProps, hasSubmenu }">
-        <a v-bind="itemProps.action" class="flex items-center">
+        <!--
+          Padding + hover bg come from the project ContextMenu wrapper's PT.
+          The inner span here only owns the icon / label / shortcut / chevron
+          layout — any padding or hover state here would stack on top of the
+          wrapper and produce a nested "frame" effect.
+        -->
+        <a
+          v-bind="itemProps.action"
+          :class="[
+            'flex w-full items-center gap-2 text-sm',
+            (item as MenuItem & { disabled?: boolean }).disabled
+              ? 'cursor-not-allowed opacity-40'
+              : 'cursor-pointer',
+          ]"
+        >
+          <span class="flex-1">{{ item.label }}</span>
           <span
-            :class="[
-              'flex w-full items-center gap-2 px-3 py-1.5 text-sm',
-              'text-foreground hover:bg-surface-sunken cursor-pointer rounded',
-              (item as MenuItem & { disabled?: boolean }).disabled
-                ? 'cursor-not-allowed opacity-40'
-                : '',
-            ]"
+            v-if="(item as MenuItem & { shortcut?: string }).shortcut"
+            class="text-faint font-mono text-[10px]"
           >
-            <span class="flex-1">{{ item.label }}</span>
-            <span
-              v-if="(item as MenuItem & { shortcut?: string }).shortcut"
-              class="text-faint font-mono text-[10px]"
-            >
-              {{ (item as MenuItem & { shortcut?: string }).shortcut }}
-            </span>
-            <ChevronRight v-if="hasSubmenu" class="text-faint size-3.5" />
+            {{ (item as MenuItem & { shortcut?: string }).shortcut }}
           </span>
+          <ChevronRight v-if="hasSubmenu" class="text-faint size-3.5" />
         </a>
       </template>
     </ContextMenu>
