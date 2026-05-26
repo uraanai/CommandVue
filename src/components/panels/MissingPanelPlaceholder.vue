@@ -1,13 +1,15 @@
 <script setup lang="ts">
+import type { PanelApiProps } from "@/composables/usePanelApi";
 import type { PanelType } from "@/types/workspace";
-import type { DockviewApi, DockviewPanelApi } from "dockview-vue";
 
 import { AlertTriangle } from "@lucide/vue";
 import { computed, ref } from "vue";
 
 import Button from "@/components/ui/Button.vue";
 import Select from "@/components/ui/Select.vue";
+import { usePanelApi } from "@/composables/usePanelApi";
 import { panelRegistry } from "@/modules/panels/registry";
+import { swapPanelComponent } from "@/modules/panels/swap";
 import { UNASSIGNED_PANEL_TYPE } from "@/modules/panels/unassigned";
 import { usePanelStateStore } from "@/stores/panelState";
 import { useSessionStore } from "@/stores/session";
@@ -24,12 +26,11 @@ import { useSessionStore } from "@/stores/session";
  *     stays the same so cross-references (`layout.panelIds`,
  *     `panel.appliedPresetIds`) survive intact.
  */
-interface Props {
-  api: DockviewPanelApi;
-  containerApi: DockviewApi;
-}
+const props = defineProps<PanelApiProps>();
 
-const props = defineProps<Props>();
+// dockview-vue passes api + containerApi inside `params`, not as top-level
+// props — see usePanelApi.
+const { api, containerApi } = usePanelApi(props);
 
 const panelStateStore = usePanelStateStore();
 const session = useSessionStore();
@@ -37,7 +38,10 @@ const session = useSessionStore();
 const selectedType = ref<null | PanelType>(null);
 const busy = ref(false);
 
-const missingType = computed(() => panelStateStore.getState(props.api.id)?.panelType ?? "unknown");
+const missingType = computed(() => {
+  const id = api.value?.id;
+  return id ? (panelStateStore.getState(id)?.panelType ?? "unknown") : "unknown";
+});
 
 const candidates = computed(() =>
   panelRegistry
@@ -52,21 +56,19 @@ const candidateOptions = computed(() =>
 
 async function reassign(): Promise<void> {
   if (!selectedType.value) return;
+  const panelApi = api.value;
+  const dockApi = containerApi.value;
+  if (!panelApi || !dockApi) return;
   const target = selectedType.value;
   const def = panelRegistry.get(target);
   if (!def) return;
   busy.value = true;
   try {
-    const panelId = props.api.id;
+    const panelId = panelApi.id;
     await panelStateStore.assignComponent(panelId, target, "configured");
-    const group = props.api.group;
-    props.containerApi.addPanel({
-      id: panelId,
-      component: target,
-      title: def.title,
-      position: { referenceGroup: group, direction: "within" },
-    });
-    props.api.close();
+    // Swap the placeholder for the chosen type, preserving the panel id so
+    // cross-references survive.
+    swapPanelComponent(dockApi, panelApi, { component: target, title: def.title });
     session.markDirty();
   } finally {
     busy.value = false;
@@ -74,11 +76,13 @@ async function reassign(): Promise<void> {
 }
 
 async function removePanel(): Promise<void> {
+  const panelApi = api.value;
+  if (!panelApi) return;
   busy.value = true;
   try {
-    const panelId = props.api.id;
+    const panelId = panelApi.id;
     await panelStateStore.deletePanel(panelId);
-    props.api.close();
+    panelApi.close();
     session.markDirty();
   } finally {
     busy.value = false;

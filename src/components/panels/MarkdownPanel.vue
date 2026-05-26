@@ -1,23 +1,23 @@
 <script setup lang="ts">
-import type { DockviewPanelApi } from "dockview-vue";
+import type { PanelApiProps } from "@/composables/usePanelApi";
 
 import { Pencil, Save } from "@lucide/vue";
 import MarkdownIt from "markdown-it";
 import { computed, ref } from "vue";
 
 import Button from "@/components/ui/Button.vue";
+import { usePanelApi } from "@/composables/usePanelApi";
 import { usePanelState } from "@/composables/usePanelState";
 import Textarea from "@/volt/Textarea.vue";
-
-interface Props {
-  api?: DockviewPanelApi;
-}
 
 interface MarkdownState extends Record<string, unknown> {
   content: string;
 }
 
-const props = defineProps<Props>();
+const props = defineProps<PanelApiProps>();
+
+// dockview-vue passes the panel api inside the `params` bag — see usePanelApi.
+const { api } = usePanelApi(props);
 
 const md = new MarkdownIt({
   html: false,
@@ -63,8 +63,8 @@ const editing = ref(false);
 const html = computed(() => md.render(content.value));
 
 let saveFn: (() => void) | null = null;
-if (props.api) {
-  const { save } = usePanelState<MarkdownState>(props.api.id, {
+if (api.value) {
+  const { save } = usePanelState<MarkdownState>(api.value.id, {
     serialize: () => ({ content: content.value }),
     restore: (state) => {
       if (typeof state.content === "string" && state.content.length > 0) {

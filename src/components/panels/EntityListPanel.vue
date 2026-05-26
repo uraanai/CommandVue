@@ -4,7 +4,7 @@ import type {
   SortingState,
   VisibilityState,
 } from "@/components/ui/datatable/types";
-import type { DockviewPanelApi } from "dockview-vue";
+import type { PanelApiProps } from "@/composables/usePanelApi";
 
 import { computed, ref } from "vue";
 
@@ -12,6 +12,7 @@ import DataTable from "@/components/ui/DataTable.vue";
 import { createColumnHelper } from "@/components/ui/datatable/columnHelpers";
 import Input from "@/components/ui/Input.vue";
 import Select from "@/components/ui/Select.vue";
+import { usePanelApi } from "@/composables/usePanelApi";
 import { usePanelState } from "@/composables/usePanelState";
 import { renderSidcToSvg } from "@/modules/symbology/render";
 import { useEntitiesStore, type Entity } from "@/stores/entities";
@@ -27,10 +28,6 @@ import { formatLatLon } from "@/utils/format";
  * across workspace reloads via `usePanelState`.
  */
 
-interface Props {
-  api?: DockviewPanelApi;
-}
-
 interface EntityListPanelState extends Record<string, unknown> {
   sorting: SortingState;
   filterText: string;
@@ -38,7 +35,10 @@ interface EntityListPanelState extends Record<string, unknown> {
   density: DataTableDensity;
 }
 
-const props = defineProps<Props>();
+const props = defineProps<PanelApiProps>();
+
+// dockview-vue passes the panel api inside the `params` bag — see usePanelApi.
+const { api } = usePanelApi(props);
 
 const entities = useEntitiesStore();
 const data = computed(() => entities.entities);
@@ -83,8 +83,8 @@ const columns = computed(() => [
   helper.accessor("headingDegrees", { id: "headingDegrees", header: "Heading", size: 110 }),
 ]);
 
-const persisted = props.api
-  ? usePanelState<EntityListPanelState>(props.api.id, {
+const persisted = api.value
+  ? usePanelState<EntityListPanelState>(api.value.id, {
       serialize: () => ({
         sorting: sorting.value,
         filterText: filterText.value,
