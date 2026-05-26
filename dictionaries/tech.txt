@@ -196,6 +196,7 @@ useconfirm
 Cascadia
 FOUC
 unstub
+Tauri
 primeui
 closebutton
 maximizebutton

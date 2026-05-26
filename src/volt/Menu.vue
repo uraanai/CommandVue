@@ -23,21 +23,29 @@ interface Props extends /* @vue-ignore */ MenuProps {}
 defineProps<Props>();
 
 const theme = ref<MenuPassThroughOptions>({
-  root: `bg-surface-0 dark:bg-surface-900
+  // Dark popup uses surface-800 (one step above the surface-900 body) so the
+  // popup is visibly raised. Hover state below uses surface-700 (one step
+  // above the popup) for an unambiguous three-level hierarchy:
+  //   body 900 → popup 800 → hover 700  (dark)
+  //   body 50  → popup 0   → hover 100  (light)
+  root: `bg-surface-0 dark:bg-surface-800
         text-surface-700 dark:text-surface-0
         border border-surface-200 dark:border-surface-700
         rounded-md min-w-52 overflow-hidden
         p-popup:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-2px_rgba(0,0,0,0.1)]`,
   // No inner padding / row gap — the hovered item should fill the full row
-  // width of the popup so there's no visible "frame" between the list bg and
+  // width of the popup so there's no visible "frame" between the popup bg and
   // the item hover bg. `rounded-sm` is also removed from itemContent below.
   list: `m-0 p-0 list-none outline-none flex flex-col`,
   item: `p-disabled:opacity-60 p-disabled:pointer-events-none`,
   itemContent: `group transition-colors duration-200 text-surface-700 dark:text-surface-0
-        p-focus:bg-surface-100 dark:p-focus:bg-surface-800 p-focus:text-surface-800 dark:p-focus:text-surface-0
-        hover:bg-surface-100 dark:hover:bg-surface-800 hover:text-surface-800 dark:hover:text-surface-0`,
+        p-focus:bg-surface-100 dark:p-focus:bg-surface-700 p-focus:text-surface-800 dark:p-focus:text-surface-0
+        hover:bg-surface-100 dark:hover:bg-surface-700 hover:text-surface-800 dark:hover:text-surface-0`,
+  // Tightened vertical padding (`py-1.5` instead of `py-2`) for denser rows
+  // that match the operations-dashboard density mode. Horizontal padding
+  // stays `px-3` so labels don't crash into the popup edge.
   itemLink: `cursor-pointer flex items-center no-underline overflow-hidden relative text-inherit
-        px-3 py-2 gap-2 select-none outline-none`,
+        px-3 py-1.5 gap-2 select-none outline-none`,
   itemIcon: `text-surface-400 dark:text-surface-500
         p-focus:text-surface-500 dark:p-focus:text-surface-400
         group-hover:text-surface-500 dark:group-hover:text-surface-400`,

@@ -262,7 +262,7 @@ const menuItems = computed<MenuItem[]>(() => [
       { label: "Undo", disabled: true },
       { label: "Redo", disabled: true },
       { separator: true },
-      { label: "Rename Layout…", command: () => (manageLayoutsOpen.value = true) },
+      { label: "Manage Layouts…", command: () => (manageLayoutsOpen.value = true) },
       { label: "Duplicate Layout", command: () => void duplicateCurrentLayout() },
       { label: "Delete Layout…", command: () => void deleteCurrentLayout() },
       { separator: true },

@@ -31,6 +31,27 @@ await seedIfEmpty();
 // localStorage mirror diverged from IDB (private mode, storage cleared, …).
 await initializeTheme();
 
+// Suppress the browser's native context menu site-wide. CommandVue's
+// right-click affordances are handled by PrimeVue ContextMenu instances
+// throughout the app, and the native menu would otherwise overlay them.
+// Native menu is preserved for text editing surfaces (`<input>`,
+// `<textarea>`, and any `contenteditable` host) so users keep cut / copy /
+// paste / spell-check. This deliberately mimics the eventual desktop
+// (Tauri / Electron) packaging where the OS has no browser-tab chrome to
+// host a native page menu at all.
+window.addEventListener(
+  "contextmenu",
+  (event) => {
+    const target = event.target as HTMLElement | null;
+    if (!target) return;
+    if (target.closest("input, textarea, [contenteditable=''], [contenteditable='true']")) {
+      return;
+    }
+    event.preventDefault();
+  },
+  { capture: true },
+);
+
 // Populate the panel registry before mount. The registry sits alongside the
 // global `app.component()` registrations below — Dockview resolves panel
 // components from the global registry, while the panel registry owns the

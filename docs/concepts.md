@@ -28,6 +28,10 @@ Most users have one workspace ("Operations" is seeded on first launch) and never
 **Manage / rename / delete / import / export:** `Manage workspaces…` in the dropdown, or via `File → Import Workspace…` / `File → Export Workspace…`.
 **Create new:** `+ New workspace…` in the dropdown.
 
+![Manage Workspaces dialog](./public/concepts/06-manage-workspaces.png)
+
+The Manage Workspaces dialog lets you rename inline (pencil icon), set the global default (star), duplicate, delete, or add a new workspace at the bottom — all without leaving the modal.
+
 One workspace is the **global default** (it loads first). Each workspace has its **own default layout** (the one that opens when you switch into the workspace).
 
 Workspaces persist locally in IndexedDB. The Supabase-migration path under `docs/supabase-migration.md` documents how they cascade to the server in deployments that have one.
@@ -41,12 +45,20 @@ Each workspace contains one or more layouts. The seeded "Default" layout has all
 - **File → Save Layout** (`Ctrl+S`) — overwrites the current layout
 - **File → Save Layout As…** (`Ctrl+Shift+S`) — creates a new named layout (optionally setting it as the workspace default)
 
-**Manage layouts** lives at `Edit → Manage Layouts…`. From there:
+**Manage layouts** lives at `Edit → Manage Layouts…`.
 
-- ⭐ Star icon — make this layout the workspace default
-- 🖊 Pencil icon — rename inline
+![Edit menu open](./public/concepts/04-edit-menu.png)
+
+The dialog itself:
+
+![Manage Layouts dialog](./public/concepts/05-manage-layouts.png)
+
+From the dialog:
+
+- ⭐ Star icon — make this layout the workspace default (the star marks the current default)
+- 🖊 Pencil icon — rename inline (click → type → Enter)
 - 📋 Duplicate
-- 🗑 Delete
+- 🗑 Delete (deleting the workspace default re-points to another layout automatically)
 
 Workspaces and layouts together answer "what arrangement of panels am I looking at?" — workspaces group, layouts arrange.
 
@@ -65,6 +77,8 @@ Panels are the building blocks of every layout. CommandVue ships seven built-in 
 | Symbology         | MIL-STD-2525 / APP-6 symbol code reference.                         |
 
 Add a panel of any type via **View → Components Panel** (or `Ctrl+B`) — opens a floating "Components" panel that's a card grid of every registered panel type. Click a card to spawn a new floating panel of that type.
+
+![Components panel](./public/concepts/07-components-panel.png)
 
 Each panel can persist its own per-instance state (zoom level, filter, viewer position, …) via `usePanelState()`. The state survives reload and travels with the layout's portable JSON.
 
@@ -100,6 +114,12 @@ Each preset has a **type** (what kind of configuration), a **config object** (th
 Presets are scoped: a preset can be **workspace-scoped** (cascades when the workspace is deleted) or **global** (no workspace binding). Manage them via `Edit → Manage Presets…`.
 
 Cascading order matters: applying preset B after preset A overrides any token A set, but A's other tokens stay. This matches CSS-cascade semantics.
+
+## The same dashboard in dark mode
+
+![Dark theme overview](./public/concepts/08-dark-theme.png)
+
+Every panel and chrome surface theme together via the Light / Dark / Auto toggle in the top-right. Auto follows the OS preference (`prefers-color-scheme`). Phase 3.3 ships six built-in theme variants on top of this foundation; until then, the toggle switches between the slate-based light and dark sets shown above.
 
 ## How everything stacks
 
