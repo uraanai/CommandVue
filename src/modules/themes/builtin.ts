@@ -1,4 +1,4 @@
-import type { PortableTheme, Theme } from "@/types/theme";
+import type { Theme, ThemeDefinition } from "@/types/theme";
 
 import adminPanelDark from "@/assets/themes/admin-panel-dark.json";
 import adminPanelLight from "@/assets/themes/admin-panel-light.json";
@@ -24,31 +24,41 @@ import { themeRegistry } from "./registry";
  *      theme becomes the documentation default (see
  *      `docs/public/concepts/MANIFEST.md`).
  */
-const BUILTIN_PORTABLE: readonly PortableTheme[] = [
-  compactLight as PortableTheme,
-  compactDark as PortableTheme,
-  commandCenterLight as PortableTheme,
-  commandCenterDark as PortableTheme,
-  adminPanelLight as PortableTheme,
-  adminPanelDark as PortableTheme,
+const BUILTIN_DEFINITIONS: readonly ThemeDefinition[] = [
+  compactLight as ThemeDefinition,
+  compactDark as ThemeDefinition,
+  commandCenterLight as ThemeDefinition,
+  commandCenterDark as ThemeDefinition,
+  adminPanelLight as ThemeDefinition,
+  adminPanelDark as ThemeDefinition,
 ];
 
 let registered = false;
 
+/** Normalize bundled token keys to the `--`-prefixed form the engine + repo use. */
+function normalizeTokens(tokens: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(tokens)) {
+    out[key.startsWith("--") ? key : `--${key}`] = value;
+  }
+  return out;
+}
+
 /**
- * Hydrate the bundled JSON files into the runtime `Theme` shape (adds
- * `isBuiltIn: true`, fills timestamps if missing) and register each with
- * `themeRegistry`. Idempotent — second call is a no-op.
+ * Hydrate the bundled JSON files into the runtime `Theme` shape (sets
+ * `source: "built-in"`, fills timestamps, normalizes token keys) and register
+ * each with `themeRegistry`. Idempotent — second call is a no-op.
  */
 export function registerBuiltinThemes(): void {
   if (registered) return;
-  const bootTime = new Date().toISOString();
-  for (const portable of BUILTIN_PORTABLE) {
+  const now = Date.now();
+  for (const def of BUILTIN_DEFINITIONS) {
     const theme: Theme = {
-      ...portable,
-      isBuiltIn: true,
-      createdAt: portable.createdAt ?? bootTime,
-      updatedAt: portable.updatedAt ?? bootTime,
+      ...def,
+      tokens: normalizeTokens(def.tokens),
+      source: "built-in",
+      createdAt: now,
+      updatedAt: now,
     };
     themeRegistry.register(theme);
   }

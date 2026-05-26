@@ -1,11 +1,12 @@
 import type { ChromeProfile } from "@/types/chrome";
 import type { Preset } from "@/types/preset";
+import type { Theme } from "@/types/theme";
 import type { AppMeta, Layout, PanelState, Workspace } from "@/types/workspace";
 
 import { type DBSchema, type IDBPDatabase, openDB } from "idb";
 
 const DB_NAME = "commandvue-workspaces";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 /**
  * IndexedDB schema (version 1).
@@ -58,6 +59,14 @@ export interface CommandVueDb extends DBSchema {
     key: string;
     value: AppMeta;
   };
+  "custom-themes": {
+    key: string;
+    value: Theme;
+    indexes: {
+      "by-name": string;
+      "by-source": string;
+    };
+  };
 }
 
 let dbPromise: null | Promise<IDBPDatabase<CommandVueDb>> = null;
@@ -82,6 +91,13 @@ export function getDb(): Promise<IDBPDatabase<CommandVueDb>> {
           db.createObjectStore("chrome-profiles", { keyPath: "id" });
 
           db.createObjectStore("app-meta", { keyPath: "key" });
+        }
+        if (oldVersion < 2) {
+          // Prompt 4 Phase A: custom themes (user / imported / generated).
+          // Built-ins are NOT stored here — they're registered from JSON.
+          const customThemes = db.createObjectStore("custom-themes", { keyPath: "id" });
+          customThemes.createIndex("by-name", "name");
+          customThemes.createIndex("by-source", "source");
         }
       },
     });

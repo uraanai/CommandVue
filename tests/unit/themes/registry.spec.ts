@@ -6,16 +6,16 @@ import { __unregisterBuiltinThemesForTests, registerBuiltinThemes } from "@/modu
 import { themeRegistry } from "@/modules/themes/registry";
 
 function makeTheme(overrides: Partial<Theme> = {}): Theme {
-  const now = new Date().toISOString();
+  const now = Date.now();
   return {
     id: "test",
     name: "Test",
     description: "Test fixture",
     author: "tests",
-    isBuiltIn: false,
+    source: "user",
     mode: "light",
     density: "comfortable",
-    tokens: { "color-surface-base": "#fff" },
+    tokens: { "--color-surface-base": "#fff" },
     createdAt: now,
     updatedAt: now,
     ...overrides,
@@ -45,9 +45,9 @@ describe("themeRegistry", () => {
     expect(themeRegistry.get("alpha")).toBeUndefined();
   });
 
-  it("listBuiltIn filters by isBuiltIn", () => {
-    themeRegistry.register(makeTheme({ id: "core", isBuiltIn: true }));
-    themeRegistry.register(makeTheme({ id: "custom", isBuiltIn: false }));
+  it("listBuiltIn filters by source", () => {
+    themeRegistry.register(makeTheme({ id: "core", source: "built-in" }));
+    themeRegistry.register(makeTheme({ id: "custom", source: "generated" }));
     const builtIns = themeRegistry.listBuiltIn();
     expect(builtIns.map((t) => t.id)).toEqual(["core"]);
   });

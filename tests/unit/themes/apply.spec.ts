@@ -5,13 +5,13 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { applyTheme, clearTheme } from "@/modules/themes/apply";
 
 function fixture(id: string, tokens: Record<string, string>): Theme {
-  const now = new Date().toISOString();
+  const now = Date.now();
   return {
     id,
     name: id,
     description: "",
     author: "",
-    isBuiltIn: false,
+    source: "generated",
     mode: "light",
     density: "comfortable",
     tokens,
@@ -77,7 +77,8 @@ describe("applyTheme / clearTheme", () => {
     );
     const raw = document.documentElement.getAttribute("data-theme-applied");
     const parsed = JSON.parse(raw ?? "[]") as string[];
-    expect(parsed.sort()).toEqual(["color-surface-base", "color-text-primary"]);
+    // Keys are normalized to `--`-prefixed form on apply.
+    expect(parsed.sort()).toEqual(["--color-surface-base", "--color-text-primary"]);
   });
 
   it("clearTheme removes overrides and identity attributes", () => {

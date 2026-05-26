@@ -1,40 +1,65 @@
 /**
- * Theme types (Phase 3.3 of Prompt 3).
+ * Theme types.
  *
  * A `Theme` is a named bundle of CSS-variable overrides applied to the
  * document root at runtime. Built-in themes ship as JSON files under
- * `src/assets/themes/`; downstream apps register custom themes through
- * `themeRegistry.register()`.
+ * `src/assets/themes/`; custom themes (Prompt 4) live in IndexedDB via
+ * `themeRepo` and are registered into `themeRegistry` at boot.
  *
  * Pairing convention: themes that come in light + dark pairs share a base id
- * with a `-light` / `-dark` suffix (e.g. `compact-light` and `compact-dark`).
- * The Light / Dark / Auto toggle uses the suffix to bridge between variants
- * without losing the user's chosen aesthetic.
+ * with a `-light` / `-dark` suffix (e.g. `compact-light` and `compact-dark`)
+ * for built-ins, or point at each other via `generation.paired` for
+ * generated themes. The Light / Dark / Auto toggle uses either signal to
+ * bridge between variants without losing the chosen aesthetic.
  *
- * Tokens layered into the document live in three categories:
- *   - color (`--color-surface-*`, `--color-text-*`, `--color-interactive*`, …)
- *   - density-influencing (`--density-*`)
- *   - component (`--datatable-*`, `--dockpanel-*`, …)
- *
- * Themes **only** override semantic + component tokens. Primitive scales
- * (`--color-slate-500`, `--space-4`, etc.) are off-limits — the architecture
- * docs at `docs/design-tokens.md` cover the rationale.
+ * Tokens layered into the document live in three categories — color, density,
+ * and component. Themes **only** override semantic + component tokens.
+ * Primitive scales (`--color-slate-500`, `--space-4`, etc.) are off-limits;
+ * `docs/design-tokens.md` covers the rationale.
  */
+
+/** Bumped when the persisted/portable theme shape changes incompatibly. */
+export const THEME_SCHEMA_VERSION = 1 as const;
+export type ThemeSchemaVersion = typeof THEME_SCHEMA_VERSION;
 
 export type ThemeId = string;
 export type ThemeMode = "light" | "dark";
 export type ThemeDensity = "compact" | "comfortable" | "spacious";
 
 /**
+ * Where a theme came from.
+ *   - `built-in`  — one of the six bundled JSON variants; registered, never
+ *     stored in `themeRepo`.
+ *   - `user`      — hand-authored by the user (reserved; the editor produces
+ *     `generated` today).
+ *   - `imported`  — created by importing a PortableTheme JSON file.
+ *   - `generated` — produced by the Linear-style generation engine.
+ */
+export type ThemeSource = "built-in" | "user" | "imported" | "generated";
+
+/**
  * The dictionary of CSS-variable overrides. Each key is a CSS custom property
- * name *without* the leading `--`. Values are plain CSS values (`#1e293b`,
- * `var(--color-slate-800)`, `0 1px 2px rgb(0 0 0 / 0.05)`, etc.).
+ * name *including* the leading `--` (e.g. `--color-surface-base`). Values are
+ * plain CSS values (`#1e293b`, `oklch(0.2 0.04 264)`, `1.75rem`, …).
  *
- * Keys are intentionally typed as `string` instead of a closed union so
- * downstream apps can introduce their own component tokens without changing
- * the type. Validation happens at runtime in the application engine.
+ * Note: the bundled built-in JSON files predate this convention and store keys
+ * *without* the leading `--`; the loader in `builtin.ts` normalizes them.
+ * New code (repo, generator, import) uses the `--`-prefixed form throughout.
  */
 export type ThemeTokens = Record<string, string>;
+
+/**
+ * Generation parameters captured when a theme is produced by the engine.
+ * Present iff `source === "generated"`. Lets the editor pre-fill its inputs
+ * when editing a generated theme, and lets the toggle find the paired variant.
+ */
+export interface ThemeGenerationMeta {
+  schemaVersion: 1;
+  baseColor: string; // OKLCH string, e.g. "oklch(0.15 0.04 270)"
+  accentColor: string;
+  contrast: number; // 30-100
+  paired?: ThemeId; // id of the paired light/dark variant, if generated as a pair
+}
 
 export interface Theme {
   /** Stable id used by the registry, the store, and the persisted pointer. */
@@ -45,41 +70,46 @@ export interface Theme {
   readonly description: string;
   /** Free-form attribution shown on the card footer. */
   readonly author: string;
-  /** `true` for the six bundled variants; `false` for user-authored themes (Prompt 4). */
-  readonly isBuiltIn: boolean;
-  /**
-   * Intrinsic mode of the theme — used by `setMode()` to bridge between
-   * light and dark variants of the same base aesthetic.
-   */
+  /** Provenance of the theme. */
+  readonly source: ThemeSource;
+  /** Intrinsic mode — used to bridge between light/dark variants. */
   readonly mode: ThemeMode;
-  /** Default density to apply with the theme. The user can override via the density toggle. */
+  /** Default density applied with the theme. */
   readonly density: ThemeDensity;
   /** CSS-variable overrides. See `ThemeTokens`. */
   readonly tokens: ThemeTokens;
-  /** ISO timestamp; used for sorting recent custom themes (Prompt 4). */
-  readonly createdAt: string;
-  /** ISO timestamp; updated on every save (Prompt 4). */
-  readonly updatedAt: string;
+  /** Generation parameters; present iff `source === "generated"`. */
+  readonly generation?: ThemeGenerationMeta;
+  /** Unix ms timestamp. Aligns with the rest of the storage layer. */
+  readonly createdAt: number;
+  /** Unix ms timestamp; updated on every save. */
+  readonly updatedAt: number;
 }
 
 /**
- * Shape of the JSON files under `src/assets/themes/`. Same shape as `Theme`
- * minus the runtime-derived fields; `isBuiltIn` is enforced to `true` and
- * the timestamps are filled in at load time.
+ * Shape of the bundled JSON files under `src/assets/themes/`. Same as `Theme`
+ * minus the runtime-derived fields — `source` is forced to `built-in` and the
+ * timestamps are filled at load time. Token keys in these files omit the
+ * leading `--` (historical); the loader normalizes them.
  */
-export type PortableTheme = Omit<Theme, "isBuiltIn" | "createdAt" | "updatedAt"> & {
-  /**
-   * Optional explicit timestamps. Built-in JSON files don't set them; the
-   * loader fills both with the app boot time.
-   */
-  createdAt?: string;
-  updatedAt?: string;
-};
+export type ThemeDefinition = Omit<Theme, "source" | "createdAt" | "updatedAt" | "generation">;
 
 /**
- * Subset of theme tokens the picker preview pulls swatches from. Used by the
- * theme picker dialog to render the "what does this theme look like" chips
- * without applying the theme to the live DOM.
+ * Export/import envelope. Wraps a single `Theme` with provenance metadata so
+ * importers can validate the schema version and surface where the file came
+ * from. Produced by `exportThemeToJson` (Phase D), consumed by
+ * `importThemeFromJson` (Phase D).
+ */
+export interface PortableTheme {
+  schemaVersion: ThemeSchemaVersion;
+  exportedAt: number;
+  exportedBy: "commandvue";
+  exportedByVersion: string;
+  theme: Theme;
+}
+
+/**
+ * Subset of theme tokens the picker preview samples for its swatch chips.
  */
 export interface ThemeSwatches {
   surface: string;
