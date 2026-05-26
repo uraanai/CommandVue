@@ -75,12 +75,31 @@ onMounted(async () => {
         };
       },
       restore: (state) => {
-        instance.jumpTo({
-          center: state.center,
-          zoom: state.zoom,
-          bearing: state.bearing,
-          pitch: state.pitch,
-        });
+        // Seeded panels persist an empty `{}` state, and `usePanelState`
+        // dispatches restore for it (a `{}` is truthy). Guard every field
+        // before touching the map: `jumpTo` treats a present-but-`undefined`
+        // option as "apply it", so `jumpTo({ bearing: undefined })` feeds NaN
+        // into maplibre-gl's matrix math and throws. Mirrors the defensive
+        // restores in MarkdownPanel / EntityListPanel.
+        const { center, zoom, bearing, pitch } = state;
+        if (
+          !Array.isArray(center) ||
+          center.length !== 2 ||
+          typeof zoom !== "number" ||
+          typeof bearing !== "number" ||
+          typeof pitch !== "number"
+        ) {
+          return;
+        }
+        // `usePanelState`'s watcher is `immediate`, so restore runs on mount —
+        // before MapLibre has built its style + transform. Calling jumpTo that
+        // early reads a null projection matrix and throws, so defer the camera
+        // restore until the map is ready (mirrors the preset re-apply below).
+        const applyCamera = (): void => {
+          instance.jumpTo({ center, zoom, bearing, pitch });
+        };
+        if (instance.loaded()) applyCamera();
+        else instance.once("load", applyCamera);
       },
     });
     instance.on("moveend", save);
