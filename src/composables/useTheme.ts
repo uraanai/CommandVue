@@ -1,6 +1,7 @@
 import { computed, readonly, ref, type Ref } from "vue";
 
 import { appMetaRepo } from "@/modules/storage/appMetaRepo";
+import { themeRegistry } from "@/modules/themes/registry";
 
 /**
  * Three-way theme composable (Phase 3.2 of Prompt 3).
@@ -66,6 +67,12 @@ function resolveMode(m: ThemeMode, systemDark: boolean): ResolvedTheme {
  * dark), not the mode, because the anti-FOUC script can't compute auto
  * resolution synchronously before CSS loads — it needs the actual value to
  * paint.
+ *
+ * After setting `data-theme`, the variant bridge looks up the paired theme
+ * for the current active theme id (e.g. `compact-light` ↔ `compact-dark`)
+ * and applies it if found. The bridge lets the Light / Dark / Auto toggle
+ * carry the user's chosen aesthetic across mode changes — switching modes
+ * doesn't drop them back to the default theme.
  */
 function applyResolved(resolved: ResolvedTheme): void {
   const html = document.documentElement;
@@ -76,6 +83,46 @@ function applyResolved(resolved: ResolvedTheme): void {
     // localStorage can throw in private-mode Safari or with disabled storage.
     // Persistence falls back to IDB; the only loss is anti-FOUC on next load.
   }
+  bridgeVariant(resolved);
+}
+
+/**
+ * If the currently-applied theme has a paired variant for the resolved mode
+ * (e.g. `compact-light` paired with `compact-dark`), swap to it. Pairing is
+ * encoded in the theme id via the trailing `-light` / `-dark` suffix.
+ *
+ * No-ops when:
+ *   - No theme is currently applied (data-theme-id missing)
+ *   - The theme's id has no suffix (no pairing convention to follow)
+ *   - The paired id isn't in the registry
+ *   - The paired theme is already applied
+ *
+ * Dynamically imports the theme store to avoid a circular dependency
+ * (themeStore → applyTheme; useTheme → themeStore). The import is cached
+ * after first call.
+ */
+let cachedThemeStore: { setTheme: (id: string) => Promise<void> } | null = null;
+
+function bridgeVariant(resolved: ResolvedTheme): void {
+  const root = document.documentElement;
+  const currentId = root.getAttribute("data-theme-id");
+  if (!currentId) return;
+  const otherSuffix: "-light" | "-dark" = resolved === "dark" ? "-dark" : "-light";
+  const oppositeSuffix: "-light" | "-dark" = resolved === "dark" ? "-light" : "-dark";
+  // Is the current id already on the right side of the pair?
+  if (currentId.endsWith(otherSuffix)) return;
+  if (!currentId.endsWith(oppositeSuffix)) return;
+  const baseId = currentId.slice(0, -oppositeSuffix.length);
+  const pairedId = `${baseId}${otherSuffix}`;
+  if (!themeRegistry.get(pairedId)) return;
+  // Use the theme store to apply (it persists the new global pointer too).
+  void (async () => {
+    if (!cachedThemeStore) {
+      const mod = await import("@/stores/theme");
+      cachedThemeStore = mod.useThemeStore();
+    }
+    await cachedThemeStore.setTheme(pairedId);
+  })();
 }
 
 /**

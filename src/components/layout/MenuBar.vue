@@ -10,6 +10,7 @@ import ManageLayoutsDialog from "@/components/dialogs/ManageLayoutsDialog.vue";
 import ManagePresetsDialog from "@/components/dialogs/ManagePresetsDialog.vue";
 import ManageWorkspacesDialog from "@/components/dialogs/ManageWorkspacesDialog.vue";
 import SaveLayoutAsDialog from "@/components/dialogs/SaveLayoutAsDialog.vue";
+import ThemePickerDialog from "@/components/dialogs/ThemePickerDialog.vue";
 import FileUpload from "@/components/ui/FileUpload.vue";
 import Menubar from "@/components/ui/Menubar.vue";
 import { panelRegistry } from "@/modules/panels/registry";
@@ -34,6 +35,7 @@ const panelStateStore = usePanelStateStore();
 const manageWorkspacesOpen = ref(false);
 const manageLayoutsOpen = ref(false);
 const managePresetsOpen = ref(false);
+const themePickerOpen = ref(false);
 const saveAsOpen = ref(false);
 
 // FileUpload — kept hidden by the wrapper; menu items trigger `choose()`
@@ -283,6 +285,7 @@ const menuItems = computed<MenuItem[]>(() => [
         command: () => toggleComponentsPanel(),
         shortcut: formatCombo("mod+b", isMac),
       },
+      { label: "Themes…", command: () => (themePickerOpen.value = true) },
       { separator: true },
       { label: "Discard Changes", command: () => void discardChanges(), disabled: !session.dirty },
     ],
@@ -344,6 +347,7 @@ const menuItems = computed<MenuItem[]>(() => [
   <ManageWorkspacesDialog v-model:visible="manageWorkspacesOpen" />
   <ManageLayoutsDialog v-model:visible="manageLayoutsOpen" />
   <ManagePresetsDialog v-model:visible="managePresetsOpen" />
+  <ThemePickerDialog v-model:visible="themePickerOpen" />
   <SaveLayoutAsDialog
     v-model:visible="saveAsOpen"
     :default-name="(layoutStore.currentLayout?.name ?? '') + ' (saved)'"
