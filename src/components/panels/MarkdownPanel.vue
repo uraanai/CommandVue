@@ -86,7 +86,7 @@ function toggleEdit(): void {
 <template>
   <div class="bg-surface-sunken flex h-full w-full flex-col">
     <header
-      class="border-border bg-surface-raised flex items-center justify-between border-b px-3 py-1.5 text-xs"
+      class="border-border bg-surface-raised flex items-center justify-between border-b px-[var(--density-cell-padding-x)] py-[var(--density-cell-padding-y)] text-[length:var(--density-font-size)]"
     >
       <span class="text-faint">Markdown briefing</span>
       <Button variant="ghost" size="sm" @click="toggleEdit">

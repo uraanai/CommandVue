@@ -48,12 +48,16 @@ defineEmits<{
     :pt="{
       root: {
         class: cn(
-          'inline-flex items-center w-full rounded-md border border-border bg-surface text-sm text-foreground',
+          'inline-flex items-center w-full rounded-md border border-border bg-surface text-foreground',
+          'min-h-[var(--density-control-height)] text-[length:var(--density-font-size)]',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500',
           'aria-disabled:cursor-not-allowed aria-disabled:opacity-50',
         ),
       },
-      label: { class: 'flex-1 px-3 py-1.5 truncate' },
+      label: {
+        class:
+          'flex-1 px-[var(--density-cell-padding-x)] py-[var(--density-cell-padding-y)] truncate',
+      },
       dropdown: { class: 'px-2 text-faint' },
       overlay: {
         class: 'z-[100] mt-1 rounded-md border border-border bg-surface-raised py-1 shadow-lg',
@@ -62,7 +66,8 @@ defineEmits<{
       list: { class: 'list-none p-0 m-0' },
       option: {
         class: cn(
-          'px-3 py-1.5 text-sm text-foreground cursor-pointer',
+          'text-foreground cursor-pointer',
+          'px-[var(--density-cell-padding-x)] py-[var(--density-cell-padding-y)] text-[length:var(--density-font-size)]',
           'hover:bg-surface-sunken aria-selected:bg-surface-sunken',
           'aria-disabled:cursor-not-allowed aria-disabled:opacity-40',
         ),

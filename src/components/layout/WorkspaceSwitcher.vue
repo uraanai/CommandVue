@@ -177,7 +177,10 @@ async function onSaveAs(payload: {
           any of those produces a visible nested "frame" on top of Volt's
           hover state.
         -->
-        <a v-bind="itemProps.action" class="flex w-full items-center gap-2 text-sm">
+        <a
+          v-bind="itemProps.action"
+          class="flex w-full items-center gap-2 text-[length:var(--density-font-size)]"
+        >
           <FolderCog v-if="(item as MenuItem).label === 'Manage workspaces…'" class="size-3.5" />
           <Plus v-else-if="(item as MenuItem).label === 'New workspace…'" class="size-3.5" />
           <span

@@ -32,9 +32,13 @@ defineEmits<{
   "update:modelValue": [value: string];
 }>();
 
+// Padding + font-size + min-height all driven by the `--density-*` tokens so
+// the input rescales with `data-density` on `<html>`.
 const rootClass = computed(() =>
   cn(
-    "block w-full rounded-md border bg-surface px-3 py-1.5 text-sm text-foreground",
+    "block w-full rounded-md border bg-surface text-foreground",
+    "px-[var(--density-cell-padding-x)] py-[var(--density-cell-padding-y)]",
+    "text-[length:var(--density-font-size)] min-h-[var(--density-control-height)]",
     "placeholder:text-faint",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-0",
     "disabled:cursor-not-allowed disabled:opacity-50",

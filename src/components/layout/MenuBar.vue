@@ -316,10 +316,8 @@ const menuItems = computed<MenuItem[]>(() => [
       <a
         v-bind="itemProps.action"
         :class="[
-          'flex w-full items-center gap-1 leading-none',
-          root
-            ? 'text-muted hover:text-foreground px-2 py-1 text-xs'
-            : 'text-foreground px-3 py-1.5 text-sm',
+          'flex w-full items-center gap-1 px-[var(--density-cell-padding-x)] py-[var(--density-cell-padding-y)] text-[length:var(--density-font-size)] leading-none',
+          root ? 'text-muted hover:text-foreground' : 'text-foreground',
           (item as MenuItem & { disabled?: boolean }).disabled
             ? 'cursor-not-allowed opacity-40'
             : 'cursor-pointer',

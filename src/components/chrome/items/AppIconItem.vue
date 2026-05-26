@@ -143,7 +143,7 @@ async function onSaveAs(payload: {
         <a
           v-bind="itemProps.action"
           :class="[
-            'flex w-full items-center gap-2 text-sm',
+            'flex w-full items-center gap-2 text-[length:var(--density-font-size)]',
             (item as MenuItem & { disabled?: boolean }).disabled
               ? 'cursor-not-allowed opacity-40'
               : 'cursor-pointer',

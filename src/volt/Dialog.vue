@@ -73,11 +73,14 @@ const theme = computed<DialogPassThroughOptions>(() => ({
         bg-surface-0 dark:bg-surface-900
         text-surface-700 dark:text-surface-0 shadow-lg
         p-maximized:w-screen p-maximized:h-screen p-maximized:top-0 p-maximized:start-0 p-maximized:max-h-full p-maximized:max-w-none p-maximized:rounded-none`,
-  header: `flex items-center justify-between shrink-0 p-5`,
+  header: `flex items-center justify-between shrink-0
+        py-[calc(var(--density-cell-padding-y)*2)] px-[calc(var(--density-cell-padding-x)*2)]`,
   title: `font-semibold text-xl`,
   headerActions: `flex items-center gap-2`,
-  content: `overflow-y-auto pt-0 px-5 pb-5 p-maximized:grow`,
-  footer: `shrink-0 pt-0 px-5 pb-5 flex justify-end gap-2`,
+  content: `overflow-y-auto pt-0 p-maximized:grow
+        px-[calc(var(--density-cell-padding-x)*2)] pb-[calc(var(--density-cell-padding-y)*2)]`,
+  footer: `shrink-0 pt-0 flex justify-end gap-2
+        px-[calc(var(--density-cell-padding-x)*2)] pb-[calc(var(--density-cell-padding-y)*2)]`,
   // Computed; see `maskClass` for the no-blur / blur-on toggle.
   mask: maskClass.value,
   transition: {

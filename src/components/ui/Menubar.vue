@@ -43,8 +43,10 @@ const baseTheme: Record<string, PtSlot> = {
       "hover:bg-surface-sunken focus-visible:ring-accent-500 rounded transition-colors focus-visible:ring-2 focus-visible:outline-none",
   },
   itemLink: {
+    // Padding + font-size driven by the `--density-*` tokens so the menubar
+    // rescales with `data-density` on `<html>`.
     class:
-      "text-foreground flex w-full cursor-pointer items-center gap-2 px-2 py-1 text-xs no-underline",
+      "text-foreground flex w-full cursor-pointer items-center gap-2 px-[var(--density-cell-padding-x)] py-[var(--density-cell-padding-y)] text-[length:var(--density-font-size)] no-underline",
   },
   itemLabel: { class: "leading-none" },
   itemIcon: { class: "text-muted size-3.5" },

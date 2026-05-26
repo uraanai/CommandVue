@@ -41,11 +41,13 @@ const theme = ref<MenuPassThroughOptions>({
   itemContent: `group transition-colors duration-200 text-surface-700 dark:text-surface-0
         p-focus:bg-surface-100 dark:p-focus:bg-surface-700 p-focus:text-surface-800 dark:p-focus:text-surface-0
         hover:bg-surface-100 dark:hover:bg-surface-700 hover:text-surface-800 dark:hover:text-surface-0`,
-  // Tightened vertical padding (`py-1.5` instead of `py-2`) for denser rows
-  // that match the operations-dashboard density mode. Horizontal padding
-  // stays `px-3` so labels don't crash into the popup edge.
+  // Padding + font-size pull from the density tokens so menus rescale with
+  // `data-density` on `<html>`. Horizontal padding always gets the cell-pad-x
+  // value; vertical padding gets cell-pad-y. The font-size uses Tailwind v4's
+  // arbitrary length syntax `text-[length:var(...)]`.
   itemLink: `cursor-pointer flex items-center no-underline overflow-hidden relative text-inherit
-        px-3 py-1.5 gap-2 select-none outline-none`,
+        text-[length:var(--density-font-size)] gap-2 select-none outline-none
+        px-[var(--density-cell-padding-x)] py-[var(--density-cell-padding-y)]`,
   itemIcon: `text-surface-400 dark:text-surface-500
         p-focus:text-surface-500 dark:p-focus:text-surface-400
         group-hover:text-surface-500 dark:group-hover:text-surface-400`,
