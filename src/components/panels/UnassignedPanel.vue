@@ -1,13 +1,15 @@
 <script setup lang="ts">
+import type { PanelApiProps } from "@/composables/usePanelApi";
 import type { PanelType } from "@/types/workspace";
-import type { DockviewApi, DockviewPanelApi } from "dockview-vue";
 
 import { Square } from "@lucide/vue";
 import { computed, ref } from "vue";
 
 import Button from "@/components/ui/Button.vue";
 import Select from "@/components/ui/Select.vue";
+import { usePanelApi } from "@/composables/usePanelApi";
 import { panelRegistry } from "@/modules/panels/registry";
+import { swapPanelComponent } from "@/modules/panels/swap";
 import { UNASSIGNED_PANEL_TYPE } from "@/modules/panels/unassigned";
 import { useLayoutStore } from "@/stores/layout";
 import { usePanelStateStore } from "@/stores/panelState";
@@ -26,12 +28,11 @@ import { useWorkspaceStore } from "@/stores/workspace";
  * then remove this one. Same panel id preserves cross-references in the
  * Layout's `panelIds` and in any preset's `appliedPresetIds`.
  */
-interface Props {
-  api: DockviewPanelApi;
-  containerApi: DockviewApi;
-}
+const props = defineProps<PanelApiProps>();
 
-const props = defineProps<Props>();
+// dockview-vue hands panels their api + containerApi inside the `params` bag,
+// not as top-level props — see usePanelApi.
+const { api, containerApi } = usePanelApi(props);
 
 const panelStateStore = usePanelStateStore();
 const session = useSessionStore();
@@ -66,26 +67,24 @@ const presetOptions = computed(() =>
 
 async function assign(): Promise<void> {
   if (!selectedType.value) return;
+  const panelApi = api.value;
+  const dockApi = containerApi.value;
+  if (!panelApi || !dockApi) return;
   const targetType = selectedType.value;
   const definition = panelRegistry.get(targetType);
   if (!definition) return;
 
   switching.value = true;
   try {
-    const panelId = props.api.id;
+    const panelId = panelApi.id;
     await panelStateStore.assignComponent(panelId, targetType, "configured");
     if (selectedPreset.value) {
       await presetStore.applyToPanel(panelId, selectedPreset.value);
     }
 
-    const group = props.api.group;
-    props.containerApi.addPanel({
-      id: panelId,
-      component: targetType,
-      title: definition.title,
-      position: { referenceGroup: group, direction: "within" },
-    });
-    props.api.close();
+    // Swap the empty placeholder for a panel of the chosen type, keeping the
+    // same id so the panel-state record + preset binding stay wired.
+    swapPanelComponent(dockApi, panelApi, { component: targetType, title: definition.title });
     session.markDirty();
   } finally {
     switching.value = false;

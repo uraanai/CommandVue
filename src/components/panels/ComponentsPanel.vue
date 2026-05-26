@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import type { PanelApiProps } from "@/composables/usePanelApi";
 import type { PanelCategory, PanelDefinition } from "@/modules/panels/types";
-import type { DockviewApi, DockviewPanelApi } from "dockview-vue";
 
 import { computed, onMounted, onUnmounted, ref, shallowRef } from "vue";
 
 import Input from "@/components/ui/Input.vue";
+import { usePanelApi } from "@/composables/usePanelApi";
 import { panelRegistry } from "@/modules/panels/registry";
 import { UNASSIGNED_PANEL_TYPE } from "@/modules/panels/unassigned";
 import { newId } from "@/modules/storage/ids";
@@ -24,12 +25,11 @@ import DataView from "@/volt/DataView.vue";
  * grids" so library-first applies. One DataView per category gives us the
  * grouped layout `DataView` doesn't natively support.
  */
-interface Props {
-  containerApi?: DockviewApi;
-  api?: DockviewPanelApi;
-}
+const props = defineProps<PanelApiProps>();
 
-const props = defineProps<Props>();
+// dockview-vue passes the container api inside the `params` bag — see
+// usePanelApi.
+const { containerApi } = usePanelApi(props);
 
 const layoutStore = useLayoutStore();
 const panelStateStore = usePanelStateStore();
@@ -72,12 +72,11 @@ const grouped = computed(() => {
 async function addPanelOfType(def: PanelDefinition): Promise<void> {
   const layoutId = layoutStore.currentLayoutId;
   if (!layoutId) return;
-  // Dockview wires `containerApi` through to panels via props, but the
-  // session store keeps a singleton `DockviewApi` reference that the menubar
-  // also uses. Prefer the prop (no extra coupling) and fall back to the
-  // session-store API if Dockview hasn't wired the prop yet — both routes
-  // address the same Dockview instance.
-  const api = props.containerApi ?? session.getDockviewApi();
+  // Dockview wires `containerApi` through to panels via the `params` bag, but
+  // the session store keeps a singleton `DockviewApi` reference the menubar
+  // also uses. Prefer the panel-scoped api (no extra coupling) and fall back
+  // to the session-store API — both address the same Dockview instance.
+  const api = containerApi.value ?? session.getDockviewApi();
   if (!api) return;
   const panelId = newId();
   await panelStateStore.createPanel({
@@ -119,6 +118,7 @@ async function addPanelOfType(def: PanelDefinition): Promise<void> {
         >
           <template #grid="{ items: rowItems }: { items: PanelDefinition[] }">
             <div class="grid grid-cols-2 gap-2">
+              <!-- eslint-disable-next-line vue/no-restricted-html-elements -- Card-style grid tile (two-line, left-aligned, fills the cell); PrimeVue Button can't express this layout. Documented escape valve, see docs/contributing-ui.md. -->
               <button
                 v-for="def in rowItems"
                 :key="def.id"
