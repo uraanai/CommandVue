@@ -8,6 +8,19 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 
 ### Added
 
+- **Drag-and-drop reorder inside chrome edit mode.** Each chrome item becomes a draggable handle when edit mode is on; drop anywhere left or right of a sibling item to move it. Wired via `@atlaskit/pragmatic-drag-and-drop` and `@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge` (both already in the locked stack). An accent-coloured vertical bar marks the insertion point on the side of the hovered target. Source item dims to 40% opacity while dragging. Cross-slot drag intentionally out of scope for this PR — the `canDrop` filter restricts to same-slot moves. Non-removable items (the always-on app icon) are anchored at their canonical position and don't drag.
+- **`docs/concepts.md` walkthrough page** — top-level overview of how workspaces, layouts, panels, chrome, and presets fit together, with annotated screenshots from a fresh launch. Now ships eight screenshots covering the overview, workspace switcher, Manage Workspaces dialog, Edit menu, Manage Layouts dialog, components panel, chrome edit mode, and the dark theme. Registered in the VitePress sidebar under "Overview".
+- **`docs/public/concepts/MANIFEST.md`** — tracks every embedded screenshot, the steps to reproduce it, and the theme/density used at capture so Phase 3.3 can re-take them against the chosen built-in documentation theme.
+- **Theme-aware scrollbar styling** — `*::-webkit-scrollbar-*` + `scrollbar-color` rules read from the semantic surface + border tokens so scrollbar thumbs flip automatically with `data-theme`.
+- **Light / Dark / Auto theme toggle (Phase 3.2 of Prompt 3).**
+  - `useTheme()` composable rewritten as a three-mode controller: `light` / `dark` / `auto`. Auto follows `prefers-color-scheme` and re-resolves automatically when the OS preference changes.
+  - `setMode(next)` / `cycleMode()` actions. Cycle order: light → dark → auto → light. `resolvedTheme` always returns a concrete `light` | `dark`.
+  - Dual-write persistence: `appMetaRepo` (IDB) under key `commandvue:theme` is authoritative (stores the mode); `localStorage` mirrors the resolved theme for the anti-FOUC inline script.
+  - Anti-FOUC inline `<script>` in `index.html` runs synchronously in `<head>` before any CSS loads; reads the localStorage mirror or falls back to `prefers-color-scheme` so the first paint matches user choice.
+  - `initializeTheme()` runs from `main.ts` before `app.mount()` — hydrates the in-memory mode from IDB, wires the matchMedia listener, applies the resolved theme.
+  - `ThemeToggleItem` chrome item replaced with the new three-way cycle (Sun → Moon → Monitor). `aria-label` and `title` describe the next mode for discoverability.
+  - Mode changes announce via a visually-hidden `role="status" aria-live="polite"` region (`#commandvue-theme-announce`).
+  - 13 new unit tests in `tests/unit/composables/useTheme.spec.ts` covering default state, mode setting, cycle order, system-preference resolution, dual-write persistence, listener teardown, idempotent init, aria-live region creation.
 - **Three-layer design token foundation (Phase 3.1 of Prompt 3).**
   - Primitive token layer (`@theme` in `src/assets/styles/tokens.css`) — OKLCH neutral scale (slate 50→950) + six accent palettes (blue, teal, green, amber, red, violet), spacing scale (`--space-0` → `--space-48`), typography (font families, font size scale, font weights, line heights), border radii, shadows, motion (durations + easings), z-index. Mirrors Tailwind v4's default palette values.
   - Semantic token layer (`:root` in `tokens.css`) — surface (base/raised/overlay/sunken), border (subtle/default/strong), text (primary/secondary/tertiary/disabled/inverse), interactive (default/hover/active/subtle + `on-interactive`), status (success/warning/danger/info with `-subtle` companions), focus ring, semantic spacing (`--space-panel-padding`, …), semantic typography.
@@ -64,6 +77,18 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
   - `src/modules/panels/unassigned.ts` — reserved synthetic type `__unassigned__` for empty panels.
   - Wired into `main.ts` before mount; sits alongside the existing `app.component()` registrations (Dockview still resolves components from Vue's global registry).
   - 9 new unit tests covering registry surface and built-in registration.
+
+### Fixed
+
+- **Edit-mode banner no longer overlays the menu bar.** The Chrome-edit banner was absolutely positioned over the top of the shell, which made the File / Edit / View dropdowns unreachable while editing chrome. Rendered inline as the first flex row of `AppShell` instead, so the banner pushes the chrome bar (and everything below it) down. Wording updated to reflect the new drag affordance.
+- **Dropdown hover frame removed.** Consumer `#item` slot templates in `WorkspaceSwitcher`, `MenuBar`, and `AppIconItem` all painted their own `hover:bg-surface-sunken` + `rounded` + duplicate padding on top of the wrapper's hover state, producing a visible nested frame around the hovered item. Stripped the duplicates — the wrapper's `itemContent` hover handles the fill, the consumer templates only own text color, padding, and icon layout.
+- **Browser native context menu suppressed site-wide.** A global capture-phase `contextmenu` listener `preventDefault()`s everywhere so only PrimeVue ContextMenu instances render on right-click. Native menu is preserved for `<input>`, `<textarea>`, and `contenteditable` hosts so cut / copy / paste / spell-check still work. Mirrors the eventual desktop-shell (Tauri / Electron) packaging where the browser has no native page menu to overlay app menus with.
+- **Edit menu's "Rename Layout…" label was misleading** — the entry actually opens the Manage Layouts dialog. Renamed to "Manage Layouts…" to match the AppIconItem context menu wording.
+- **Dropdown popup blended into the body in dark mode.** Volt `Menu` used `dark:bg-surface-900`, which is the same shade as the body. Raised the popup to `dark:bg-surface-800` and the hover state to `dark:hover:bg-surface-700` so the body → popup → hover hierarchy is clearly three steps. Tightened item vertical padding (`py-2` → `py-1.5`) for denser rows.
+- **Manage Layouts "Make Default" button** — clicking the star now refreshes the workspace store so the UI reflects the new default immediately. Previously the IDB write succeeded but the star indicator stayed on the old default until the user switched workspaces.
+- **Components Panel cards** — clicking a panel card now reliably spawns the panel even when the panel's `containerApi` prop is briefly undefined during mount; falls back to `useSessionStore().getDockviewApi()`. Previously silently no-op'd.
+- **Workspace dropdown hover** — Volt `Menu` had both `p-1` list padding *and* a `rounded-sm` `bg-surface-100` hover fill on the inner div, producing a visible "double-frame" effect on hover. Dropped both so the hover fills the full row of the popup edge-to-edge.
+- **Menu bar dismissal on right-click** — opening the app-icon context menu while a top-bar dropdown was visible now dismisses the dropdown first (synthesises a click outside the menubar to trigger PrimeVue's outside-click handler before opening the context menu).
 
 ### Changed
 

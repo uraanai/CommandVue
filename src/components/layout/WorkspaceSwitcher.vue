@@ -110,18 +110,21 @@ async function onSaveAs(payload: {
 
     <Menu id="workspace-switcher-menu" ref="menuRef" :model="menuItems" popup>
       <template #item="{ item, props: itemProps }">
-        <a v-bind="itemProps.action" class="flex items-center">
-          <span
-            class="text-foreground hover:bg-surface-sunken flex w-full items-center gap-2 rounded px-3 py-1.5 text-sm"
-          >
-            <FolderCog v-if="(item as MenuItem).label === 'Manage workspaces…'" class="size-3.5" />
-            <Plus v-else-if="(item as MenuItem).label === 'New workspace…'" class="size-3.5" />
-            <span class="flex-1">{{ item.label }}</span>
-            <Check
-              v-if="(item as MenuItem & { class?: string }).class === 'is-current'"
-              class="text-accent-500 size-3.5"
-            />
-          </span>
+        <!--
+          Volt Menu's `itemLink` PT already applies `px-3 py-1.5` padding and
+          hover background. The inner span here only owns the flex layout for
+          icon + label + check — no padding, no hover bg, no rounded. Adding
+          any of those produces a visible nested "frame" on top of Volt's
+          hover state.
+        -->
+        <a v-bind="itemProps.action" class="flex w-full items-center gap-2 text-sm">
+          <FolderCog v-if="(item as MenuItem).label === 'Manage workspaces…'" class="size-3.5" />
+          <Plus v-else-if="(item as MenuItem).label === 'New workspace…'" class="size-3.5" />
+          <span class="flex-1">{{ item.label }}</span>
+          <Check
+            v-if="(item as MenuItem & { class?: string }).class === 'is-current'"
+            class="text-accent-500 size-3.5"
+          />
         </a>
       </template>
     </Menu>

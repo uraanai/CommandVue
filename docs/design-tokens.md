@@ -341,6 +341,88 @@ When you encounter a hardcoded value in a component:
 
 Use judgment. The goal is "no obviously hardcoded values," not "every literal is a token." A `mt-2` is fine; a `mt-[7px]` should become `--space-N`-aligned.
 
+## Theme toggle — Light / Dark / Auto
+
+CommandVue ships a three-way theme control (Phase 3.2 of Prompt 3). The `useTheme()` composable owns the state; the `ThemeToggleItem` chrome item is its primary UI.
+
+### Modes
+
+| Mode    | Meaning                                                                                   |
+| ------- | ----------------------------------------------------------------------------------------- |
+| `light` | Explicit light. Ignores OS preference.                                                    |
+| `dark`  | Explicit dark. Ignores OS preference.                                                     |
+| `auto`  | Follows `prefers-color-scheme`. Re-resolves automatically when the OS preference changes. |
+
+### Cycle order
+
+The toggle button advances `light → dark → auto → light`. The icon reflects the _current_ mode (Sun / Moon / Monitor); the `aria-label` and `title` describe the next mode for discoverability.
+
+### Persistence — dual write
+
+| Store                                             | Role                                                                                                                                                                                                                                                                                                                           |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `appMetaRepo` (IndexedDB, key `commandvue:theme`) | **Authoritative.** Async, survives across browser sessions, cascades cleanly when the eventual Supabase migration moves the key/value store to Postgres.                                                                                                                                                                       |
+| `localStorage` (key `commandvue:theme`)           | **Anti-FOUC mirror.** Synchronous, read by the inline `<script>` in `index.html` _before_ any CSS loads so the page paints with the correct theme on the first frame. Stores the _resolved_ theme (`light` or `dark`), not the mode — auto mode can't be resolved synchronously without reading `prefers-color-scheme` itself. |
+
+The mirror is best-effort. If `localStorage` is unavailable (private-mode Safari, disabled storage), the inline script falls back to `prefers-color-scheme`. The IDB read in `initializeTheme()` then reconciles on mount.
+
+### FOUC mitigation
+
+```html
+<!-- index.html -->
+<script>
+  (function () {
+    try {
+      var stored = localStorage.getItem("commandvue:theme");
+      if (stored !== "light" && stored !== "dark") {
+        stored =
+          window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light";
+      }
+      document.documentElement.setAttribute("data-theme", stored);
+    } catch (e) {
+      document.documentElement.setAttribute("data-theme", "light");
+    }
+  })();
+</script>
+```
+
+This runs synchronously in `<head>` before `main.css` loads. It always sets `data-theme` to a concrete value (`light` or `dark`) so the first paint matches the user's previous choice.
+
+### Accessibility
+
+- The button has an `aria-label` and `title` describing both current mode and the next-mode action.
+- Mode changes are announced via a visually-hidden `role="status" aria-live="polite"` region (`#commandvue-theme-announce`), created lazily on first use.
+- Keyboard activatable like any IconButton.
+
+### Bootstrap
+
+`initializeTheme()` runs once from `main.ts` before `app.mount()`. It:
+
+1. Reads the persisted mode from `appMetaRepo` (IDB, authoritative).
+2. Wires a `matchMedia('(prefers-color-scheme: dark)')` listener so auto mode tracks OS changes live.
+3. Re-applies the resolved theme to `data-theme` on `<html>`.
+
+The anti-FOUC inline script already set a paint-safe `data-theme` value before this code runs; `initializeTheme()` reconciles any drift between localStorage and IDB.
+
+### API quick reference
+
+```typescript
+import { useTheme } from "@/composables/useTheme";
+
+const {
+  mode, // Readonly<Ref<"light" | "dark" | "auto">>
+  resolvedTheme, // Readonly<Ref<"light" | "dark">>
+  systemPrefersDark, // Readonly<Ref<boolean>>
+  isDark, // Readonly<Ref<boolean>> — convenience for resolvedTheme === "dark"
+  setMode, // (next) => Promise<void>
+  cycleMode, // () => Promise<void> — advance one step
+  nextModeLabel, // Readonly<Ref<string>> — for tooltip discoverability
+  toggle, // alias of cycleMode (backwards-compat with the old 2-way API)
+} = useTheme();
+```
+
 ## Density mode quick reference
 
 ```html

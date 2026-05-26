@@ -7,6 +7,7 @@ import { createPinia } from "pinia";
 import PrimeVue from "primevue/config";
 import { createApp, defineAsyncComponent } from "vue";
 
+import { initializeTheme } from "@/composables/useTheme";
 import { registerBuiltinChromeItems } from "@/modules/chrome/builtin";
 import { registerBuiltinPanels } from "@/modules/panels/builtin";
 import { MISSING_PANEL_TYPE, registerMissingPanel } from "@/modules/panels/missing";
@@ -21,6 +22,35 @@ import { router } from "./router";
 // supported by Vite for entry modules; ensures the Operations workspace,
 // Default layout, and Default chrome profile exist before App.vue mounts.
 await seedIfEmpty();
+
+// Theme bootstrap. Hydrates `useTheme()`'s in-memory mode from IDB (the
+// authoritative store), wires the prefers-color-scheme listener for auto
+// mode, and re-applies the resolved theme to `data-theme` on <html>. The
+// anti-FOUC inline script in `index.html` already set a paint-safe value;
+// this call reconciles IDB with that and fixes the rare case where the
+// localStorage mirror diverged from IDB (private mode, storage cleared, …).
+await initializeTheme();
+
+// Suppress the browser's native context menu site-wide. CommandVue's
+// right-click affordances are handled by PrimeVue ContextMenu instances
+// throughout the app, and the native menu would otherwise overlay them.
+// Native menu is preserved for text editing surfaces (`<input>`,
+// `<textarea>`, and any `contenteditable` host) so users keep cut / copy /
+// paste / spell-check. This deliberately mimics the eventual desktop
+// (Tauri / Electron) packaging where the OS has no browser-tab chrome to
+// host a native page menu at all.
+window.addEventListener(
+  "contextmenu",
+  (event) => {
+    const target = event.target as HTMLElement | null;
+    if (!target) return;
+    if (target.closest("input, textarea, [contenteditable=''], [contenteditable='true']")) {
+      return;
+    }
+    event.preventDefault();
+  },
+  { capture: true },
+);
 
 // Populate the panel registry before mount. The registry sits alongside the
 // global `app.component()` registrations below — Dockview resolves panel

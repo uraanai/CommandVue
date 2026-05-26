@@ -262,7 +262,7 @@ const menuItems = computed<MenuItem[]>(() => [
       { label: "Undo", disabled: true },
       { label: "Redo", disabled: true },
       { separator: true },
-      { label: "Rename Layout…", command: () => (manageLayoutsOpen.value = true) },
+      { label: "Manage Layouts…", command: () => (manageLayoutsOpen.value = true) },
       { label: "Duplicate Layout", command: () => void duplicateCurrentLayout() },
       { label: "Delete Layout…", command: () => void deleteCurrentLayout() },
       { separator: true },
@@ -302,28 +302,35 @@ const menuItems = computed<MenuItem[]>(() => [
     }"
   >
     <template #item="{ item, props: itemProps, hasSubmenu, root }">
-      <a v-bind="itemProps.action" class="flex items-center">
+      <!--
+        Hover background + rounded corners come from the Menubar wrapper's
+        `itemContent` PT. The consumer template here only owns text color,
+        padding (which differs between root buttons and nested items), text
+        size, and the icon/shortcut layout. Adding `hover:bg-…` or `rounded`
+        here would stack on top of the wrapper and produce a visible nested
+        frame on hover.
+      -->
+      <a
+        v-bind="itemProps.action"
+        :class="[
+          'flex w-full items-center gap-1 leading-none',
+          root
+            ? 'text-muted hover:text-foreground px-2 py-1 text-xs'
+            : 'text-foreground px-3 py-1.5 text-sm',
+          (item as MenuItem & { disabled?: boolean }).disabled
+            ? 'cursor-not-allowed opacity-40'
+            : 'cursor-pointer',
+        ]"
+      >
+        <span class="flex-1 leading-none">{{ item.label }}</span>
         <span
-          :class="[
-            'flex w-full items-center gap-1 rounded',
-            root
-              ? 'text-muted hover:text-foreground hover:bg-surface-sunken px-2 py-1 text-xs'
-              : 'text-foreground hover:bg-surface-sunken cursor-pointer px-3 py-1.5 text-sm',
-            (item as MenuItem & { disabled?: boolean }).disabled
-              ? 'cursor-not-allowed opacity-40'
-              : '',
-          ]"
+          v-if="(item as MenuItem & { shortcut?: string }).shortcut"
+          class="text-faint font-mono text-[10px]"
         >
-          <span class="flex-1 leading-none">{{ item.label }}</span>
-          <span
-            v-if="(item as MenuItem & { shortcut?: string }).shortcut"
-            class="text-faint font-mono text-[10px]"
-          >
-            {{ (item as MenuItem & { shortcut?: string }).shortcut }}
-          </span>
-          <ChevronDown v-if="hasSubmenu && root" class="text-faint size-3" />
-          <ChevronRight v-else-if="hasSubmenu" class="text-faint size-3.5" />
+          {{ (item as MenuItem & { shortcut?: string }).shortcut }}
         </span>
+        <ChevronDown v-if="hasSubmenu && root" class="text-faint size-3" />
+        <ChevronRight v-else-if="hasSubmenu" class="text-faint size-3.5" />
       </a>
     </template>
   </Menubar>

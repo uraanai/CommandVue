@@ -9,6 +9,31 @@
       content="CommandVue — a production-grade Vue 3 template for command-center applications."
     />
     <title>CommandVue</title>
+    <!--
+      Anti-FOUC theme initialiser. Synchronous so it runs before any CSS or
+      app code paints. Reads the resolved theme from localStorage (the mirror
+      written by useTheme on every change). Falls back to prefers-color-scheme
+      when the mirror is missing — matches `mode: "auto"` default. The mirror
+      stores the *resolved* theme (light|dark), not the *mode* — auto mode
+      can't be resolved synchronously without a system-preference read, and
+      this script always wants a concrete value to paint.
+    -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("commandvue:theme");
+          if (stored !== "light" && stored !== "dark") {
+            stored =
+              window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+                ? "dark"
+                : "light";
+          }
+          document.documentElement.setAttribute("data-theme", stored);
+        } catch (e) {
+          document.documentElement.setAttribute("data-theme", "light");
+        }
+      })();
+    </script>
   </head>
   <body class="antialiased">
     <div id="app"></div>

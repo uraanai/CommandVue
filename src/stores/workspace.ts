@@ -66,6 +66,16 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     workspaces.value = await workspaceRepo.list();
   }
 
+  /**
+   * Re-read every workspace row from IDB and refresh the reactive list.
+   * Used by external stores that mutate workspace columns (e.g. layout store
+   * setting `defaultLayoutId`) and need the UI to reflect the change without
+   * round-tripping through `setCurrentWorkspace`.
+   */
+  async function refreshAll(): Promise<void> {
+    workspaces.value = await workspaceRepo.list();
+  }
+
   async function setCurrentWorkspace(id: Ulid): Promise<void> {
     if (!workspaces.value.some((w) => w.id === id)) {
       throw new Error(`Workspace not loaded: ${id}`);
@@ -98,5 +108,6 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     setGlobalDefault,
     setCurrentWorkspace,
     deleteWorkspace,
+    refreshAll,
   };
 });
