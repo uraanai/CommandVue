@@ -196,4 +196,41 @@ describe("importThemeFromJson", () => {
     expect(themeRegistry.get(result.theme!.id)).toBeDefined();
     expect(themeRegistry.listImported()).toHaveLength(1);
   });
+
+  describe("non-ULID id auto-mint", () => {
+    it("reassigns a non-ULID id to a fresh ULID and surfaces a warning", async () => {
+      const seed = makeTheme({ id: "my-cool-theme" });
+      const result = await importThemeFromJson(exportThemeToJson(seed));
+      expect(result.success).toBe(true);
+      expect(result.theme?.id).not.toBe("my-cool-theme");
+      expect(result.theme?.id).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
+      expect(result.warnings?.[0]).toMatch(/not a valid ULID/);
+      expect(result.warnings?.[0]).toContain("my-cool-theme");
+    });
+
+    it("auto-mint precedes the conflict check — same non-ULID id, different names both import", async () => {
+      // Two imports sharing the same non-ULID id: each gets a fresh ULID, so
+      // the abort path never fires. Different names so repo invariant 2 (name
+      // uniqueness within source) doesn't muddy the assertion — that's a
+      // separate concern from id collision.
+      const first = await importThemeFromJson(
+        exportThemeToJson(makeTheme({ id: "alpha", name: "Alpha One" })),
+      );
+      const second = await importThemeFromJson(
+        exportThemeToJson(makeTheme({ id: "alpha", name: "Alpha Two" })),
+      );
+      expect(first.success).toBe(true);
+      expect(second.success).toBe(true);
+      expect(first.theme?.id).not.toBe(second.theme?.id);
+      expect(themeRegistry.listImported()).toHaveLength(2);
+    });
+
+    it("does NOT auto-mint when the imported id is already a valid ULID", async () => {
+      const seed = makeTheme(); // default id is the canonical ULID fixture
+      const result = await importThemeFromJson(exportThemeToJson(seed));
+      expect(result.success).toBe(true);
+      expect(result.theme?.id).toBe(seed.id);
+      expect(result.warnings).toBeUndefined();
+    });
+  });
 });

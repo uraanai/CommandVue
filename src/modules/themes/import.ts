@@ -26,6 +26,10 @@ import { themeRepo } from "@/modules/storage/themeRepo";
 import { PortableThemeSchema } from "@/modules/themes/portableSchema";
 import { THEME_SCHEMA_VERSION, type Theme, type ThemeId } from "@/types/theme";
 
+/** ULID format (Crockford base32, 26 chars, excludes I/L/O/U). Matches the
+ *  regex `themeRepo`'s invariant 1 enforces. */
+const ULID_RE = /^[0-9A-HJKMNP-TV-Z]{26}$/;
+
 /**
  * Policy for ID collisions on import.
  *
@@ -98,11 +102,27 @@ export async function importThemeFromJson(
     };
   }
   let theme = parsed.data.theme;
+  const warnings: string[] = [];
 
-  // 4. ID conflict resolution.
+  // 4. Auto-mint a ULID if the imported id isn't one. Storage requires ULIDs
+  // (`themeRepo` invariant 1); imported files — especially LLM-authored or
+  // hand-written — often use friendly ids like "my-cool-theme". Renaming
+  // silently here means import "just works" for any JSON the schema accepts,
+  // and the user is told what happened via `warnings`. Note: a non-ULID id
+  // can't collide with anything in storage (every stored id is a ULID), so
+  // auto-mint always precedes the conflict check without ambiguity.
+  if (!ULID_RE.test(theme.id)) {
+    const minted = newId();
+    warnings.push(
+      `Imported id "${theme.id}" is not a valid ULID — reassigned to ${minted}. ` +
+        `Storage requires ULIDs; the original id was discarded.`,
+    );
+    theme = { ...theme, id: minted };
+  }
+
+  // 5. ID conflict resolution.
   const existing = await themeRepo.exists(theme.id);
   const policy: ImportConflictPolicy = options.onConflict ?? "abort";
-  let renamed = false;
   if (existing) {
     if (policy === "abort") {
       return {
@@ -114,19 +134,20 @@ export async function importThemeFromJson(
       };
     }
     if (policy === "rename") {
-      theme = { ...theme, id: newId(), name: `${theme.name} (Imported)` };
-      renamed = true;
+      const renamedName = `${theme.name} (Imported)`;
+      warnings.push(`ID collision resolved by renaming to "${renamedName}".`);
+      theme = { ...theme, id: newId(), name: renamedName };
     } else {
       // policy === "replace" — drop the existing theme (and its workspace bindings).
       await themeRepo.delete(theme.id);
     }
   }
 
-  // 5. Force source to "imported" — provenance always reflects the import
+  // 6. Force source to "imported" — provenance always reflects the import
   // event, even if the file claimed `source: "user"` or `"generated"`.
   // The `generation` block (if present) carries through so the customizer
   // can re-edit a re-imported generated theme without losing its inputs.
-  // 6. Persist via the repo — runs all 8 invariants again as defense-in-depth.
+  // 7. Persist via the repo — runs all 8 invariants again as defense-in-depth.
   //    The repo also generates fresh createdAt / updatedAt timestamps.
   try {
     const created = await themeRepo.create({
@@ -140,8 +161,6 @@ export async function importThemeFromJson(
       tokens: theme.tokens,
       generation: theme.generation,
     });
-    const warnings: string[] = [];
-    if (renamed) warnings.push(`ID collision resolved by renaming to "${created.name}".`);
     return { success: true, theme: created, warnings: warnings.length ? warnings : undefined };
   } catch (e) {
     return { success: false, errors: [(e as Error).message] };
