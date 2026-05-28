@@ -105,6 +105,26 @@ Six bundled themes under `src/assets/themes/*.json` — `compact-light`, `compac
 
 Full reference: [`docs/themes.md`](../../../docs/themes.md). Tests: `tests/unit/themes/registry.spec.ts`, `tests/unit/themes/apply.spec.ts`.
 
+## Custom theme registry (Prompt 4 Phase C)
+
+The registry now holds **both** the six built-ins **and** any custom themes (`user` / `imported` / `generated`) persisted in IndexedDB via `themeRepo`. Same singleton, same `subscribe()` — no UI surface has to know whether a theme came from JSON or from a user's IndexedDB profile.
+
+**Boot sequence** (`src/main.ts`): `registerBuiltinThemes()` runs first so built-ins own their canonical ids, then `await themeRegistry.loadFromRepo(() => themeRepo.getAll())` hydrates custom themes. The fetcher is passed in (not imported by the registry) to keep `registry` storage-agnostic and avoid a circular import.
+
+**Runtime sync** — `themeRepo.create / update / delete` each call `themeRegistry.unregister(id) + register(theme)` (or `unregister` for delete) so picker subscribers see the new state without a reload. Idempotent — safe even if the registry already holds the id.
+
+**New registry methods on top of Phase 3.3:**
+
+- `loadFromRepo(fetcher)` — async hydration; skips ids already registered (built-ins win).
+- `listCustom()` — everything that isn't `source: "built-in"`.
+- `listGenerated()` — only `source: "generated"` (engine output, Phase B).
+- `listImported()` — only `source: "imported"` (Phase D / G).
+- `listBuiltIn()` + `listByMode()` unchanged from Phase 3.3.
+
+**Picker UI** — `ThemePickerDialog.vue` groups cards by source: **Built-in** / **Generated** / **Imported** / **Custom**. Empty groups are hidden, so the picker stays compact until the first custom theme exists. Behaviorally identical to Phase 3.3 — Apply + workspace-binding + swatches all work the same.
+
+Tests: `tests/unit/themes/registry.spec.ts` (filters + `loadFromRepo`), `tests/unit/storage/themeRepo.spec.ts` (CRUD↔registry sync).
+
 ## Theme generation (Prompt 4 Phase B)
 
 `src/modules/themes/generate.ts` is the Linear-style generation engine: 3–4 high-level inputs → the full ~50-token semantic set. All color math runs in OKLCH via [culori](https://culorijs.org) (see [ADR 0003](../../../docs/decisions/0003-theme-generation-color-library.md)).

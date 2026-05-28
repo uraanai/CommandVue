@@ -51,9 +51,47 @@ export const themeRegistry = {
     return Array.from(themes.values()).filter((t) => t.source === "built-in");
   },
 
+  /** Themes that did NOT ship as a bundled built-in (user-authored, generated, or imported). */
+  listCustom(): readonly Theme[] {
+    return Array.from(themes.values()).filter((t) => t.source !== "built-in");
+  },
+
+  /** Themes produced by the Linear-style generation engine (Phase B). */
+  listGenerated(): readonly Theme[] {
+    return Array.from(themes.values()).filter((t) => t.source === "generated");
+  },
+
+  /** Themes imported from a `PortableTheme` JSON file (Phase D / G). */
+  listImported(): readonly Theme[] {
+    return Array.from(themes.values()).filter((t) => t.source === "imported");
+  },
+
   /** Themes whose intrinsic `mode` matches the filter. */
   listByMode(mode: ThemeMode): readonly Theme[] {
     return Array.from(themes.values()).filter((t) => t.mode === mode);
+  },
+
+  /**
+   * Hydrate the registry with any custom themes persisted in storage. The
+   * caller supplies the fetcher so the registry stays independent of the
+   * storage layer (avoids a circular import between `registry` and
+   * `themeRepo`, and keeps tests trivial to mock).
+   *
+   * Built-in registration MUST already be complete before this runs so we
+   * never overwrite an id the built-ins own. Already-registered ids are
+   * skipped silently — `themeRepo.create` separately wires the live sync
+   * for runtime mutations after boot.
+   */
+  async loadFromRepo(fetcher: () => Promise<readonly Theme[]>): Promise<void> {
+    const customs = await fetcher();
+    let added = 0;
+    for (const t of customs) {
+      if (!themes.has(t.id)) {
+        themes.set(t.id, t);
+        added += 1;
+      }
+    }
+    if (added > 0) notify();
   },
 
   /**

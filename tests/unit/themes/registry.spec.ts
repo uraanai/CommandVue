@@ -78,6 +78,70 @@ describe("themeRegistry", () => {
     unsub();
     expect(seen).toEqual([0, 1, 2, 1]);
   });
+
+  // -- Phase C: source filters + loadFromRepo --
+
+  it("listCustom returns everything that isn't built-in", () => {
+    themeRegistry.register(makeTheme({ id: "core", source: "built-in" }));
+    themeRegistry.register(makeTheme({ id: "gen", source: "generated" }));
+    themeRegistry.register(makeTheme({ id: "imp", source: "imported" }));
+    themeRegistry.register(makeTheme({ id: "usr", source: "user" }));
+    expect(
+      themeRegistry
+        .listCustom()
+        .map((t) => t.id)
+        .sort(),
+    ).toEqual(["gen", "imp", "usr"]);
+  });
+
+  it("listGenerated and listImported partition by source", () => {
+    themeRegistry.register(makeTheme({ id: "g1", source: "generated" }));
+    themeRegistry.register(makeTheme({ id: "g2", source: "generated" }));
+    themeRegistry.register(makeTheme({ id: "i1", source: "imported" }));
+    expect(
+      themeRegistry
+        .listGenerated()
+        .map((t) => t.id)
+        .sort(),
+    ).toEqual(["g1", "g2"]);
+    expect(themeRegistry.listImported().map((t) => t.id)).toEqual(["i1"]);
+  });
+
+  describe("loadFromRepo", () => {
+    it("registers every theme the fetcher returns", async () => {
+      const persisted = [
+        makeTheme({ id: "01PERSIST00000000000000001", source: "generated" }),
+        makeTheme({ id: "01PERSIST00000000000000002", source: "imported" }),
+      ];
+      await themeRegistry.loadFromRepo(async () => persisted);
+      expect(
+        themeRegistry
+          .list()
+          .map((t) => t.id)
+          .sort(),
+      ).toEqual(["01PERSIST00000000000000001", "01PERSIST00000000000000002"]);
+    });
+
+    it("skips ids already registered (built-ins win)", async () => {
+      themeRegistry.register(
+        makeTheme({ id: "compact-light", source: "built-in", name: "Built-in Compact Light" }),
+      );
+      await themeRegistry.loadFromRepo(async () => [
+        makeTheme({ id: "compact-light", source: "user", name: "Ghost should NOT overwrite" }),
+      ]);
+      expect(themeRegistry.get("compact-light")?.name).toBe("Built-in Compact Light");
+    });
+
+    it("notifies subscribers only when at least one theme was added", async () => {
+      const seen: number[] = [];
+      themeRegistry.subscribe((list) => seen.push(list.length));
+      await themeRegistry.loadFromRepo(async () => []);
+      // initial subscribe snapshot + no extra notify (nothing added)
+      expect(seen).toEqual([0]);
+      await themeRegistry.loadFromRepo(async () => [makeTheme({ id: "fresh" })]);
+      expect(seen).toEqual([0, 1]);
+    });
+  });
 });
 
 describe("registerBuiltinThemes", () => {

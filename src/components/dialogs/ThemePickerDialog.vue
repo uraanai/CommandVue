@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Theme, ThemeId, ThemeSwatches } from "@/types/theme";
+import type { Theme, ThemeId, ThemeSource, ThemeSwatches } from "@/types/theme";
 
 import { Check, Sparkles } from "@lucide/vue";
 import { computed, onMounted, onUnmounted, ref, shallowRef } from "vue";
@@ -100,6 +100,33 @@ const swatchesById = computed(() => {
   return out;
 });
 
+/**
+ * Group themes by source for display. Phase C surfaces three groups today —
+ * Built-in (shipped variants), Generated (Phase E customizer output), Imported
+ * (Phase G JSON import) — plus a future `Custom` slot reserved for hand-authored
+ * `user` themes. Empty groups are hidden so the picker stays compact until
+ * the first custom theme exists.
+ */
+const GROUP_ORDER: Array<{ key: ThemeSource; label: string }> = [
+  { key: "built-in", label: "Built-in" },
+  { key: "generated", label: "Generated" },
+  { key: "imported", label: "Imported" },
+  { key: "user", label: "Custom" },
+];
+
+const groupedThemes = computed(() => {
+  const buckets = new Map<ThemeSource, Theme[]>(GROUP_ORDER.map((g) => [g.key, []]));
+  for (const t of themes.value) {
+    buckets.get(t.source)?.push(t);
+  }
+  for (const list of buckets.values()) list.sort((a, b) => a.name.localeCompare(b.name));
+  return GROUP_ORDER.map(({ key, label }) => ({
+    key,
+    label,
+    themes: buckets.get(key) ?? [],
+  })).filter((g) => g.themes.length > 0);
+});
+
 function close(): void {
   emit("update:visible", false);
 }
@@ -128,83 +155,88 @@ async function apply(theme: Theme): Promise<void> {
   >
     <div class="flex flex-col gap-4">
       <p class="text-foreground/80 text-sm">
-        Pick a built-in theme. Each one bundles its own surface palette, accent color, density, and
+        Pick a theme. Each one bundles its own surface palette, accent color, density, and
         component-level tweaks. Apply once for the whole app, or tick the box below to bind the
         choice to the active workspace.
       </p>
 
-      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <article
-          v-for="theme in themes"
-          :key="theme.id"
-          :class="[
-            'border-border-default flex flex-col gap-3 rounded-md border p-3 text-sm transition-colors',
-            currentId === theme.id
-              ? 'border-accent-500 ring-accent-500 ring-1'
-              : 'hover:border-border-strong',
-          ]"
-        >
-          <header class="flex items-start justify-between gap-2">
-            <div class="flex flex-col gap-0.5">
-              <span class="text-foreground font-medium">{{ theme.name }}</span>
+      <section v-for="group in groupedThemes" :key="group.key" class="flex flex-col gap-2">
+        <h3 class="text-faint text-[10px] font-medium tracking-wider uppercase">
+          {{ group.label }}
+        </h3>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <article
+            v-for="theme in group.themes"
+            :key="theme.id"
+            :class="[
+              'border-border-default flex flex-col gap-3 rounded-md border p-3 text-sm transition-colors',
+              currentId === theme.id
+                ? 'border-accent-500 ring-accent-500 ring-1'
+                : 'hover:border-border-strong',
+            ]"
+          >
+            <header class="flex items-start justify-between gap-2">
+              <div class="flex flex-col gap-0.5">
+                <span class="text-foreground font-medium">{{ theme.name }}</span>
+                <span
+                  class="text-faint flex items-center gap-1.5 text-[10px] tracking-wider uppercase"
+                >
+                  {{ theme.mode }} · {{ theme.density }}
+                </span>
+              </div>
+              <Check v-if="currentId === theme.id" class="text-accent-500 size-4 shrink-0" />
+            </header>
+
+            <p class="text-muted text-xs leading-snug">{{ theme.description }}</p>
+
+            <!-- Token swatches -->
+            <div v-if="swatchesById[theme.id]" class="flex items-center gap-1.5" aria-hidden="true">
               <span
-                class="text-faint flex items-center gap-1.5 text-[10px] tracking-wider uppercase"
-              >
-                {{ theme.mode }} · {{ theme.density }}
-              </span>
+                class="border-border h-5 w-5 rounded border"
+                :style="{ backgroundColor: swatchesById[theme.id]?.surface }"
+                title="Surface"
+              />
+              <span
+                class="border-border h-5 w-5 rounded border"
+                :style="{ backgroundColor: swatchesById[theme.id]?.surfaceRaised }"
+                title="Surface raised"
+              />
+              <span
+                class="h-5 w-5 rounded"
+                :style="{ backgroundColor: swatchesById[theme.id]?.text }"
+                title="Text"
+              />
+              <span
+                class="h-5 w-5 rounded"
+                :style="{ backgroundColor: swatchesById[theme.id]?.interactive }"
+                title="Interactive"
+              />
+              <span
+                class="h-5 w-5 rounded"
+                :style="{ backgroundColor: swatchesById[theme.id]?.success }"
+                title="Success"
+              />
+              <span
+                class="h-5 w-5 rounded"
+                :style="{ backgroundColor: swatchesById[theme.id]?.danger }"
+                title="Danger"
+              />
             </div>
-            <Check v-if="currentId === theme.id" class="text-accent-500 size-4 shrink-0" />
-          </header>
 
-          <p class="text-muted text-xs leading-snug">{{ theme.description }}</p>
-
-          <!-- Token swatches -->
-          <div v-if="swatchesById[theme.id]" class="flex items-center gap-1.5" aria-hidden="true">
-            <span
-              class="border-border h-5 w-5 rounded border"
-              :style="{ backgroundColor: swatchesById[theme.id]?.surface }"
-              title="Surface"
-            />
-            <span
-              class="border-border h-5 w-5 rounded border"
-              :style="{ backgroundColor: swatchesById[theme.id]?.surfaceRaised }"
-              title="Surface raised"
-            />
-            <span
-              class="h-5 w-5 rounded"
-              :style="{ backgroundColor: swatchesById[theme.id]?.text }"
-              title="Text"
-            />
-            <span
-              class="h-5 w-5 rounded"
-              :style="{ backgroundColor: swatchesById[theme.id]?.interactive }"
-              title="Interactive"
-            />
-            <span
-              class="h-5 w-5 rounded"
-              :style="{ backgroundColor: swatchesById[theme.id]?.success }"
-              title="Success"
-            />
-            <span
-              class="h-5 w-5 rounded"
-              :style="{ backgroundColor: swatchesById[theme.id]?.danger }"
-              title="Danger"
-            />
-          </div>
-
-          <footer class="mt-auto flex items-center justify-between gap-2 pt-1">
-            <span class="text-faint text-[10px]">{{ theme.author }}</span>
-            <Button
-              size="sm"
-              :variant="currentId === theme.id ? 'secondary' : 'primary'"
-              @click="apply(theme)"
-            >
-              <Sparkles class="size-3" />
-              {{ currentId === theme.id ? "Re-apply" : "Apply" }}
-            </Button>
-          </footer>
-        </article>
-      </div>
+            <footer class="mt-auto flex items-center justify-between gap-2 pt-1">
+              <span class="text-faint text-[10px]">{{ theme.author }}</span>
+              <Button
+                size="sm"
+                :variant="currentId === theme.id ? 'secondary' : 'primary'"
+                @click="apply(theme)"
+              >
+                <Sparkles class="size-3" />
+                {{ currentId === theme.id ? "Re-apply" : "Apply" }}
+              </Button>
+            </footer>
+          </article>
+        </div>
+      </section>
 
       <div class="border-border-subtle flex items-center justify-between gap-3 border-t pt-3">
         <label class="flex items-center gap-2 text-sm">
