@@ -31,14 +31,23 @@ import { THEME_SCHEMA_VERSION, type Theme, type ThemeId } from "@/types/theme";
 const ULID_RE = /^[0-9A-HJKMNP-TV-Z]{26}$/;
 
 /**
- * Policy for ID collisions on import.
+ * Policy for collisions on import. A "collision" is either an existing record
+ * with the same id OR an existing imported record with the same name (the
+ * repo's invariant 2 is name-unique-within-source, so two imports of the same
+ * exported theme — from different sessions with different ULIDs — would
+ * otherwise trip the name check at create time).
  *
- *   - `abort`    — bail out and return `conflictWithExistingId` so the UI can
- *                  prompt the user; **default** when no option is supplied.
- *   - `rename`   — mint a new ULID + append " (Imported)" to the name, then
- *                  create. The existing theme is untouched.
- *   - `replace`  — delete the existing theme (and its workspace bindings) and
- *                  create the imported one under the original id.
+ *   - `abort`    — bail out and return `conflictWithExistingId` (pointing at
+ *                  whichever record collided — id-match wins precedence) so
+ *                  the UI can prompt the user; **default** when no option
+ *                  is supplied.
+ *   - `rename`   — mint a fresh ULID and append " (Imported)" to the name,
+ *                  iteratively suffixing (" (Imported 2)", " (Imported 3)",
+ *                  …) until the name is unique among imported themes. The
+ *                  existing theme is untouched.
+ *   - `replace`  — delete whatever collides (the id-matching record and / or
+ *                  the name-matching record) along with any workspace
+ *                  bindings, then create the imported theme.
  */
 export type ImportConflictPolicy = "abort" | "rename" | "replace";
 
@@ -120,26 +129,57 @@ export async function importThemeFromJson(
     theme = { ...theme, id: minted };
   }
 
-  // 5. ID conflict resolution.
-  const existing = await themeRepo.exists(theme.id);
+  // 5. Conflict resolution — id OR name match against existing imported themes.
+  //    Name match is checked because `themeRepo`'s invariant 2 enforces name
+  //    uniqueness within source; two exports of the same theme from different
+  //    sessions would have different ULIDs but the same name, and we want the
+  //    `rename` / `replace` policies to handle that case the way a user
+  //    intuitively expects ("re-importing this file should just work").
   const policy: ImportConflictPolicy = options.onConflict ?? "abort";
-  if (existing) {
+  const idExists = await themeRepo.exists(theme.id);
+  const all = await themeRepo.getAll();
+  const targetName = theme.name.trim().toLowerCase();
+  const nameConflictRecord = all.find(
+    (t) =>
+      t.source === "imported" && t.id !== theme.id && t.name.trim().toLowerCase() === targetName,
+  );
+  const hasConflict = idExists || nameConflictRecord !== undefined;
+
+  if (hasConflict) {
     if (policy === "abort") {
+      const conflictId = idExists ? theme.id : nameConflictRecord!.id;
+      const reason = idExists
+        ? `A theme with id "${theme.id}" already exists.`
+        : `An imported theme named "${theme.name}" already exists.`;
       return {
         success: false,
-        conflictWithExistingId: theme.id,
-        errors: [
-          `A theme with id "${theme.id}" already exists. Choose "rename" or "replace" to resolve.`,
-        ],
+        conflictWithExistingId: conflictId,
+        errors: [`${reason} Choose "rename" or "replace" to resolve.`],
       };
     }
     if (policy === "rename") {
-      const renamedName = `${theme.name} (Imported)`;
-      warnings.push(`ID collision resolved by renaming to "${renamedName}".`);
-      theme = { ...theme, id: newId(), name: renamedName };
+      // Mint a fresh ULID (so any id collision is moot) and iteratively suffix
+      // the name until it's unique among imported themes.
+      const nameTaken = (n: string): boolean => {
+        const lower = n.trim().toLowerCase();
+        return all.some((t) => t.source === "imported" && t.name.trim().toLowerCase() === lower);
+      };
+      const base = theme.name;
+      let candidate = `${base} (Imported)`;
+      let attempt = 2;
+      while (nameTaken(candidate) && attempt < 100) {
+        candidate = `${base} (Imported ${attempt})`;
+        attempt += 1;
+      }
+      warnings.push(`Conflict resolved by renaming to "${candidate}".`);
+      theme = { ...theme, id: newId(), name: candidate };
     } else {
-      // policy === "replace" — drop the existing theme (and its workspace bindings).
-      await themeRepo.delete(theme.id);
+      // policy === "replace" — drop whichever record(s) collide. The same
+      // record might match both id and name; delete only once in that case.
+      if (idExists) await themeRepo.delete(theme.id);
+      if (nameConflictRecord && nameConflictRecord.id !== theme.id) {
+        await themeRepo.delete(nameConflictRecord.id);
+      }
     }
   }
 

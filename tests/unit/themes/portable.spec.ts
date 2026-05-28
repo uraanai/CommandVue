@@ -197,6 +197,81 @@ describe("importThemeFromJson", () => {
     expect(themeRegistry.listImported()).toHaveLength(1);
   });
 
+  describe("name collision (in addition to id collision)", () => {
+    it("rename: different ULID but same name still triggers the rename branch", async () => {
+      // First import establishes a record with name "Twin"
+      const a = await importThemeFromJson(
+        exportThemeToJson(makeTheme({ id: "01AAAAAAAAAAAAAAAAAAAAAAAA", name: "Twin" })),
+      );
+      expect(a.success).toBe(true);
+      // Second: different ULID, same name → name conflict; rename adds " (Imported)"
+      const b = await importThemeFromJson(
+        exportThemeToJson(makeTheme({ id: "01BBBBBBBBBBBBBBBBBBBBBBBB", name: "Twin" })),
+        { onConflict: "rename" },
+      );
+      expect(b.success).toBe(true);
+      expect(b.theme?.name).toBe("Twin (Imported)");
+      expect(b.warnings?.[0]).toMatch(/renaming to "Twin \(Imported\)"/);
+    });
+
+    it("rename: iteratively suffixes when '(Imported)' is also taken", async () => {
+      await importThemeFromJson(
+        exportThemeToJson(makeTheme({ id: "01AAAAAAAAAAAAAAAAAAAAAAAA", name: "Triple" })),
+      );
+      await importThemeFromJson(
+        exportThemeToJson(makeTheme({ id: "01BBBBBBBBBBBBBBBBBBBBBBBB", name: "Triple" })),
+        { onConflict: "rename" },
+      );
+      // Now both "Triple" and "Triple (Imported)" exist; third gets "(Imported 2)".
+      const c = await importThemeFromJson(
+        exportThemeToJson(makeTheme({ id: "01CCCCCCCCCCCCCCCCCCCCCCCC", name: "Triple" })),
+        { onConflict: "rename" },
+      );
+      expect(c.success).toBe(true);
+      expect(c.theme?.name).toBe("Triple (Imported 2)");
+    });
+
+    it("replace: deletes the name-colliding record (different id)", async () => {
+      await importThemeFromJson(
+        exportThemeToJson(
+          makeTheme({
+            id: "01AAAAAAAAAAAAAAAAAAAAAAAA",
+            name: "Override",
+            tokens: { "--color-surface-base": "oklch(0.9 0.01 0)" },
+          }),
+        ),
+      );
+      const replacement = await importThemeFromJson(
+        exportThemeToJson(
+          makeTheme({
+            id: "01BBBBBBBBBBBBBBBBBBBBBBBB",
+            name: "Override",
+            tokens: { "--color-surface-base": "oklch(0.2 0.01 0)" },
+          }),
+        ),
+        { onConflict: "replace" },
+      );
+      expect(replacement.success).toBe(true);
+      expect(replacement.theme?.id).toBe("01BBBBBBBBBBBBBBBBBBBBBBBB");
+      // Original (different id, same name) deleted
+      expect(await themeRepo.getById("01AAAAAAAAAAAAAAAAAAAAAAAA")).toBeNull();
+      // Only one "Override" remains
+      expect(themeRegistry.listImported().filter((t) => t.name === "Override")).toHaveLength(1);
+    });
+
+    it("abort: surfaces the name-colliding record's id when only the name clashes", async () => {
+      const first = await importThemeFromJson(
+        exportThemeToJson(makeTheme({ id: "01AAAAAAAAAAAAAAAAAAAAAAAA", name: "Blocked" })),
+      );
+      const second = await importThemeFromJson(
+        exportThemeToJson(makeTheme({ id: "01BBBBBBBBBBBBBBBBBBBBBBBB", name: "Blocked" })),
+      );
+      expect(second.success).toBe(false);
+      expect(second.conflictWithExistingId).toBe(first.theme?.id);
+      expect(second.errors?.[0]).toMatch(/named "Blocked"/);
+    });
+  });
+
   describe("non-ULID id auto-mint", () => {
     it("reassigns a non-ULID id to a fresh ULID and surfaces a warning", async () => {
       const seed = makeTheme({ id: "my-cool-theme" });
