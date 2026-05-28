@@ -8,6 +8,13 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 
 ### Added
 
+- **Theme import / export core (Prompt 4 Phase D).**
+  - `zod` added as a runtime dep for JSON import validation.
+  - `src/modules/themes/portableSchema.ts` — Zod schemas (`PortableThemeSchema`, `ThemeSchema`, `TokenNameSchema`, `TokenValueSchema`). Token names validated against the known-token allowlist; values length-bounded + filtered for `<script` / `javascript:` / `expression(` / HTML-like injection vectors. Same patterns `themeRepo`'s invariant 5 rejects, surfaced here at the import boundary with per-key error paths.
+  - `src/modules/themes/import.ts` — `importThemeFromJson(jsonText, options?)` → `ImportResult`. Flow: JSON parse → explicit `schemaVersion` check (clearer error than a Zod literal mismatch buried in `.issues`) → Zod validate → ID-conflict resolution → **force `source: "imported"`** (provenance always reflects the import event; the `generation` block carries through so a re-imported generated theme stays editable) → `themeRepo.create` (which re-runs the 8 invariants as defense-in-depth and auto-syncs `themeRegistry` via Phase C).
+  - Conflict policies: `abort` (default — returns `conflictWithExistingId` so the UI can prompt the user), `rename` (mint new ULID + append " (Imported)"), `replace` (delete existing + its workspace bindings, create under the original id).
+  - `src/modules/themes/export.ts` — `exportThemeToJson(theme)` produces the PortableTheme envelope (`schemaVersion: 1`, `exportedBy: "commandvue"`, `exportedByVersion` read from `package.json`). `buildExportFilename(theme)` returns `<slug>.commandvue-theme.json` (kebab-case slug; fallback `theme` for empty / punctuation-only names). `downloadThemeFile(theme)` dispatches a browser download via a hidden `<a download>` click.
+  - 17 new tests in `tests/unit/themes/portable.spec.ts` (pure export logic, filename builder, invalid JSON, unsupported schema version, unknown token, `<script>` injection, source coercion, all three conflict policies, round-trip, registry sync via the import path).
 - **Custom theme registry hydration + picker grouping (Prompt 4 Phase C).**
   - `themeRegistry.loadFromRepo(fetcher)` hydrates custom themes (`user` / `imported` / `generated`) from IndexedDB at boot. Wired in `src/main.ts` after `registerBuiltinThemes()` so built-ins own their canonical ids first; the fetcher is passed in (rather than the registry importing `themeRepo`) to keep the registry storage-agnostic and avoid a circular import.
   - `themeRegistry.listCustom()` / `listGenerated()` / `listImported()` filter helpers complement the existing `listBuiltIn()` / `listByMode()`.
