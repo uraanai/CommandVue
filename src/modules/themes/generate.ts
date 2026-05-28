@@ -258,6 +258,73 @@ export function generateTheme(input: ThemeGenerationInput): ThemeGenerationResul
   const status = (hue: number) => oklch(statusL, statusC, hue);
   const statusSubtle = (hue: number) => oklch(subtleL, subtleC, hue);
 
+  // --- Accent scale (50–900) ------------------------------------------------
+  // The existing UI primitives (Button, IconButton, Input, Select, Tabs,
+  // Menubar, DataTable, ColorPicker, dockview borders) consume the
+  // `--color-accent-*` aliases that `tokens.css` defines pointing at
+  // `--color-blue-*`. The six built-in themes don't override the scale (their
+  // interactive accent is also blue, so the default alias matches by
+  // coincidence); a generated theme with any non-blue accent would otherwise
+  // leave every wrapper visually stuck on the default blue.
+  //
+  // We derive the full scale from the user's accent hue + chroma, varying
+  // lightness across a perceptually-balanced curve. Chroma is capped at the
+  // extremes (very light + very dark) since saturated colors in those bands
+  // tend to fall out of sRGB; the engine's gamut clamp handles whatever's
+  // left over.
+  const accentScale: Array<{ step: number; l: number; cCap: number }> = [
+    { step: 50, l: 0.97, cCap: 0.03 },
+    { step: 100, l: 0.93, cCap: 0.05 },
+    { step: 200, l: 0.86, cCap: 0.09 },
+    { step: 300, l: 0.77, cCap: 0.13 },
+    { step: 400, l: 0.68, cCap: 0.18 },
+    { step: 500, l: 0.6, cCap: 0.22 },
+    { step: 600, l: 0.52, cCap: 0.22 },
+    { step: 700, l: 0.45, cCap: 0.18 },
+    { step: 800, l: 0.36, cCap: 0.14 },
+    { step: 900, l: 0.28, cCap: 0.1 },
+  ];
+  const accentBaseC = accent.c ?? 0.15;
+  const accentColors: Record<string, string> = {};
+  for (const { step, l, cCap } of accentScale) {
+    accentColors[`--color-accent-${step}`] = css(oklch(l, Math.min(accentBaseC, cCap), accentHue));
+  }
+
+  // --- PrimeVue surface scale (p-surface-0 ... -950) ------------------------
+  // Volt components (Dialog, Menu, Checkbox, InputText, Slider, DataView,
+  // Fieldset, SecondaryButton) consume Tailwind utilities like
+  // `bg-surface-0 dark:bg-surface-900`, `border-surface-200`,
+  // `text-surface-700` etc., which resolve to `--color-p-surface-*`.
+  // `tokens.css` aliases that scale to `--color-slate-*` by default — so
+  // without this override every Volt-rendered surface (dialog backgrounds,
+  // the workspace-switcher menu, the customizer's own dialog chrome) stays
+  // slate regardless of the generated theme.
+  //
+  // We derive the scale from the user's base hue at very low chroma so
+  // surfaces stay near-neutral with just a whisper of the theme's tint.
+  // Step 0 stays pure white literally (matches `tokens.css` baseline) so
+  // utilities like `bg-surface-0` paint a true white surface in light mode.
+  const pSurfaceScale: Array<{ step: number; l: number }> = [
+    { step: 50, l: 0.97 },
+    { step: 100, l: 0.94 },
+    { step: 200, l: 0.86 },
+    { step: 300, l: 0.77 },
+    { step: 400, l: 0.66 },
+    { step: 500, l: 0.55 },
+    { step: 600, l: 0.46 },
+    { step: 700, l: 0.37 },
+    { step: 800, l: 0.28 },
+    { step: 900, l: 0.19 },
+    { step: 950, l: 0.12 },
+  ];
+  const pSurfaceChroma = Math.min(baseC, 0.012);
+  const pSurfaceColors: Record<string, string> = {
+    "--color-p-surface-0": "#ffffff",
+  };
+  for (const { step, l } of pSurfaceScale) {
+    pSurfaceColors[`--color-p-surface-${step}`] = css(oklch(l, pSurfaceChroma, baseHue));
+  }
+
   // --- Assemble. -------------------------------------------------------------
   const tokens: Record<string, string> = {
     // Surfaces
@@ -292,6 +359,18 @@ export function generateTheme(input: ThemeGenerationInput): ThemeGenerationResul
     "--color-status-info-subtle": css(statusSubtle(STATUS_HUES.info)),
     // Focus
     "--color-focus-ring": css(focusRing),
+    // Accent scale 50–900 — overrides the `tokens.css` blue aliases so every
+    // UI primitive that reads `bg-accent-500` / `var(--color-accent-*)` (Button,
+    // Input, Select, Tabs, Menubar, DataTable, dockview, …) follows the user's
+    // accent. Derived above; spread in here.
+    ...accentColors,
+    // PrimeVue surface scale 0–950 — overrides the `tokens.css` slate aliases
+    // so every Volt component (Dialog, Menu, Checkbox, InputText, Slider,
+    // DataView, Fieldset, SecondaryButton) that reads `bg-surface-N` /
+    // `text-surface-N` / `border-surface-N` Tailwind utilities follows the
+    // theme's base hue. Without this override Volt-rendered backgrounds stay
+    // slate even after a generated theme is applied.
+    ...pSurfaceColors,
     // Backwards-compat aliases (old utility classes still read these).
     "--color-surface": css(surfaceBase),
     "--color-foreground": css(textPrimary),

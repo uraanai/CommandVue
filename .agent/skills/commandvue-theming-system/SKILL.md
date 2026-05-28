@@ -137,6 +137,20 @@ The file-I/O core for theme portability. No UI in this phase — the Phase G imp
 
 Tests: `tests/unit/themes/portable.spec.ts` (17 cases — pure export logic, filename builder, invalid JSON, unsupported schema version, unknown token, `<script>` injection, source coercion, all three conflict policies, round-trip, registry sync).
 
+## Theme customizer dialog (Prompt 4 Phase E)
+
+The Linear-style authoring surface — 3–4 high-level inputs, live preview, save creates a new generated theme.
+
+- **`src/components/dialogs/ThemeCustomizerDialog.vue`** — opened from `View → Create new theme…` (blank) or `View → Edit current theme…` (pre-fills from the active theme's `generation` block; only enabled when `themeStore.currentTheme.source === "generated"`). Save **always creates a new theme** — even in edit mode the original is untouched, so the pre-fill pattern is intentionally "duplicate to edit".
+- **`src/components/ui/ColorSwatchPicker.vue`** — OKLCH-typed sibling of `ColorPicker.vue` (which stays hex-typed for operational use). Round swatch grid + optional native `<input type="color">` popover that converts hex → OKLCH on change. Used by the customizer for base + accent inputs.
+- **`src/modules/themes/curated-swatches.ts`** — 10 base swatches (near-neutral with a whisper of tint, sitting in the engine's surface-base lightness band) + 10 accent swatches (mid-lightness mid-chroma, covering the hue wheel) + 6 curated font stacks. Picking from the grid lands the user in the engine's sweet spot; custom picks still go through the engine's clamp + gamut mapping.
+- **Inputs:** name, optional description, mode (Light / Dark), base color, accent color, contrast slider (30–100), density (Compact / Comfortable / Spacious), font family, "Generate paired variant" checkbox, "Apply after saving" checkbox.
+- **Live preview** — scoped `<div>` with all generated tokens written as inline custom properties; nested mini-app sample (menubar, telemetry rows, status badges, sample buttons, text hierarchy) reads via `var(--color-*)` so the preview never bleeds the generated tokens into the rest of the app. Contrast report below the preview surfaces the three headline ratios + any failures with pass/fail color.
+- **Paired variant flow** — when the checkbox is on, save creates the primary theme, generates + creates the opposite-mode variant with `generation.paired` pointing at the primary, then backfills the primary's `generation.paired` with the variant's id. The Light/Dark/Auto toggle's `bridgeVariant` (Phase 3.2) uses `generation.paired` to swap.
+- **Apply after save** — convenience checkbox; defaults on. Routes through `themeStore.setTheme(id, workspaceId)` so the workspace binding contract from Prompt 3.3 still applies.
+
+Tests: `tests/unit/themes/curated-swatches.spec.ts` (BLANK_DEFAULTS alignment, OKLCH validity, every accent round-trips through `generateTheme` cleanly) + `tests/unit/components/ui/ColorSwatchPicker.spec.ts` (render, aria-checked, click emits, whitespace-tolerant match, `allowCustom` toggle, disabled state).
+
 ## Theme generation (Prompt 4 Phase B)
 
 `src/modules/themes/generate.ts` is the Linear-style generation engine: 3–4 high-level inputs → the full ~50-token semantic set. All color math runs in OKLCH via [culori](https://culorijs.org) (see [ADR 0003](../../../docs/decisions/0003-theme-generation-color-library.md)).

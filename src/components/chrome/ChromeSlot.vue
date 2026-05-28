@@ -251,7 +251,7 @@ onBeforeUnmount(() => teardownAll());
         v-if="chrome.editMode && chromeItemRegistry.get(id)?.removable"
         label="Remove from slot"
         size="sm"
-        class="bg-danger absolute -top-1.5 -right-1.5 h-4 min-h-0 w-4 min-w-0 rounded-full p-0 text-white hover:bg-red-500 [&_svg]:size-2.5"
+        class="bg-danger absolute -top-1.5 -right-1.5 h-4 min-h-0 w-4 min-w-0 rounded-full p-0 text-white hover:opacity-90 [&_svg]:size-2.5"
         @click="removeItem(id)"
       >
         <X />

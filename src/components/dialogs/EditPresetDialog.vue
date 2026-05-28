@@ -79,7 +79,7 @@ async function save(): Promise<void> {
       <p v-else class="text-muted text-xs">No editor registered for this preset type.</p>
     </div>
     <template #footer>
-      <Button variant="ghost" size="sm" @click="close">Cancel</Button>
+      <Button variant="secondary" size="sm" @click="close">Cancel</Button>
       <Button variant="primary" size="sm" :disabled="!name.trim()" @click="save">Save</Button>
     </template>
   </Dialog>

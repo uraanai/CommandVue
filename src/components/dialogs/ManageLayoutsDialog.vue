@@ -143,7 +143,7 @@ async function remove(id: string): Promise<void> {
                 <Check class="size-3.5" />
                 Save
               </Button>
-              <Button size="sm" variant="ghost" @click="editorCancelCallback">Cancel</Button>
+              <Button size="sm" variant="secondary" @click="editorCancelCallback">Cancel</Button>
             </div>
           </template>
         </Column>

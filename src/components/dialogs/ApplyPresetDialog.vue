@@ -71,7 +71,7 @@ async function apply(): Promise<void> {
     </div>
 
     <template #footer>
-      <Button variant="ghost" size="sm" @click="emit('update:visible', false)">Cancel</Button>
+      <Button variant="secondary" size="sm" @click="emit('update:visible', false)">Cancel</Button>
       <Button
         variant="primary"
         size="sm"

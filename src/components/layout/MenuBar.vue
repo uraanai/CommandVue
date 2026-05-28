@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { PanelDefinition } from "@/modules/panels/types";
+import type { Theme } from "@/types/theme";
 import type { MenuItem } from "primevue/menuitem";
 
 import { ChevronDown, ChevronRight } from "@lucide/vue";
@@ -10,6 +11,7 @@ import ManageLayoutsDialog from "@/components/dialogs/ManageLayoutsDialog.vue";
 import ManagePresetsDialog from "@/components/dialogs/ManagePresetsDialog.vue";
 import ManageWorkspacesDialog from "@/components/dialogs/ManageWorkspacesDialog.vue";
 import SaveLayoutAsDialog from "@/components/dialogs/SaveLayoutAsDialog.vue";
+import ThemeCustomizerDialog from "@/components/dialogs/ThemeCustomizerDialog.vue";
 import ThemePickerDialog from "@/components/dialogs/ThemePickerDialog.vue";
 import FileUpload from "@/components/ui/FileUpload.vue";
 import Menubar from "@/components/ui/Menubar.vue";
@@ -25,18 +27,41 @@ import {
 import { useLayoutStore } from "@/stores/layout";
 import { usePanelStateStore } from "@/stores/panelState";
 import { useSessionStore } from "@/stores/session";
+import { useThemeStore } from "@/stores/theme";
 import { useWorkspaceStore } from "@/stores/workspace";
 
 const session = useSessionStore();
 const layoutStore = useLayoutStore();
 const workspace = useWorkspaceStore();
 const panelStateStore = usePanelStateStore();
+const themeStore = useThemeStore();
 
 const manageWorkspacesOpen = ref(false);
 const manageLayoutsOpen = ref(false);
 const managePresetsOpen = ref(false);
 const themePickerOpen = ref(false);
+const themeCustomizerOpen = ref(false);
+// When set, the customizer opens in edit mode pre-filled from this theme.
+// Cleared on dialog close so a subsequent "Create new theme…" starts blank.
+const themeToEdit = ref<Theme | null>(null);
 const saveAsOpen = ref(false);
+
+// "Edit current theme…" is only meaningful when the active theme is one the
+// engine produced — built-in / user / imported themes don't carry the
+// `generation` block the customizer needs to pre-fill its inputs.
+const canEditCurrentTheme = computed(
+  () => themeStore.currentTheme?.source === "generated" && !!themeStore.currentTheme.generation,
+);
+
+function openCustomizer(edit: boolean): void {
+  themeToEdit.value = edit ? themeStore.currentTheme : null;
+  themeCustomizerOpen.value = true;
+}
+
+function onCustomizerVisibleChange(visible: boolean): void {
+  themeCustomizerOpen.value = visible;
+  if (!visible) themeToEdit.value = null;
+}
 
 // FileUpload — kept hidden by the wrapper; menu items trigger `choose()`
 // programmatically. customUpload + auto means @select fires immediately with
@@ -286,6 +311,12 @@ const menuItems = computed<MenuItem[]>(() => [
         shortcut: formatCombo("mod+b", isMac),
       },
       { label: "Themes…", command: () => (themePickerOpen.value = true) },
+      { label: "Create new theme…", command: () => openCustomizer(false) },
+      {
+        label: "Edit current theme…",
+        command: () => openCustomizer(true),
+        disabled: !canEditCurrentTheme.value,
+      },
       { separator: true },
       { label: "Discard Changes", command: () => void discardChanges(), disabled: !session.dirty },
     ],
@@ -346,6 +377,11 @@ const menuItems = computed<MenuItem[]>(() => [
   <ManageLayoutsDialog v-model:visible="manageLayoutsOpen" />
   <ManagePresetsDialog v-model:visible="managePresetsOpen" />
   <ThemePickerDialog v-model:visible="themePickerOpen" />
+  <ThemeCustomizerDialog
+    :visible="themeCustomizerOpen"
+    :theme-to-edit="themeToEdit"
+    @update:visible="onCustomizerVisibleChange"
+  />
   <SaveLayoutAsDialog
     v-model:visible="saveAsOpen"
     :default-name="(layoutStore.currentLayout?.name ?? '') + ' (saved)'"
