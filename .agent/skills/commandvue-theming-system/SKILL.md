@@ -125,6 +125,18 @@ The registry now holds **both** the six built-ins **and** any custom themes (`us
 
 Tests: `tests/unit/themes/registry.spec.ts` (filters + `loadFromRepo`), `tests/unit/storage/themeRepo.spec.ts` (CRUD↔registry sync).
 
+## Theme import / export (Prompt 4 Phase D)
+
+The file-I/O core for theme portability. No UI in this phase — the Phase G import dialog and the per-card "Export…" menu both consume these functions.
+
+- **`src/modules/themes/portableSchema.ts`** — Zod schemas (`TokenValueSchema`, `TokenNameSchema`, `ThemeSchema`, `PortableThemeSchema`) for structural validation. Token names are validated against the `knownTokens` allowlist; values are length-bounded and filtered for `<script` / `javascript:` / `expression(` / HTML-like injection vectors.
+- **`src/modules/themes/import.ts`** — `importThemeFromJson(jsonText, options?)` → `ImportResult`. Flow: JSON parse → explicit `schemaVersion` check (clearer error than Zod literal mismatch) → Zod validate → ID-conflict resolution → **force `source: "imported"`** (provenance always reflects the import event, even if the file claimed `user` or `generated`; the `generation` block carries through so a re-imported generated theme stays editable) → `themeRepo.create` (which re-runs the 8 invariants as defense-in-depth and syncs `themeRegistry` via Phase C).
+- **Conflict policies** — trigger on **either** an id match OR a name match within `source: "imported"` (since `themeRepo` invariant 2 is name-unique-within-source). `abort` (default; returns `conflictWithExistingId` pointing at the colliding record), `rename` (mint fresh ULID + iteratively suffix the name " (Imported)" / " (Imported 2)" / … until unique), `replace` (delete whichever record(s) collide — by id and/or name — and create the imported one).
+- **Non-ULID ids auto-mint with a warning.** Storage requires ULIDs (`themeRepo` invariant 1) but imported files often use friendly ids like `"my-cool-theme"`. Import silently reassigns to a fresh ULID and surfaces the change via `warnings`, so any JSON the schema accepts "just works". Auto-mint runs before the conflict check (a non-ULID id can't collide with anything stored).
+- **`src/modules/themes/export.ts`** — `exportThemeToJson(theme)` wraps a Theme in the PortableTheme envelope (`schemaVersion: 1`, `exportedBy: "commandvue"`, `exportedByVersion` from `package.json`). `buildExportFilename(theme)` produces `<slug>.commandvue-theme.json`. `downloadThemeFile(theme)` triggers a browser download via a hidden `<a>` click. Filename slug rules: lowercased, non-alphanumeric runs collapsed to single hyphens, leading / trailing hyphens trimmed, fallback to `theme` for empty / punctuation-only names.
+
+Tests: `tests/unit/themes/portable.spec.ts` (17 cases — pure export logic, filename builder, invalid JSON, unsupported schema version, unknown token, `<script>` injection, source coercion, all three conflict policies, round-trip, registry sync).
+
 ## Theme generation (Prompt 4 Phase B)
 
 `src/modules/themes/generate.ts` is the Linear-style generation engine: 3–4 high-level inputs → the full ~50-token semantic set. All color math runs in OKLCH via [culori](https://culorijs.org) (see [ADR 0003](../../../docs/decisions/0003-theme-generation-color-library.md)).
