@@ -430,14 +430,30 @@ const FONT_OPTIONS = CURATED_FONTS.map((f) => ({ label: f.label, value: f.value 
 
         <!-- Live preview ---------------------------------------------- -->
         <div class="flex flex-col gap-3">
+          <!--
+            The preview wrapper carries `data-density` so the cascade in
+            `tokens.css` (`[data-density="compact"]` / `…="spacious"`) re-binds
+            `--density-*` for descendants — this is why changing the Density
+            control affects spacing inside the preview without the generator
+            emitting density tokens (it deliberately doesn't, see Phase B).
+
+            `font-family: var(--font-family-body)` on the inner container is
+            what makes the Font dropdown actually visible in the preview;
+            without it the preview inherits the dialog's Inter and the
+            control has no observable effect.
+          -->
           <div
             class="border-border-subtle relative overflow-hidden rounded-lg border"
             :style="previewStyle"
+            :data-density="density"
             data-theme-preview
           >
             <div
               class="flex flex-col gap-3 p-4"
-              :style="{ backgroundColor: 'var(--color-surface-base)' }"
+              :style="{
+                backgroundColor: 'var(--color-surface-base)',
+                fontFamily: 'var(--font-family-body)',
+              }"
             >
               <!-- Menubar -->
               <div
@@ -501,10 +517,11 @@ const FONT_OPTIONS = CURATED_FONTS.map((f) => ({ label: f.label, value: f.value 
                   Engage
                 </div>
                 <div
-                  class="rounded-md px-3 py-1.5 text-xs"
+                  class="rounded-md border px-3 py-1.5 text-xs"
                   :style="{
-                    backgroundColor: 'var(--color-interactive-subtle)',
-                    color: 'var(--color-interactive)',
+                    backgroundColor: 'transparent',
+                    color: 'var(--color-text-primary)',
+                    borderColor: 'var(--color-border-default)',
                   }"
                 >
                   Cancel
@@ -520,32 +537,45 @@ const FONT_OPTIONS = CURATED_FONTS.map((f) => ({ label: f.label, value: f.value 
                 </div>
               </div>
 
-              <!-- Status badges -->
-              <div class="flex flex-wrap items-center gap-2">
-                <span
-                  v-for="s in [
-                    {
-                      label: 'SUCCESS',
-                      bg: '--color-status-success-subtle',
-                      fg: '--color-status-success',
-                    },
-                    {
-                      label: 'WARNING',
-                      bg: '--color-status-warning-subtle',
-                      fg: '--color-status-warning',
-                    },
-                    {
-                      label: 'DANGER',
-                      bg: '--color-status-danger-subtle',
-                      fg: '--color-status-danger',
-                    },
-                    { label: 'INFO', bg: '--color-status-info-subtle', fg: '--color-status-info' },
-                  ]"
-                  :key="s.label"
-                  class="rounded-md px-2 py-0.5 text-[10px] font-semibold tracking-wider"
-                  :style="{ backgroundColor: `var(${s.bg})`, color: `var(${s.fg})` }"
-                >
-                  {{ s.label }}
+              <!-- Status badges. Status colors use fixed semantic hue
+                   families (success ≈ 145°, warning ≈ 75°, danger ≈ 27°,
+                   info ≈ 250°) so meaning is preserved regardless of the
+                   accent — by design. They do shift L/C with Mode. -->
+              <div class="flex flex-col gap-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    v-for="s in [
+                      {
+                        label: 'SUCCESS',
+                        bg: '--color-status-success-subtle',
+                        fg: '--color-status-success',
+                      },
+                      {
+                        label: 'WARNING',
+                        bg: '--color-status-warning-subtle',
+                        fg: '--color-status-warning',
+                      },
+                      {
+                        label: 'DANGER',
+                        bg: '--color-status-danger-subtle',
+                        fg: '--color-status-danger',
+                      },
+                      {
+                        label: 'INFO',
+                        bg: '--color-status-info-subtle',
+                        fg: '--color-status-info',
+                      },
+                    ]"
+                    :key="s.label"
+                    class="rounded-md px-2 py-0.5 text-[10px] font-semibold tracking-wider"
+                    :style="{ backgroundColor: `var(${s.bg})`, color: `var(${s.fg})` }"
+                  >
+                    {{ s.label }}
+                  </span>
+                </div>
+                <span class="text-[10px] italic" :style="{ color: 'var(--color-text-tertiary)' }">
+                  Status hues are fixed semantic families — independent of the accent so meaning is
+                  preserved.
                 </span>
               </div>
 
