@@ -8,6 +8,9 @@ OLED
 LLMs
 llms
 
+# Font / typography (Prompt 4 Phase E curated font stacks)
+Segoe
+
 pnpm
 vite
 vitest
