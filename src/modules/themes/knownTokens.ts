@@ -135,9 +135,21 @@ export const DENSITY_TOKEN_NAMES = [
 ] as const;
 
 /**
- * The curated primitives a theme MAY override — radii + font stacks. The six
- * built-ins use these (command-center sharpens radii + sets mono; admin-panel
- * rounds them). The raw color/spacing scales are intentionally absent.
+ * The curated primitives a theme MAY override — radii + font stacks + the
+ * accent-color scale.
+ *
+ * The `--color-accent-*` scale (50–900) is here on purpose. In `tokens.css`
+ * those tokens are *aliases* of `--color-blue-*` — they exist precisely so
+ * themes can re-point the entire UI-primitive accent (Button, IconButton,
+ * Input, Select, Tabs, Menubar, DataTable, ColorPicker, dockview panel
+ * borders, …) by overriding one curated channel. The six built-ins all use
+ * the default blue alias so they don't override these; the Phase B engine
+ * derives the full scale from the user's accent so a non-blue generated
+ * theme propagates through every wrapper that reads `bg-accent-500` etc.
+ *
+ * The raw color / spacing primitive scales (`--color-slate-500`,
+ * `--color-blue-500`, `--space-4`, …) remain intentionally absent — themes
+ * never touch those. The aliases are the documented extension point.
  */
 export const THEMEABLE_PRIMITIVE_TOKEN_NAMES = [
   "--radius-sm",
@@ -146,6 +158,18 @@ export const THEMEABLE_PRIMITIVE_TOKEN_NAMES = [
   "--radius-xl",
   "--font-family-sans",
   "--font-family-mono",
+  // Accent scale aliases — overridable so generated / imported themes can
+  // re-point every primitive that consumes `--color-accent-*`.
+  "--color-accent-50",
+  "--color-accent-100",
+  "--color-accent-200",
+  "--color-accent-300",
+  "--color-accent-400",
+  "--color-accent-500",
+  "--color-accent-600",
+  "--color-accent-700",
+  "--color-accent-800",
+  "--color-accent-900",
 ] as const;
 
 export const ALL_KNOWN_TOKEN_NAMES = [

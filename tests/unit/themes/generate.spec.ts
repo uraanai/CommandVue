@@ -32,11 +32,37 @@ function oklchValues(tokens: Record<string, string>): string[] {
 }
 
 describe("generateTheme", () => {
-  it("emits the full semantic token set (~50 tokens)", () => {
+  it("emits the full semantic token set + accent scale (~60 tokens)", () => {
     const { tokens } = generateTheme(input());
     const count = Object.keys(tokens).length;
-    expect(count).toBeGreaterThanOrEqual(50);
-    expect(count).toBeLessThanOrEqual(60);
+    expect(count).toBeGreaterThanOrEqual(60);
+    expect(count).toBeLessThanOrEqual(75);
+  });
+
+  it("emits the full --color-accent-50..900 scale derived from the accent hue", () => {
+    const { tokens } = generateTheme(input({ accentColor: "oklch(0.55 0.18 145)" }));
+    // All 10 steps present
+    for (const step of [50, 100, 200, 300, 400, 500, 600, 700, 800, 900]) {
+      expect(tokens[`--color-accent-${step}`], `step ${step}`).toBeDefined();
+    }
+    // Hue (third number in oklch(l c h)) is preserved across all steps
+    const hueOf = (v: string) => +(v.match(/oklch\([\d.]+\s+[\d.]+\s+([\d.-]+)/)?.[1] ?? 0);
+    for (const step of [50, 500, 900]) {
+      const h = hueOf(tokens[`--color-accent-${step}`]!);
+      expect(h, `step ${step} should preserve hue 145°`).toBeGreaterThan(120);
+      expect(h, `step ${step} should preserve hue 145°`).toBeLessThan(170);
+    }
+    // Lightness decreases monotonically from 50 → 900 (lightest → darkest).
+    const lOf = (v: string) => +(v.match(/oklch\(([\d.]+)/)?.[1] ?? 0);
+    const ls = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900].map((s) =>
+      lOf(tokens[`--color-accent-${s}`]!),
+    );
+    for (let i = 1; i < ls.length; i++) {
+      expect(
+        ls[i]!,
+        `step ${i * 100 || 50} should be darker than step ${(i - 1) * 100 || 50}`,
+      ).toBeLessThan(ls[i - 1]!);
+    }
   });
 
   it("emits only known overridable token names", () => {

@@ -657,7 +657,7 @@ const FONT_OPTIONS = CURATED_FONTS.map((f) => ({ label: f.label, value: f.value 
 
       <!-- Footer ----------------------------------------------------- -->
       <footer class="border-border-subtle flex items-center justify-end gap-2 border-t pt-3">
-        <Button variant="ghost" size="sm" :disabled="saving" @click="close">Cancel</Button>
+        <Button variant="secondary" size="sm" :disabled="saving" @click="close">Cancel</Button>
         <Button size="sm" :disabled="!canSave" @click="save">
           {{ saving ? "Saving…" : "Save as new theme" }}
         </Button>
