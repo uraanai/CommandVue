@@ -1,6 +1,7 @@
 import type { Theme, ThemeDensity, ThemeId, ThemeMode, ThemeSource } from "@/types/theme";
 
 import { listUnknownTokens } from "@/modules/themes/knownTokens";
+import { themeRegistry } from "@/modules/themes/registry";
 
 import { appMetaRepo } from "./appMetaRepo";
 import { getDb } from "./db";
@@ -161,6 +162,11 @@ export const themeRepo = {
     const theme: Theme = { ...candidate, createdAt: now, updatedAt: now };
     const db = await getDb();
     await db.add("custom-themes", theme);
+    // Keep the registry in sync so picker / apply consumers see it without a
+    // reload. unregister-then-register is idempotent: tests that reuse the
+    // registry singleton across cases don't trip on a stale entry.
+    themeRegistry.unregister(theme.id);
+    themeRegistry.register(theme);
     return theme;
   },
 
@@ -176,6 +182,8 @@ export const themeRepo = {
     await assertValid(merged, { excludeId: id });
     const updated: Theme = { ...merged, createdAt: existing.createdAt, updatedAt: Date.now() };
     await db.put("custom-themes", updated);
+    themeRegistry.unregister(id);
+    themeRegistry.register(updated);
     return updated;
   },
 
@@ -191,5 +199,6 @@ export const themeRepo = {
     }
     const db = await getDb();
     await db.delete("custom-themes", id);
+    themeRegistry.unregister(id);
   },
 };

@@ -14,7 +14,9 @@ import { MISSING_PANEL_TYPE, registerMissingPanel } from "@/modules/panels/missi
 import { registerUnassignedPanel, UNASSIGNED_PANEL_TYPE } from "@/modules/panels/unassigned";
 import { registerBuiltinPresetTypes } from "@/modules/presets/builtin";
 import { seedIfEmpty } from "@/modules/storage/seed";
+import { themeRepo } from "@/modules/storage/themeRepo";
 import { registerBuiltinThemes } from "@/modules/themes/builtin";
+import { themeRegistry } from "@/modules/themes/registry";
 
 import App from "./App.vue";
 import { router } from "./router";
@@ -64,6 +66,13 @@ registerMissingPanel();
 registerBuiltinChromeItems();
 registerBuiltinPresetTypes();
 registerBuiltinThemes();
+
+// Hydrate the theme registry with any custom themes persisted in IndexedDB
+// (Prompt 4 Phase C). Runs AFTER `registerBuiltinThemes()` so the built-ins
+// own the canonical ids first; loadFromRepo skips already-registered ids. The
+// fetcher is passed in (rather than the registry importing themeRepo) to keep
+// the registry storage-agnostic and avoid a circular import.
+await themeRegistry.loadFromRepo(() => themeRepo.getAll());
 
 const app = createApp(App);
 

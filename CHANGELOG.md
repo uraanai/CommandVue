@@ -8,6 +8,12 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 
 ### Added
 
+- **Custom theme registry hydration + picker grouping (Prompt 4 Phase C).**
+  - `themeRegistry.loadFromRepo(fetcher)` hydrates custom themes (`user` / `imported` / `generated`) from IndexedDB at boot. Wired in `src/main.ts` after `registerBuiltinThemes()` so built-ins own their canonical ids first; the fetcher is passed in (rather than the registry importing `themeRepo`) to keep the registry storage-agnostic and avoid a circular import.
+  - `themeRegistry.listCustom()` / `listGenerated()` / `listImported()` filter helpers complement the existing `listBuiltIn()` / `listByMode()`.
+  - `themeRepo.create` / `update` / `delete` now sync the registry (unregister-then-register on create/update; unregister on delete) so picker / apply consumers see runtime mutations without a reload. Idempotent.
+  - `ThemePickerDialog.vue` groups theme cards by source — Built-in / Generated / Imported / Custom — with empty groups hidden so the picker stays compact until the first custom theme exists. Apply + workspace-binding behavior unchanged.
+  - 5 new tests in `tests/unit/themes/registry.spec.ts` (source filters, `loadFromRepo` hydration, built-ins win on id collision, notify-on-add gating) + 3 new tests in `tests/unit/storage/themeRepo.spec.ts` (`themeRegistry` sync on create / update / delete).
 - **Theme generation engine (Prompt 4 Phase B).**
   - `culori` added as the color library for OKLCH color math (`@types/culori` as a dev dependency); rationale in [`docs/decisions/0003-theme-generation-color-library.md`](docs/decisions/0003-theme-generation-color-library.md).
   - `src/modules/themes/generate.ts` — `generateTheme(input)` takes 3–4 high-level inputs (base color, accent color, contrast 30–100, mode, density, optional font) and emits the full ~50-token semantic set: surfaces, text, borders, the interactive scale, status colors, focus ring, backwards-compat aliases, and color-bearing component overrides. All math runs in OKLCH for perceptual uniformity.

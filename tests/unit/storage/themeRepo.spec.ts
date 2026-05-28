@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { appMetaRepo } from "@/modules/storage/appMetaRepo";
 import { InvariantError } from "@/modules/storage/errors";
 import { themeRepo } from "@/modules/storage/themeRepo";
+import { themeRegistry } from "@/modules/themes/registry";
 
 import { resetStorage } from "./helpers";
 
@@ -27,6 +28,9 @@ function validInput(overrides: Partial<CreateThemeInput> = {}): CreateThemeInput
 describe("themeRepo", () => {
   beforeEach(async () => {
     await resetStorage();
+    // The repo now syncs themeRegistry on create / update / delete (Phase C).
+    // Reset the registry singleton so per-test cases don't leak state.
+    themeRegistry.__resetForTests();
   });
 
   it("creates a theme with valid input, assigning a ULID + timestamps", async () => {
@@ -136,5 +140,26 @@ describe("themeRepo", () => {
     const theme = await themeRepo.create(validInput());
     expect(await themeRepo.exists(theme.id)).toBe(true);
     expect(await themeRepo.exists("01ARZ3NDEKTSV4RRFFQ69G5FAV")).toBe(false);
+  });
+
+  describe("themeRegistry sync (Phase C)", () => {
+    it("registers the new theme into themeRegistry on create", async () => {
+      const theme = await themeRepo.create(validInput());
+      expect(themeRegistry.get(theme.id)).toBeDefined();
+      expect(themeRegistry.get(theme.id)?.name).toBe("My Theme");
+    });
+
+    it("re-registers the updated theme on update (registry sees the new name)", async () => {
+      const theme = await themeRepo.create(validInput());
+      await themeRepo.update(theme.id, { name: "Renamed" });
+      expect(themeRegistry.get(theme.id)?.name).toBe("Renamed");
+    });
+
+    it("unregisters the theme from themeRegistry on delete", async () => {
+      const theme = await themeRepo.create(validInput());
+      expect(themeRegistry.get(theme.id)).toBeDefined();
+      await themeRepo.delete(theme.id);
+      expect(themeRegistry.get(theme.id)).toBeUndefined();
+    });
   });
 });
