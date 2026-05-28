@@ -170,6 +170,25 @@ export const THEMEABLE_PRIMITIVE_TOKEN_NAMES = [
   "--color-accent-700",
   "--color-accent-800",
   "--color-accent-900",
+  // PrimeVue surface palette aliases — Volt components (Dialog, Menu,
+  // Checkbox, InputText, Slider, DataView, Fieldset, SecondaryButton)
+  // consume `bg-surface-N` / `text-surface-N` / `border-surface-N` Tailwind
+  // utilities that read these custom properties. Same pattern as accent:
+  // `tokens.css` aliases them to `--color-slate-*` by default; generated /
+  // imported themes derive the full scale from the chosen base hue so every
+  // Volt-rendered surface follows the theme.
+  "--color-p-surface-0",
+  "--color-p-surface-50",
+  "--color-p-surface-100",
+  "--color-p-surface-200",
+  "--color-p-surface-300",
+  "--color-p-surface-400",
+  "--color-p-surface-500",
+  "--color-p-surface-600",
+  "--color-p-surface-700",
+  "--color-p-surface-800",
+  "--color-p-surface-900",
+  "--color-p-surface-950",
 ] as const;
 
 export const ALL_KNOWN_TOKEN_NAMES = [

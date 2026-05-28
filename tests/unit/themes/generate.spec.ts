@@ -32,11 +32,29 @@ function oklchValues(tokens: Record<string, string>): string[] {
 }
 
 describe("generateTheme", () => {
-  it("emits the full semantic token set + accent scale (~60 tokens)", () => {
+  it("emits the full semantic + accent + p-surface token set (~73 tokens)", () => {
     const { tokens } = generateTheme(input());
     const count = Object.keys(tokens).length;
-    expect(count).toBeGreaterThanOrEqual(60);
-    expect(count).toBeLessThanOrEqual(75);
+    expect(count).toBeGreaterThanOrEqual(70);
+    expect(count).toBeLessThanOrEqual(85);
+  });
+
+  it("emits the full --color-p-surface-0..950 scale (Volt component backgrounds)", () => {
+    const { tokens } = generateTheme(input({ baseColor: "oklch(0.98 0.006 145)" }));
+    // All 12 steps present (0, 50, 100, 200, 300, ..., 900, 950)
+    const steps = [0, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
+    for (const step of steps) {
+      expect(tokens[`--color-p-surface-${step}`], `step ${step}`).toBeDefined();
+    }
+    // Step 0 is pure white literally (matches tokens.css baseline)
+    expect(tokens["--color-p-surface-0"]).toBe("#ffffff");
+    // Hue carried through on the OKLCH steps (base hue 145°, low chroma)
+    const hueOf = (v: string) => +(v.match(/oklch\([\d.]+\s+[\d.]+\s+([\d.-]+)/)?.[1] ?? 0);
+    for (const step of [100, 500, 900]) {
+      const h = hueOf(tokens[`--color-p-surface-${step}`]!);
+      expect(h, `step ${step} should carry base hue 145°`).toBeGreaterThan(120);
+      expect(h, `step ${step} should carry base hue 145°`).toBeLessThan(170);
+    }
   });
 
   it("emits the full --color-accent-50..900 scale derived from the accent hue", () => {

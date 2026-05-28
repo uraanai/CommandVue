@@ -70,7 +70,7 @@ function submit(): void {
       </label>
     </div>
     <template #footer>
-      <Button variant="ghost" size="sm" @click="close">Cancel</Button>
+      <Button variant="secondary" size="sm" @click="close">Cancel</Button>
       <Button variant="primary" size="sm" :disabled="!name.trim()" @click="submit"> Save </Button>
     </template>
   </Dialog>

@@ -290,6 +290,41 @@ export function generateTheme(input: ThemeGenerationInput): ThemeGenerationResul
     accentColors[`--color-accent-${step}`] = css(oklch(l, Math.min(accentBaseC, cCap), accentHue));
   }
 
+  // --- PrimeVue surface scale (p-surface-0 ... -950) ------------------------
+  // Volt components (Dialog, Menu, Checkbox, InputText, Slider, DataView,
+  // Fieldset, SecondaryButton) consume Tailwind utilities like
+  // `bg-surface-0 dark:bg-surface-900`, `border-surface-200`,
+  // `text-surface-700` etc., which resolve to `--color-p-surface-*`.
+  // `tokens.css` aliases that scale to `--color-slate-*` by default — so
+  // without this override every Volt-rendered surface (dialog backgrounds,
+  // the workspace-switcher menu, the customizer's own dialog chrome) stays
+  // slate regardless of the generated theme.
+  //
+  // We derive the scale from the user's base hue at very low chroma so
+  // surfaces stay near-neutral with just a whisper of the theme's tint.
+  // Step 0 stays pure white literally (matches `tokens.css` baseline) so
+  // utilities like `bg-surface-0` paint a true white surface in light mode.
+  const pSurfaceScale: Array<{ step: number; l: number }> = [
+    { step: 50, l: 0.97 },
+    { step: 100, l: 0.94 },
+    { step: 200, l: 0.86 },
+    { step: 300, l: 0.77 },
+    { step: 400, l: 0.66 },
+    { step: 500, l: 0.55 },
+    { step: 600, l: 0.46 },
+    { step: 700, l: 0.37 },
+    { step: 800, l: 0.28 },
+    { step: 900, l: 0.19 },
+    { step: 950, l: 0.12 },
+  ];
+  const pSurfaceChroma = Math.min(baseC, 0.012);
+  const pSurfaceColors: Record<string, string> = {
+    "--color-p-surface-0": "#ffffff",
+  };
+  for (const { step, l } of pSurfaceScale) {
+    pSurfaceColors[`--color-p-surface-${step}`] = css(oklch(l, pSurfaceChroma, baseHue));
+  }
+
   // --- Assemble. -------------------------------------------------------------
   const tokens: Record<string, string> = {
     // Surfaces
@@ -329,6 +364,13 @@ export function generateTheme(input: ThemeGenerationInput): ThemeGenerationResul
     // Input, Select, Tabs, Menubar, DataTable, dockview, …) follows the user's
     // accent. Derived above; spread in here.
     ...accentColors,
+    // PrimeVue surface scale 0–950 — overrides the `tokens.css` slate aliases
+    // so every Volt component (Dialog, Menu, Checkbox, InputText, Slider,
+    // DataView, Fieldset, SecondaryButton) that reads `bg-surface-N` /
+    // `text-surface-N` / `border-surface-N` Tailwind utilities follows the
+    // theme's base hue. Without this override Volt-rendered backgrounds stay
+    // slate even after a generated theme is applied.
+    ...pSurfaceColors,
     // Backwards-compat aliases (old utility classes still read these).
     "--color-surface": css(surfaceBase),
     "--color-foreground": css(textPrimary),

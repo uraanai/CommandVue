@@ -129,9 +129,11 @@ watch(
     saveError.value = null;
     const t = props.themeToEdit;
     if (t && t.source === "generated" && t.generation) {
-      // Edit mode — pre-fill from generation; save still creates a new theme,
-      // so suggest a distinct name.
-      name.value = `${t.name} (Copy)`;
+      // Edit mode — pre-fill from `generation`. Default name to the original
+      // so the primary "Update" action overwrites cleanly; if the user
+      // prefers "Save as new theme" they can change the name first to avoid
+      // the name-uniqueness invariant tripping.
+      name.value = t.name;
       description.value = t.description ?? "";
       baseColor.value = t.generation.baseColor;
       accentColor.value = t.generation.accentColor;
@@ -251,6 +253,56 @@ async function save(): Promise<void> {
 
     if (applyAfterSave.value) {
       await themeStore.setTheme(created.id, workspaceStore.currentWorkspaceId);
+    }
+    close();
+  } catch (e) {
+    saveError.value = (e as Error).message;
+  } finally {
+    saving.value = false;
+  }
+}
+
+/**
+ * Edit mode only — update the existing theme in place via `themeRepo.update`
+ * rather than creating a new one. Preserves the theme id, so any workspace
+ * binding pointing at it keeps working; just re-points its tokens + generation
+ * block + density/mode/font to whatever the form now describes. The paired
+ * variant (if present in the original) is left untouched — re-pairing happens
+ * via the user re-saving with the paired-variant checkbox.
+ */
+async function updateExisting(): Promise<void> {
+  if (!props.themeToEdit) return;
+  saveError.value = null;
+  const cleanName = name.value.trim();
+  if (!cleanName) {
+    saveError.value = "Name is required.";
+    return;
+  }
+  const result = generationResult.value;
+  if (!result) {
+    saveError.value = "Inputs produced an invalid theme — adjust the base or accent color.";
+    return;
+  }
+  saving.value = true;
+  try {
+    const generationMeta = {
+      schemaVersion: 1 as const,
+      baseColor: baseColor.value,
+      accentColor: accentColor.value,
+      contrast: contrast.value,
+      // Preserve the original paired ref if there was one.
+      paired: props.themeToEdit.generation?.paired,
+    };
+    const updated = await themeRepo.update(props.themeToEdit.id, {
+      name: cleanName,
+      description: description.value,
+      mode: mode.value,
+      density: density.value,
+      tokens: result.tokens,
+      generation: generationMeta,
+    });
+    if (applyAfterSave.value) {
+      await themeStore.setTheme(updated.id, workspaceStore.currentWorkspaceId);
     }
     close();
   } catch (e) {
@@ -658,7 +710,26 @@ const FONT_OPTIONS = CURATED_FONTS.map((f) => ({ label: f.label, value: f.value 
       <!-- Footer ----------------------------------------------------- -->
       <footer class="border-border-subtle flex items-center justify-end gap-2 border-t pt-3">
         <Button variant="secondary" size="sm" :disabled="saving" @click="close">Cancel</Button>
-        <Button size="sm" :disabled="!canSave" @click="save">
+        <Button
+          v-if="isEditMode"
+          variant="secondary"
+          size="sm"
+          :disabled="!canSave"
+          :title="`Save as a new theme; the original ${props.themeToEdit?.name ?? ''} stays untouched`"
+          @click="save"
+        >
+          {{ saving ? "Saving…" : "Save as new theme" }}
+        </Button>
+        <Button
+          v-if="isEditMode"
+          size="sm"
+          :disabled="!canSave"
+          :title="`Overwrite ${props.themeToEdit?.name ?? 'the current theme'} in place — workspace bindings stay attached`"
+          @click="updateExisting"
+        >
+          {{ saving ? "Saving…" : `Update ${props.themeToEdit?.name ?? "theme"}` }}
+        </Button>
+        <Button v-else size="sm" :disabled="!canSave" @click="save">
           {{ saving ? "Saving…" : "Save as new theme" }}
         </Button>
       </footer>
