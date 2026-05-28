@@ -1,13 +1,10 @@
 <script setup lang="ts">
 import type { Theme, ThemeId, ThemeSource, ThemeSwatches } from "@/types/theme";
 
-import { Check, Download, Sparkles } from "@lucide/vue";
+import { Check, Sparkles } from "@lucide/vue";
 import { computed, onMounted, onUnmounted, ref, shallowRef } from "vue";
 
 import Button from "@/components/ui/Button.vue";
-// TEMP — Phase D download-verification button. Remove together with the
-// download() function and the <Button> in the card footer below before merge.
-import { buildExportFilename, downloadThemeFile } from "@/modules/themes/export";
 import { themeRegistry } from "@/modules/themes/registry";
 import { useThemeStore } from "@/stores/theme";
 import { useWorkspaceStore } from "@/stores/workspace";
@@ -134,13 +131,6 @@ function close(): void {
   emit("update:visible", false);
 }
 
-// TEMP — Phase D download-verification handler. Triggers a browser download
-// of `<slug>.commandvue-theme.json`. Remove along with its import and the
-// Button in the card footer once the per-card "Export…" menu lands in Phase G.
-function download(theme: Theme): void {
-  downloadThemeFile(theme);
-}
-
 async function apply(theme: Theme): Promise<void> {
   if (setAsWorkspaceDefault.value && workspaceStore.currentWorkspaceId) {
     await themeStore.setWorkspaceTheme(
@@ -235,25 +225,14 @@ async function apply(theme: Theme): Promise<void> {
 
             <footer class="mt-auto flex items-center justify-between gap-2 pt-1">
               <span class="text-faint text-[10px]">{{ theme.author }}</span>
-              <div class="flex items-center gap-1">
-                <!-- TEMP — Phase D download-verification button. Remove before merge. -->
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  :title="`Download as ${buildExportFilename(theme)}`"
-                  @click="download(theme)"
-                >
-                  <Download class="size-3" />
-                </Button>
-                <Button
-                  size="sm"
-                  :variant="currentId === theme.id ? 'secondary' : 'primary'"
-                  @click="apply(theme)"
-                >
-                  <Sparkles class="size-3" />
-                  {{ currentId === theme.id ? "Re-apply" : "Apply" }}
-                </Button>
-              </div>
+              <Button
+                size="sm"
+                :variant="currentId === theme.id ? 'secondary' : 'primary'"
+                @click="apply(theme)"
+              >
+                <Sparkles class="size-3" />
+                {{ currentId === theme.id ? "Re-apply" : "Apply" }}
+              </Button>
             </footer>
           </article>
         </div>
