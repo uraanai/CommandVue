@@ -145,6 +145,10 @@ If the new control genuinely needs its own named token so it can be tuned indepe
 
 The new token inherits the generated semantic value automatically; custom theme JSON can override it explicitly when needed. `THEME_SCHEMA_VERSION` stays `1` — adding tokens is backward-compatible. Full decision tree (and when to instead emit a derived value from the generator) in [`docs/theme-generation-algorithm.md` → Extending the vocabulary](../../../docs/theme-generation-algorithm.md#extending-the-vocabulary).
 
+### "I want to extend theming into a new dimension (typography roles, motion, icons, etc.)"
+
+The current generator only handles colors. Other pillars — typography (font roles / weights / sizes / line-heights / tracking), motion, shadows, effects, iconography, data-viz palettes, accessibility variants — follow the same three-layer cascade and can be added as additional pillars. Each pillar's current state in CommandVue, the role-based extension pattern (with a worked typography example using `--font-family-ui` / `-display` / `-mono`), and operational-dashboard priorities (motion tokens, data-viz unification, high-contrast / CVD-safe variants) live in [`docs/theme-generation-algorithm.md` → Beyond colors](../../../docs/theme-generation-algorithm.md#beyond-colors-other-themeable-dimensions).
+
 ### "I need to add a new theme variant"
 
 That's Phase 3.3 work. The theme is a JSON file under `src/assets/themes/` that overrides 30–50 semantic + component tokens. See `docs/themes.md` (added in Phase 3.3) for the schema.

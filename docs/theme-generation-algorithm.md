@@ -170,6 +170,100 @@ New semantic tokens are a governed surface — they belong on the cheat sheet in
 
 The constraint that makes the Linear-style approach work is **3–4 inputs → ~50 tokens is small enough to stay coherent**. If the generator emitted every component token directly, every new control becomes "now re-tune the algorithm." The cascade is what lets the system stay small and still cover everything. The curated component overrides the generator _does_ emit (`--datatable-header-bg`, `--menubar-bg`, `--tooltip-bg`, `--dialog-backdrop`, …) exist only where the built-ins deliberately deviate from cascade defaults.
 
+## Beyond colors: other themeable dimensions
+
+The current engine generates only color tokens. The same three-layer architecture (primitive → semantic → component, cascade-driven) handles every other design dimension a theme might tune. This section documents the broader landscape and the recommended extension path for each pillar — so future agents and designers know what's in scope, what's not, and how to extend without breaking the small-surface-coherent constraint that makes the algorithm work.
+
+### Typography — the next likely extension
+
+`generateTheme()` accepts a single `fontFamily?: string` today and emits two tokens (`--font-family-sans` + `--font-family-body`). That covers "set one font everywhere" but doesn't address "menubar wants Inter, critical alerts want IBM Plex Display, telemetry wants tabular mono."
+
+The clean extension is **role-based semantic fonts** — the same pattern as semantic colors. Four roles cover essentially every dashboard need:
+
+| Semantic role           | Used by                                   | Why separate it                                |
+| ----------------------- | ----------------------------------------- | ---------------------------------------------- |
+| `--font-family-body`    | reading text, panel content               | the default                                    |
+| `--font-family-ui`      | menubar, statusbar, buttons, tabs         | chrome often wants a tighter stack than body   |
+| `--font-family-display` | critical alerts, page titles, "eye-catch" | the "look here right now" font                 |
+| `--font-family-mono`    | code, tabular numbers, telemetry columns  | digit alignment is operational, not decorative |
+
+Component tokens default to a role via the cascade — identical to the color pattern:
+
+```css
+:root {
+  --menubar-font: var(--font-family-ui);
+  --statusbar-font: var(--font-family-ui);
+  --datatable-numeric-font: var(--font-family-mono);
+  --dialog-title-font: var(--font-family-display);
+  --alert-critical-font: var(--font-family-display);
+}
+```
+
+The `generateTheme()` input grows from one string to an optional fonts object — backward-compatible, since the old `fontFamily` keeps working as a shortcut for "all roles same":
+
+```ts
+interface ThemeGenerationInput {
+  // existing fields...
+  fonts?: {
+    body?: string; // reading text
+    ui?: string; // chrome, controls, menus
+    display?: string; // critical, eye-catching, titles
+    mono?: string; // code, tabular numbers
+  };
+}
+```
+
+The generator emits the four role tokens; unspecified roles fall back to `body`, `body` falls back to the current default. **No algorithm changes** — pure additive emission. Custom theme JSON can override any role independently.
+
+Font _family_ is only one part of the typography pillar. A mature theme system also tokenizes:
+
+| Typography sub-dimension | Why it matters in ops dashboards                                                                                           |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| Font weights             | Need a separate "critical alert" weight distinct from regular bold                                                         |
+| Font sizes (type scale)  | A real scale, not ad-hoc — `--text-display-lg/md`, `--text-body`, `--text-caption`. CommandVue has this partly via density |
+| Line heights             | Tight for UI chrome, normal for body, loose for reading panels                                                             |
+| Letter spacing           | Slightly tighter for UI labels; wider for small-caps status labels                                                         |
+| Numeric features         | `font-feature-settings: 'tnum'` for tabular numbers in telemetry                                                           |
+| Text transforms          | Tokenize whether status labels are uppercase / sentence-case                                                               |
+
+All additive — add when the design needs them.
+
+### The full taxonomy of themeable design dimensions
+
+Where each pillar stands in CommandVue today:
+
+| Pillar                     | Sub-dimensions                                                          | CommandVue today                                                                 |
+| -------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| **Color**                  | surfaces, text, borders, interactive, status, focus, aliases            | ✅ full                                                                          |
+| **Typography**             | font families, weights, sizes, line-heights, tracking, numeric features | ⚠️ partial (1 family input, sizes via density)                                   |
+| **Spacing**                | base scale, semantic spacing, component padding                         | ✅ semantic + density                                                            |
+| **Shape**                  | border radii, border widths, corner styles                              | ⚠️ radii only (themeable primitive)                                              |
+| **Elevation**              | shadow scale, focus ring style, backdrop blur                           | ⚠️ focus-ring + shadow scale, no blur                                            |
+| **Motion**                 | durations, easings, reduced-motion handling                             | ❌ not tokenized — currently inline in components                                |
+| **Effects**                | selection bg, caret color, outline styles, glow                         | ⚠️ caret + selection rely on browser defaults                                    |
+| **Iconography**            | default icon size, stroke width (Lucide supports 1 / 1.5 / 2 px)        | ⚠️ size via density; stroke not themed                                           |
+| **Density**                | compact / comfortable / spacious                                        | ✅ full (`data-density` attribute)                                               |
+| **Data-viz palette**       | chart palette, map style, symbology overrides                           | ❌ separate concern today (ECharts theme, milsymbol, MapLibre — not unified)     |
+| **Accessibility variants** | high-contrast mode, color-blind-safe palettes                           | ⚠️ contrast input drives WCAG ratios; no high-contrast or CVD-safe palette today |
+
+### Three pillars worth prioritizing for operational dashboards
+
+1. **Motion tokens.** Ops dashboards have a genuine "reduce my distraction" need — animations fine on a marketing site become disorienting in command-and-control. Tokens like `--motion-critical: 0ms` (no animation for alerts) vs `--motion-normal: 200ms` belong in the theme so themes can tune them per-context. The Phase E customizer could expose a single "Motion intensity" slider that drives the whole motion scale.
+
+2. **Data-viz palette unification.** Today the chart palette (ECharts), map style (MapLibre), and symbology (milsymbol) live separately from the `--color-*` tokens. For a unified theming experience these should derive from or coordinate with the theme's hue/accent — e.g. a generated theme's accent could seed an ECharts categorical palette. Worth a dedicated phase.
+
+3. **Accessibility variants.** "High-contrast" and "color-blind-safe" are mode-like rather than tokens — but the generator could output them from the same inputs by pinning `contrast` to 100 and shifting status hues to CVD-safe families (e.g. blue/orange instead of green/red).
+
+### How to decide what to add next
+
+The principle that makes the color generator work — small coherent vocabulary, cascade does the heavy lifting — applies to every pillar. Decision criteria for any new dimension:
+
+1. **Does the existing vocabulary cover it?** (Button height = density, not a new token.) If yes, stop.
+2. **Is it 1–4 _roles_ (small surface) or 50+ knobs (big surface)?** Small surface → semantic tokens the generator emits. Big surface → primitive scales that components reach for directly.
+3. **Does it have a meaningful "generation" derivation?** Color does (lightness math). Motion doesn't — it's a discrete enumeration the generator just emits.
+
+When in doubt, add it as a primitive scale in `tokens.css` first and have components reach for it. Promoting to a generator input is a later, larger decision.
+
 ## Limitations
 
 - Single accent only — no secondary/tertiary accent hues.
