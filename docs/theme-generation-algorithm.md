@@ -115,6 +115,61 @@ This guarantees every emitted token renders correctly on an sRGB display.
 
 `generatePairedVariant(theme)` regenerates a generated theme's opposite-mode counterpart from the same `generation` inputs (base / accent / contrast), with the mode flipped and density carried over. This is what lets the Light/Dark/Auto toggle bridge a user-authored theme without losing its aesthetic.
 
+## Extending the vocabulary
+
+The generator emits a deliberately small, curated set (~50 tokens). When the application grows new controls, the design is that **most additions require zero changes to `generate.ts`** — the three-layer architecture's cascade does the work. The decision tree:
+
+### 95% case — new control consumes existing semantic tokens
+
+A new `TitleBox` using `bg-surface-raised text-text-primary border-border-default` (or the equivalent `--color-*` references in CSS) themes correctly under every built-in _and_ every generated theme automatically. Zero token work. The semantic vocabulary in `tokens.css` is the API for the whole app — reach for it first. The cheat sheet is in [`.agent/skills/commandvue-theming-system/SKILL.md`](../.agent/skills/commandvue-theming-system/SKILL.md).
+
+### 4% case — new control needs its own themeable component token
+
+Sometimes you want a named handle so a control can be tuned independently (`--titlebox-header-bg`, `--titlebox-border`). Two-step recipe — **no algorithm changes**:
+
+1. **`src/assets/styles/tokens.css`** — define the new component token referencing a semantic token so it inherits via the cascade:
+
+   ```css
+   :root {
+     --titlebox-header-bg: var(--color-surface-raised);
+     --titlebox-border: var(--color-border-default);
+   }
+   ```
+
+2. **`src/modules/themes/knownTokens.ts`** — add the names to `COMPONENT_TOKEN_NAMES` so `themeRepo`'s invariants and the import validator accept them as legal overrides in custom-theme JSON.
+
+The new token reads its value from a semantic token the generator already controls; under any generated theme it inherits correctly. Custom themes that _want_ to deviate can override `--titlebox-header-bg` explicitly in their JSON, and the import path now accepts it. `THEME_SCHEMA_VERSION` stays at `1` — adding tokens is backward-compatible. Old themes that don't override the new token simply fall back to the cascade.
+
+### 1% case — generator should compute a non-trivial derived value
+
+Rare: when the new token needs a value the cascade can't naturally express (the way `--dialog-backdrop` today is `oklch(0.15 0 H / 0.45)` — a translucent dark no semantic alone produces). Four steps:
+
+1. Define the default in `tokens.css` (as above).
+2. Add to `COMPONENT_TOKEN_NAMES` in `knownTokens.ts`.
+3. Emit a derived value in `generate.ts`'s `tokens` object:
+
+   ```ts
+   "--titlebox-header-bg": css(interactiveSubtle),
+   ```
+
+4. Adjust the token-count assertion in `generate.spec.ts` (currently `>= 50 && <= 60`).
+
+### Adding a new SEMANTIC token
+
+If the gap is genuinely about _vocabulary_ — a meaning the existing semantic layer can't express — extend semantics, not components. The full path:
+
+- `tokens.css` — root + dark override + density overrides if relevant.
+- `knownTokens.ts` — `SEMANTIC_TOKEN_NAMES`.
+- `generate.ts` — emit a derived value via the surface / text / interactive / status scale it logically belongs to.
+- `docs/design-tokens.md` and `docs/theme-schema-for-llms.md` (Phase G) — so LLM-generated themes know about the new token.
+- `THEME_SCHEMA_VERSION` stays `1` (additive).
+
+New semantic tokens are a governed surface — they belong on the cheat sheet in the theming agent skill and the LLM schema doc, so every consumer learns about them.
+
+### Why this design over "generate all ~200 tokens"
+
+The constraint that makes the Linear-style approach work is **3–4 inputs → ~50 tokens is small enough to stay coherent**. If the generator emitted every component token directly, every new control becomes "now re-tune the algorithm." The cascade is what lets the system stay small and still cover everything. The curated component overrides the generator _does_ emit (`--datatable-header-bg`, `--menubar-bg`, `--tooltip-bg`, `--dialog-backdrop`, …) exist only where the built-ins deliberately deviate from cascade defaults.
+
 ## Limitations
 
 - Single accent only — no secondary/tertiary accent hues.

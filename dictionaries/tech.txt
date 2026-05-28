@@ -5,6 +5,8 @@ culori
 colorizr
 APCA
 OLED
+LLMs
+llms
 
 pnpm
 vite

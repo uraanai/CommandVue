@@ -134,6 +134,17 @@ Push back first — is it really one-off, or is it a recurring pattern? If recur
 
 Use `shadow-sm` / `shadow-md` / `shadow-lg` / `shadow-xl`. They're neutral-tinted and work in both themes. Custom shadows tied to a brand color rarely look right in both modes.
 
+### "I need a component-specific themeable token for a new control"
+
+Most new controls just consume semantic tokens (`bg-surface-raised`, `text-text-primary`) and theme correctly under every built-in and every generated theme — zero token work. Reach for the cheat sheet first.
+
+If the new control genuinely needs its own named token so it can be tuned independently (e.g. `--titlebox-header-bg`, `--titlebox-border`), it's a two-step recipe — **no `generate.ts` changes**:
+
+1. Define the token in `src/assets/styles/tokens.css`, referencing a semantic token so it inherits via the cascade — e.g. `--titlebox-header-bg: var(--color-surface-raised);`.
+2. Add the name to `COMPONENT_TOKEN_NAMES` in `src/modules/themes/knownTokens.ts` so `themeRepo` invariants and the import validator accept it as a legal override.
+
+The new token inherits the generated semantic value automatically; custom theme JSON can override it explicitly when needed. `THEME_SCHEMA_VERSION` stays `1` — adding tokens is backward-compatible. Full decision tree (and when to instead emit a derived value from the generator) in [`docs/theme-generation-algorithm.md` → Extending the vocabulary](../../../docs/theme-generation-algorithm.md#extending-the-vocabulary).
+
 ### "I need to add a new theme variant"
 
 That's Phase 3.3 work. The theme is a JSON file under `src/assets/themes/` that overrides 30–50 semantic + component tokens. See `docs/themes.md` (added in Phase 3.3) for the schema.
