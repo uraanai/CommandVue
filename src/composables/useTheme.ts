@@ -87,15 +87,23 @@ function applyResolved(resolved: ResolvedTheme): void {
 }
 
 /**
- * If the currently-applied theme has a paired variant for the resolved mode
- * (e.g. `compact-light` paired with `compact-dark`), swap to it. Pairing is
- * encoded in the theme id via the trailing `-light` / `-dark` suffix.
+ * If the currently-applied theme has a paired variant for the resolved mode,
+ * swap to it. Precedence (Prompt 4 Phase F):
  *
- * No-ops when:
- *   - No theme is currently applied (data-theme-id missing)
- *   - The theme's id has no suffix (no pairing convention to follow)
- *   - The paired id isn't in the registry
- *   - The paired theme is already applied
+ *   1. **`generation.paired`** — generated themes (Phase B/E) carry an
+ *      explicit cross-link to their opposite-mode counterpart. If the paired
+ *      theme's `mode` matches the resolved mode, swap to it. This works
+ *      regardless of theme name / id format (the customizer generates ULIDs,
+ *      not suffix conventions).
+ *
+ *   2. **`-light` / `-dark` suffix swap** — bundled built-ins follow the
+ *      `compact-light` ↔ `compact-dark` naming convention. If the current
+ *      id has the opposite-mode suffix and the paired id exists, swap.
+ *
+ *   3. **No-op** — if neither path produces a paired theme. The `data-theme`
+ *      attribute is still flipped by `applyResolved` above so dark-mode CSS
+ *      rules (`html[data-theme="dark"]` overrides in `tokens.css`) take
+ *      effect, just without losing the chosen aesthetic.
  *
  * Dynamically imports the theme store to avoid a circular dependency
  * (themeStore → applyTheme; useTheme → themeStore). The import is cached
@@ -103,26 +111,46 @@ function applyResolved(resolved: ResolvedTheme): void {
  */
 let cachedThemeStore: { setTheme: (id: string) => Promise<void> } | null = null;
 
+async function applyPairedTheme(pairedId: string): Promise<void> {
+  if (!cachedThemeStore) {
+    const mod = await import("@/stores/theme");
+    cachedThemeStore = mod.useThemeStore();
+  }
+  await cachedThemeStore.setTheme(pairedId);
+}
+
 function bridgeVariant(resolved: ResolvedTheme): void {
   const root = document.documentElement;
   const currentId = root.getAttribute("data-theme-id");
   if (!currentId) return;
+  const currentTheme = themeRegistry.get(currentId);
+  if (!currentTheme) return;
+  // Current theme already on the right side — nothing to bridge.
+  if (currentTheme.mode === resolved) return;
+
+  // 1. Generated themes: explicit cross-link via generation.paired.
+  const pairedId = currentTheme.generation?.paired;
+  if (pairedId) {
+    const paired = themeRegistry.get(pairedId);
+    if (paired && paired.mode === resolved) {
+      void applyPairedTheme(pairedId);
+      return;
+    }
+  }
+
+  // 2. Built-ins: -light / -dark suffix swap.
   const otherSuffix: "-light" | "-dark" = resolved === "dark" ? "-dark" : "-light";
   const oppositeSuffix: "-light" | "-dark" = resolved === "dark" ? "-light" : "-dark";
-  // Is the current id already on the right side of the pair?
-  if (currentId.endsWith(otherSuffix)) return;
-  if (!currentId.endsWith(oppositeSuffix)) return;
-  const baseId = currentId.slice(0, -oppositeSuffix.length);
-  const pairedId = `${baseId}${otherSuffix}`;
-  if (!themeRegistry.get(pairedId)) return;
-  // Use the theme store to apply (it persists the new global pointer too).
-  void (async () => {
-    if (!cachedThemeStore) {
-      const mod = await import("@/stores/theme");
-      cachedThemeStore = mod.useThemeStore();
+  if (currentId.endsWith(oppositeSuffix)) {
+    const baseId = currentId.slice(0, -oppositeSuffix.length);
+    const suffixPairedId = `${baseId}${otherSuffix}`;
+    const suffixPaired = themeRegistry.get(suffixPairedId);
+    if (suffixPaired) {
+      void applyPairedTheme(suffixPairedId);
+      return;
     }
-    await cachedThemeStore.setTheme(pairedId);
-  })();
+  }
+  // 3. Graceful no-op — data-theme already flipped by caller.
 }
 
 /**

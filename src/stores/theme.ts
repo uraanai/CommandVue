@@ -149,6 +149,33 @@ export const useThemeStore = defineStore("theme", () => {
     return workspaceBindings.value[workspaceId];
   }
 
+  // --- Registry subscription for cache invalidation (Prompt 4 Phase F) -----
+  // `themeRepo.delete` clears IDB bindings pointing at the deleted theme
+  // (Phase A invariant) and unregisters from `themeRegistry` (Phase C sync).
+  // The IDB cleanup means `resolveForWorkspace` returns the correct
+  // fallback, but this in-memory `workspaceBindings` cache can hold stale
+  // pointers to the deleted id until the next workspace switch — making the
+  // workspace-switcher dot briefly render the wrong color. Subscribe to the
+  // registry so any unregistered id is also dropped from the cache.
+  themeRegistry.subscribe((registered) => {
+    const liveIds = new Set(registered.map((t) => t.id));
+    let mutated = false;
+    const next = { ...workspaceBindings.value };
+    for (const [wsId, themeId] of Object.entries(next)) {
+      if (themeId && !liveIds.has(themeId)) {
+        next[wsId] = null;
+        mutated = true;
+      }
+    }
+    if (mutated) workspaceBindings.value = next;
+    // Also clear `currentThemeId` if the currently-applied theme was deleted
+    // out from under us, so any reactive consumer doesn't think it's still
+    // there. The next workspace switch / loadInitial will re-resolve.
+    if (currentThemeId.value && !liveIds.has(currentThemeId.value)) {
+      currentThemeId.value = null;
+    }
+  });
+
   return {
     currentThemeId,
     currentTheme,

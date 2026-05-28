@@ -97,7 +97,12 @@ Six bundled themes under `src/assets/themes/*.json` — `compact-light`, `compac
 
 **Store:** `src/stores/theme.ts` — `useThemeStore()` with `currentThemeId`, `loadInitial(workspaceId)`, `setTheme(id, workspaceId?)`, `setWorkspaceTheme(workspaceId, id, activeId)`, `clearWorkspaceTheme(workspaceId, activeId)`. Precedence: workspace-bound > global pointer > `compact-light` fallback. Persisted via `appMetaRepo` (keys `commandvue:theme-id` and `commandvue:workspace-theme-{wsId}`).
 
-**Variant pairing:** themes share a base id with `-light` / `-dark` suffix. `useTheme.setMode()` calls `bridgeVariant()` after writing `data-theme`; if the current theme has a paired variant for the resolved mode, it swaps via `themeStore.setTheme()`. The bridge no-ops when no theme is active, when the id has no suffix, or when the paired id isn't in the registry.
+**Variant pairing (Prompt 4 Phase F):** `bridgeVariant` in `useTheme.ts` runs after `setMode()` writes `data-theme` and has two precedence rules:
+
+1. **`generation.paired`** — generated / imported themes carry an explicit cross-link to their opposite-mode counterpart. If the paired theme's `mode` matches the resolved mode, swap to it via `themeStore.setTheme()`. Works regardless of id format (ULIDs, suffix-less names, anything).
+2. **`-light` / `-dark` suffix swap** — the Prompt 3 fallback for bundled built-ins (`compact-light` ↔ `compact-dark`). Only fires when generation.paired didn't.
+
+If neither produces a paired theme, the bridge no-ops gracefully — `data-theme` is still flipped by `applyResolved`, so the dark-mode CSS rules in `tokens.css` (`html[data-theme="dark"]` overrides) take effect; the user just doesn't lose their chosen aesthetic.
 
 **Workspace integration:** `useSessionStore.switchWorkspace()` calls `themeStore.loadInitial(workspaceId)` after `workspaceStore.setCurrentWorkspace()` so the new workspace's bound theme applies before the layout's panels mount.
 

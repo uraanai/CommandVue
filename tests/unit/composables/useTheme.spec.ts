@@ -1,7 +1,11 @@
+import type { Theme } from "@/types/theme";
+
+import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { initializeTheme, teardownTheme, useTheme } from "@/composables/useTheme";
 import { appMetaRepo } from "@/modules/storage/appMetaRepo";
+import { themeRegistry } from "@/modules/themes/registry";
 
 import { resetStorage } from "../storage/helpers";
 
@@ -187,5 +191,128 @@ describe("useTheme", () => {
     await initializeTheme();
     const { mode } = useTheme();
     expect(mode.value).toBe("auto");
+  });
+
+  // -- Phase F: bridgeVariant covers both built-in suffix swap AND
+  // -- generation.paired cross-link for generated/imported themes. --
+  describe("bridgeVariant", () => {
+    function makeTheme(over: Partial<Theme> = {}): Theme {
+      const now = Date.now();
+      return {
+        id: "g-light",
+        name: "Generated Light",
+        description: "",
+        author: "",
+        source: "generated",
+        mode: "light",
+        density: "comfortable",
+        tokens: { "--color-surface-base": "oklch(0.98 0.005 250)" },
+        generation: {
+          schemaVersion: 1,
+          baseColor: "oklch(0.98 0.005 250)",
+          accentColor: "oklch(0.55 0.18 250)",
+          contrast: 50,
+        },
+        createdAt: now,
+        updatedAt: now,
+        ...over,
+      };
+    }
+
+    beforeEach(() => {
+      // bridgeVariant resolves the theme store via dynamic import — needs
+      // Pinia active. Registry must be empty so we control its contents.
+      setActivePinia(createPinia());
+      themeRegistry.__resetForTests();
+    });
+
+    afterEach(() => {
+      themeRegistry.__resetForTests();
+      document.documentElement.removeAttribute("data-theme-id");
+    });
+
+    it("generation.paired drives the swap for generated themes (light → dark)", async () => {
+      const light = makeTheme({ id: "g-light", mode: "light" });
+      const dark = makeTheme({
+        id: "g-dark",
+        mode: "dark",
+        name: "Generated Dark",
+      });
+      // Cross-link them — the customizer does this on save.
+      const lightLinked: Theme = {
+        ...light,
+        generation: { ...light.generation!, paired: "g-dark" },
+      };
+      const darkLinked: Theme = {
+        ...dark,
+        generation: { ...dark.generation!, paired: "g-light" },
+      };
+      themeRegistry.register(lightLinked);
+      themeRegistry.register(darkLinked);
+      // Apply the light theme so bridgeVariant has something to start from.
+      document.documentElement.setAttribute("data-theme-id", "g-light");
+
+      installMatchMedia(false);
+      await initializeTheme();
+      const { setMode } = useTheme();
+      await setMode("dark");
+
+      // bridgeVariant fires its applyPairedTheme via void async — wait for it.
+      await vi.waitFor(() =>
+        expect(document.documentElement.getAttribute("data-theme-id")).toBe("g-dark"),
+      );
+    });
+
+    it("built-in -light / -dark suffix swap still works (Prompt 3 behavior)", async () => {
+      // Two paired themes following the suffix convention; no generation block.
+      const compactLight: Theme = {
+        ...makeTheme({ id: "compact-light", source: "built-in" }),
+        generation: undefined,
+      };
+      const compactDark: Theme = {
+        ...makeTheme({ id: "compact-dark", source: "built-in", mode: "dark" }),
+        generation: undefined,
+      };
+      themeRegistry.register(compactLight);
+      themeRegistry.register(compactDark);
+      document.documentElement.setAttribute("data-theme-id", "compact-light");
+
+      installMatchMedia(false);
+      await initializeTheme();
+      const { setMode } = useTheme();
+      await setMode("dark");
+
+      await vi.waitFor(() =>
+        expect(document.documentElement.getAttribute("data-theme-id")).toBe("compact-dark"),
+      );
+    });
+
+    it("no-ops when current theme already matches the resolved mode", async () => {
+      const dark: Theme = {
+        ...makeTheme({ id: "g-dark", mode: "dark" }),
+        generation: { schemaVersion: 1, baseColor: "x", accentColor: "y", contrast: 50 },
+      };
+      themeRegistry.register(dark);
+      document.documentElement.setAttribute("data-theme-id", "g-dark");
+
+      installMatchMedia(true);
+      await initializeTheme();
+      const { setMode } = useTheme();
+      await setMode("dark"); // same mode
+
+      // Wait a tick for any spurious async to settle, then assert no flip.
+      await Promise.resolve();
+      expect(document.documentElement.getAttribute("data-theme-id")).toBe("g-dark");
+    });
+
+    it("no-ops when there's no current theme applied (data-theme-id missing)", async () => {
+      installMatchMedia(false);
+      await initializeTheme();
+      const { setMode } = useTheme();
+      await setMode("dark");
+
+      // Nothing to bridge — data-theme-id stays missing.
+      expect(document.documentElement.getAttribute("data-theme-id")).toBeNull();
+    });
   });
 });

@@ -59,7 +59,13 @@ watch(
   () => void hydrateBindings(),
 );
 
-/** Pre-baked accent color per built-in theme id; falls back to gray. */
+/**
+ * Pre-baked accent color per built-in theme id. Built-ins reference primitive
+ * scales via `var(--color-blue-600)` etc. in their token JSON, so the raw
+ * value isn't directly usable as `background-color` — the static map gives us
+ * a known-good OKLCH instead. Generated / imported themes are handled via
+ * the live token lookup below.
+ */
 const THEME_DOT_COLORS: Record<string, string> = {
   "compact-light": "oklch(54.6% 0.245 262.881)", // blue-600
   "compact-dark": "oklch(70.7% 0.165 254.624)", // blue-400
@@ -69,11 +75,34 @@ const THEME_DOT_COLORS: Record<string, string> = {
   "admin-panel-dark": "oklch(70.2% 0.183 293.541)", // violet-400
 };
 
+/**
+ * Resolve a usable color for the theme indicator dot. Precedence:
+ *
+ *   1. **Built-in static map** — bundled themes use primitive `var()` references
+ *      in their tokens that the browser can't resolve outside the active
+ *      cascade; the static OKLCH map is the only reliable source.
+ *   2. **`generation.accentColor`** — generated themes (Phase E customizer)
+ *      carry a literal OKLCH accent string usable directly as a CSS color.
+ *   3. **`--color-interactive` token** — imported themes carry the resolved
+ *      interactive color as a literal value in their tokens; use it when
+ *      it's not a `var()` reference.
+ *   4. **Fallback** — neutral grey.
+ */
 function dotColor(workspaceId: string): string {
   const bound = workspaceThemeIds.value[workspaceId];
   const themeId = bound ?? themeStore.currentThemeId;
   if (!themeId) return "var(--color-slate-400)";
-  return THEME_DOT_COLORS[themeId] ?? "var(--color-slate-400)";
+  // 1. Built-in fast path.
+  const builtIn = THEME_DOT_COLORS[themeId];
+  if (builtIn) return builtIn;
+  const theme = themeRegistry.get(themeId);
+  if (!theme) return "var(--color-slate-400)";
+  // 2. Generated themes carry the accent literally on the generation block.
+  if (theme.generation?.accentColor) return theme.generation.accentColor;
+  // 3. Imported themes carry --color-interactive as a literal token value.
+  const interactive = theme.tokens["--color-interactive"];
+  if (interactive && !interactive.startsWith("var(")) return interactive;
+  return "var(--color-slate-400)";
 }
 
 function themeTooltip(workspaceId: string): string {
