@@ -105,6 +105,18 @@ Six bundled themes under `src/assets/themes/*.json` — `compact-light`, `compac
 
 Full reference: [`docs/themes.md`](../../../docs/themes.md). Tests: `tests/unit/themes/registry.spec.ts`, `tests/unit/themes/apply.spec.ts`.
 
+## Theme generation (Prompt 4 Phase B)
+
+`src/modules/themes/generate.ts` is the Linear-style generation engine: 3–4 high-level inputs → the full ~50-token semantic set. All color math runs in OKLCH via [culori](https://culorijs.org) (see [ADR 0003](../../../docs/decisions/0003-theme-generation-color-library.md)).
+
+- **`generateTheme(input)`** → `{ tokens, contrastReport }`. Inputs: `baseColor`, `accentColor`, `contrast` (30–100), `mode`, `density`, optional `fontFamily`. Surfaces brighten with elevation in light mode / lighten in dark; text + border lightness are **solved** via binary search to hit a target WCAG ratio (accessibility is computed, not eyeballed); colors are gamut-mapped into sRGB.
+- **What it emits:** semantic colors + backwards-compat aliases + color-bearing component overrides. **It never emits `--density-*` tokens** — density rides the `data-density` attribute, and emitting them would break density switching. Sizing/radius/font-size component tokens cascade from the density layer + primitives.
+- **`generatePairedVariant(theme)`** regenerates the opposite-mode variant from the same `generation` inputs (mode flipped, density carried) — the bridge for Light/Dark/Auto on user-authored themes.
+- **Contrast report:** headline ratios (`textOnSurface`, `textOnRaised`, `onInteractive`) + `failures[]`. A good theme has `failures: []`.
+- **Inspect output:** `pnpm theme:demo` writes four sample themes to `.verification-screenshots/feat-theme-generation-engine/sample-output.json`.
+
+Full reference: [`docs/theme-generation-algorithm.md`](../../../docs/theme-generation-algorithm.md). Tests: `tests/unit/themes/generate.spec.ts`.
+
 ## Common operations
 
 ### "I need a color and I'm tempted to hardcode it"
@@ -121,6 +133,21 @@ Push back first — is it really one-off, or is it a recurring pattern? If recur
 ### "I need a custom shadow"
 
 Use `shadow-sm` / `shadow-md` / `shadow-lg` / `shadow-xl`. They're neutral-tinted and work in both themes. Custom shadows tied to a brand color rarely look right in both modes.
+
+### "I need a component-specific themeable token for a new control"
+
+Most new controls just consume semantic tokens (`bg-surface-raised`, `text-text-primary`) and theme correctly under every built-in and every generated theme — zero token work. Reach for the cheat sheet first.
+
+If the new control genuinely needs its own named token so it can be tuned independently (e.g. `--titlebox-header-bg`, `--titlebox-border`), it's a two-step recipe — **no `generate.ts` changes**:
+
+1. Define the token in `src/assets/styles/tokens.css`, referencing a semantic token so it inherits via the cascade — e.g. `--titlebox-header-bg: var(--color-surface-raised);`.
+2. Add the name to `COMPONENT_TOKEN_NAMES` in `src/modules/themes/knownTokens.ts` so `themeRepo` invariants and the import validator accept it as a legal override.
+
+The new token inherits the generated semantic value automatically; custom theme JSON can override it explicitly when needed. `THEME_SCHEMA_VERSION` stays `1` — adding tokens is backward-compatible. Full decision tree (and when to instead emit a derived value from the generator) in [`docs/theme-generation-algorithm.md` → Extending the vocabulary](../../../docs/theme-generation-algorithm.md#extending-the-vocabulary).
+
+### "I want to extend theming into a new dimension (typography roles, motion, icons, etc.)"
+
+The current generator only handles colors. Other pillars — typography (font roles / weights / sizes / line-heights / tracking), motion, shadows, effects, iconography, data-viz palettes, accessibility variants — follow the same three-layer cascade and can be added as additional pillars. Each pillar's current state in CommandVue, the role-based extension pattern (with a worked typography example using `--font-family-ui` / `-display` / `-mono`), and operational-dashboard priorities (motion tokens, data-viz unification, high-contrast / CVD-safe variants) live in [`docs/theme-generation-algorithm.md` → Beyond colors](../../../docs/theme-generation-algorithm.md#beyond-colors-other-themeable-dimensions).
 
 ### "I need to add a new theme variant"
 

@@ -39,6 +39,9 @@ export default defineConfigWithVueTs(
       // app's tsconfig project. They live alongside the SKILL.md files so
       // agents can read them in context.
       ".agent/skills/**",
+      // Dev-only scripts run via tsx / node — not part of the typed app graph
+      // (the existing build scripts are .mjs and already outside the file glob).
+      "scripts/**",
     ],
   },
   {

@@ -1,5 +1,13 @@
 # Tech / library / API terms used throughout the template.
 
+# Color science / theme generation (Prompt 4)
+culori
+colorizr
+APCA
+OLED
+LLMs
+llms
+
 pnpm
 vite
 vitest
