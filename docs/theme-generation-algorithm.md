@@ -121,7 +121,7 @@ The generator emits a deliberately small, curated set (~50 tokens). When the app
 
 ### 95% case — new control consumes existing semantic tokens
 
-A new `TitleBox` using `bg-surface-raised text-text-primary border-border-default` (or the equivalent `--color-*` references in CSS) themes correctly under every built-in _and_ every generated theme automatically. Zero token work. The semantic vocabulary in `tokens.css` is the API for the whole app — reach for it first. The cheat sheet is in [`.agent/skills/commandvue-theming-system/SKILL.md`](../.agent/skills/commandvue-theming-system/SKILL.md).
+A new `TitleBox` using `bg-surface-raised text-text-primary border-border-default` (or the equivalent `--color-*` references in CSS) themes correctly under every built-in _and_ every generated theme automatically. Zero token work. The semantic vocabulary in `tokens.css` is the API for the whole app — reach for it first. The cheat sheet is in the `commandvue-theming-system` agent skill (`.agent/skills/commandvue-theming-system/SKILL.md`).
 
 ### 4% case — new control needs its own themeable component token
 
