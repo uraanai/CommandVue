@@ -47,7 +47,7 @@ async function hydrateBindings(): Promise<void> {
     // to leak into the dot map and make `dotColor` fall back to the active
     // theme — so every unbound workspace's dot wrongly mirrored whichever
     // workspace was currently active. Resolving fully gives each dot a
-    // stable colour decoupled from the active workspace.
+    // stable color decoupled from the active workspace.
     next[ws.id] = await themeStore.resolveForWorkspace(ws.id);
   }
   workspaceThemeIds.value = next;
@@ -96,7 +96,7 @@ function dotColor(workspaceId: string): string {
   // Read purely from the resolved map — NEVER fall back to
   // `themeStore.currentThemeId`. The current theme reflects the *active*
   // workspace, so using it here would paint every not-yet-resolved or
-  // unbound workspace with the active workspace's colour (the Phase F bug).
+  // unbound workspace with the active workspace's color (the Phase F bug).
   const themeId = workspaceThemeIds.value[workspaceId];
   if (!themeId) return "var(--color-slate-400)";
   // 1. Built-in fast path.
