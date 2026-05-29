@@ -89,12 +89,12 @@ JSON import/export. Deferred extensions:
   themes from inside the app. Server-side; lands with the Supabase migration.
   The `PortableTheme` JSON wire format + [`docs/theme-schema-for-llms.md`](./theme-schema-for-llms.md)
   are the foundation it would build on.
-- **Accessibility theme variants** — high-contrast and colour-blind-safe
+- **Accessibility theme variants** — high-contrast and color-blind-safe
   variants generated from the same customizer inputs (pin contrast to max,
   shift status hues to a CVD-safe set). The engine already computes WCAG
   ratios; this exposes them as first-class variants. See
   [`docs/theme-generation-algorithm.md` → Beyond colors](./theme-generation-algorithm.md#beyond-colors-other-themeable-dimensions).
-- **Typography & motion theming** — the generator emits colour tokens today.
+- **Typography & motion theming** — the generator emits color tokens today.
   Role-based fonts (`body` / `ui` / `display` / `mono`), a type scale, and
   motion-duration tokens are the next pillars — design + decision tree in
   [`docs/theme-generation-algorithm.md` → Beyond colors](./theme-generation-algorithm.md#beyond-colors-other-themeable-dimensions).

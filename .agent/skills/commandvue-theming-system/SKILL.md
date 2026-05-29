@@ -142,6 +142,13 @@ The file-I/O core for theme portability. No UI in this phase — the Phase G imp
 
 Tests: `tests/unit/themes/portable.spec.ts` (17 cases — pure export logic, filename builder, invalid JSON, unsupported schema version, unknown token, `<script>` injection, source coercion, all three conflict policies, round-trip, registry sync).
 
+## Theme import / export UI (Prompt 4 Phase G — closes Prompt 4)
+
+- **`src/components/dialogs/ThemeImportDialog.vue`** — drop a `.json` file, "Browse…" (native picker via `browser-fs-access` — the locked-stack file helper; do NOT add a raw `<input type="file">`), or paste JSON. Live preview validation re-uses `PortableThemeSchema` (parse → schema-version → Zod) so errors show as you type, but the persist on Import always calls `importThemeFromJson` (single source of truth) so validation never writes to IndexedDB. Conflict policy is a segmented Button control. Opened from `View → Import theme…` or the picker's **Import…** header button.
+- **Per-card actions in `ThemePickerDialog`** — Export (all themes, `downloadThemeFile`), Edit (generated only → opens `ThemeCustomizerDialog` pre-filled), Delete (custom only, two-click confirm), Apply. The picker mounts `ThemeImportDialog` + `ThemeCustomizerDialog` as siblings. Icon actions use `<Button variant="ghost">` for consistency with the rest of the file.
+- **`docs/theme-schema-for-llms.md`** — paste-into-your-LLM prompt template, guarded by `tests/unit/docs/theme-schema-for-llms.spec.ts` so its token list can't drift from `knownTokens.ts`. Adding / renaming a token fails that test until the doc is updated.
+- **`docs/roadmap.md` → Theming** — deferred work (raw JSON editor, marketplace, a11y variants, typography/motion).
+
 ## Theme customizer dialog (Prompt 4 Phase E)
 
 The Linear-style authoring surface — 3–4 high-level inputs, live preview, save creates a new generated theme.
