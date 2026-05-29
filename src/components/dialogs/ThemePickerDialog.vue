@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import type { Theme, ThemeId, ThemeSource, ThemeSwatches } from "@/types/theme";
 
-import { Check, Sparkles } from "@lucide/vue";
+import { Check, Sparkles, Trash2 } from "@lucide/vue";
 import { computed, onMounted, onUnmounted, ref, shallowRef } from "vue";
 
 import Button from "@/components/ui/Button.vue";
+import { themeRepo } from "@/modules/storage/themeRepo";
 import { themeRegistry } from "@/modules/themes/registry";
 import { useThemeStore } from "@/stores/theme";
 import { useWorkspaceStore } from "@/stores/workspace";
@@ -143,6 +144,42 @@ async function apply(theme: Theme): Promise<void> {
   }
   close();
 }
+
+/**
+ * Delete affordance for custom (non-built-in) themes. Built-ins are
+ * registered, not stored, so they can't be deleted. We use a two-click
+ * confirm (the first click arms the button, the second deletes) rather than
+ * a native `confirm()` (blocked in this app) or wiring PrimeVue's
+ * ConfirmationService for a single call site. Arming a different card, or
+ * clicking elsewhere via `disarmDelete`, resets the pending state.
+ *
+ * `themeRepo.delete` cleans up workspace bindings (Phase A) and unregisters
+ * from `themeRegistry` (Phase C), which the `subscribe` listener above turns
+ * into a live card removal.
+ */
+const pendingDeleteId = ref<ThemeId | null>(null);
+
+function isDeletable(theme: Theme): boolean {
+  return theme.source !== "built-in";
+}
+
+async function onDeleteClick(theme: Theme): Promise<void> {
+  if (pendingDeleteId.value !== theme.id) {
+    pendingDeleteId.value = theme.id;
+    return;
+  }
+  // Second click — confirm. If the theme is currently applied, fall back to
+  // the global default first so we never sit on a deleted id.
+  if (themeStore.currentThemeId === theme.id) {
+    await themeStore.setTheme("compact-light", workspaceStore.currentWorkspaceId);
+  }
+  await themeRepo.delete(theme.id);
+  pendingDeleteId.value = null;
+}
+
+function disarmDelete(): void {
+  pendingDeleteId.value = null;
+}
 </script>
 
 <template>
@@ -225,14 +262,40 @@ async function apply(theme: Theme): Promise<void> {
 
             <footer class="mt-auto flex items-center justify-between gap-2 pt-1">
               <span class="text-faint text-[10px]">{{ theme.author }}</span>
-              <Button
-                size="sm"
-                :variant="currentId === theme.id ? 'secondary' : 'primary'"
-                @click="apply(theme)"
-              >
-                <Sparkles class="size-3" />
-                {{ currentId === theme.id ? "Re-apply" : "Apply" }}
-              </Button>
+              <div class="flex items-center gap-1">
+                <!-- Delete (custom themes only). Two-click confirm: the first
+                     click arms, the second deletes. Built-ins are registered,
+                     not stored, so they have no delete affordance. -->
+                <Button
+                  v-if="isDeletable(theme) && pendingDeleteId === theme.id"
+                  size="sm"
+                  variant="danger"
+                  title="Click again to permanently delete this theme"
+                  @click="onDeleteClick(theme)"
+                  @blur="disarmDelete"
+                >
+                  <Trash2 class="size-3" />
+                  Delete?
+                </Button>
+                <Button
+                  v-else-if="isDeletable(theme)"
+                  size="sm"
+                  variant="ghost"
+                  aria-label="Delete theme"
+                  title="Delete theme"
+                  @click="onDeleteClick(theme)"
+                >
+                  <Trash2 class="size-3.5" />
+                </Button>
+                <Button
+                  size="sm"
+                  :variant="currentId === theme.id ? 'secondary' : 'primary'"
+                  @click="apply(theme)"
+                >
+                  <Sparkles class="size-3" />
+                  {{ currentId === theme.id ? "Re-apply" : "Apply" }}
+                </Button>
+              </div>
             </footer>
           </article>
         </div>

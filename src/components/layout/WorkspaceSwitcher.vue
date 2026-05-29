@@ -30,20 +30,24 @@ const saveAsOpen = ref(false);
 const pendingWorkspaceId = ref<null | Ulid>(null);
 
 /**
- * Resolved bound theme id per workspace. Populated lazily on mount + on
- * every workspace list change. `undefined` = not yet resolved, `null` =
- * resolved as "no binding" (falls back to global default).
+ * The *effective* theme id each workspace displays — explicit binding if it
+ * has one, otherwise the global default. `undefined` = not yet resolved.
+ * Never holds the `null` "no-binding" sentinel: an unbound workspace stores
+ * the global-default id it resolves to, so its dot is stable and correct
+ * regardless of which workspace is currently active.
  */
-const workspaceThemeIds = ref<Record<string, string | null | undefined>>({});
+const workspaceThemeIds = ref<Record<string, string | undefined>>({});
 
 async function hydrateBindings(): Promise<void> {
-  const next: Record<string, string | null> = {};
+  const next: Record<string, string> = {};
   for (const ws of workspace.workspaces) {
-    const bound = themeStore.getWorkspaceBinding(ws.id);
-    if (bound !== undefined) {
-      next[ws.id] = bound;
-      continue;
-    }
+    // Always fully resolve (explicit binding → global pointer → fallback).
+    // We deliberately do NOT short-circuit on `getWorkspaceBinding`: that
+    // cache returns a `null` sentinel for "no explicit binding", which used
+    // to leak into the dot map and make `dotColor` fall back to the active
+    // theme — so every unbound workspace's dot wrongly mirrored whichever
+    // workspace was currently active. Resolving fully gives each dot a
+    // stable colour decoupled from the active workspace.
     next[ws.id] = await themeStore.resolveForWorkspace(ws.id);
   }
   workspaceThemeIds.value = next;
@@ -89,8 +93,11 @@ const THEME_DOT_COLORS: Record<string, string> = {
  *   4. **Fallback** — neutral grey.
  */
 function dotColor(workspaceId: string): string {
-  const bound = workspaceThemeIds.value[workspaceId];
-  const themeId = bound ?? themeStore.currentThemeId;
+  // Read purely from the resolved map — NEVER fall back to
+  // `themeStore.currentThemeId`. The current theme reflects the *active*
+  // workspace, so using it here would paint every not-yet-resolved or
+  // unbound workspace with the active workspace's colour (the Phase F bug).
+  const themeId = workspaceThemeIds.value[workspaceId];
   if (!themeId) return "var(--color-slate-400)";
   // 1. Built-in fast path.
   const builtIn = THEME_DOT_COLORS[themeId];
@@ -106,8 +113,9 @@ function dotColor(workspaceId: string): string {
 }
 
 function themeTooltip(workspaceId: string): string {
-  const bound = workspaceThemeIds.value[workspaceId];
-  const themeId = bound ?? themeStore.currentThemeId;
+  // Same rule as dotColor: read the resolved map only, no currentThemeId
+  // fallback, so the tooltip names the theme this workspace actually uses.
+  const themeId = workspaceThemeIds.value[workspaceId];
   if (!themeId) return "Theme: (none)";
   const theme = themeRegistry.get(themeId);
   return theme ? `Theme: ${theme.name}` : `Theme: ${themeId}`;
