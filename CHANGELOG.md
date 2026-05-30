@@ -6,6 +6,10 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-05-30
+
+The **workspace + theming system** release. Adds a full runtime theme authoring system (Prompt 4: storage → OKLCH generation → registry → import/export → constrained customizer → per-workspace binding → import/export UI), the Light/Dark/Auto toggle with six built-in theme variants and a three-layer design-token foundation (Prompt 3), the PrimeVue-first UI-primitive migration via Volt (Prompt 2), the TanStack-based DataTable wrapper with governance (Prompt 1), and the GitFlow workflow setup (Prompt 0). Also bundles an app-wide confirmation modal (`useConfirm`) and assorted panel/chrome fixes.
+
 ### Added
 
 - **Theme import / export UI + LLM schema docs + roadmap (Prompt 4 Phase G — closes Prompt 4).**
@@ -367,5 +371,6 @@ locked stack is wired and demonstrated by at least one working panel.
 - `pnpm build` — clean; initial route ~63 KB gzipped + ~42 KB lazy dock shell (≈ 17 % of the 600 KB budget). Heavy chunks (Cesium 1.1 MB, MapLibre 285 KB, ECharts 165 KB, milsymbol 197 KB, markdown-it 47 KB) live in their own lazy chunks pulled in only when the corresponding panel mounts.
 - `pnpm docker:build` — produces `commandvue:local` (~150 MB on disk).
 
-[Unreleased]: https://github.com/uraanai/CommandVue/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/uraanai/CommandVue/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/uraanai/CommandVue/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/uraanai/CommandVue/releases/tag/v0.1.0
