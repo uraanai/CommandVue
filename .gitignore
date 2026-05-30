@@ -164,3 +164,8 @@ docs/.vitepress/dist/
 
 # Scratch / temp dirs used during agent sessions
 temp/
+
+# Internal planning documents — tracked intentionally, not public
+# The ! rule below prevents accidental exclusion by future blanket dotfile rules
+!.internal/
+!.internal/**
