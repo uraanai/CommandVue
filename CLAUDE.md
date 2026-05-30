@@ -325,6 +325,24 @@ Settings live there; don't loosen without the user's explicit go-ahead.
 
 ---
 
+## Internal planning documents
+
+Private planning and strategic documents live under `.internal/`. They are
+tracked in git (intentionally, for version history) but are not part of the
+public `docs/` tree.
+
+Rules for agents:
+
+- Never reference `.internal/` files from public-facing documentation, READMEs,
+  changelogs, or agent-skill files
+- Never suggest moving `.internal/` content into `docs/`
+- When asked to update the roadmap or internal planning docs, edit files under
+  `.internal/` directly
+- `.internal/` contents are not browsable by the public; treat them as private
+  even though they are in the repo
+
+---
+
 ## Runtime verification (mandatory after major-version bumps)
 
 The static gauntlet (`pnpm lint && pnpm type-check && pnpm test && pnpm spell && pnpm build && pnpm docs:build`) does **not** prove a major-version migration is safe. All five can pass while the running app is broken in ways that only surface when components actually mount in the browser.

@@ -47,3 +47,4 @@ WCAG
 Volted
 Vuetify
 firstrule
+browsable
