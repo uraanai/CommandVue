@@ -1,6 +1,6 @@
 {
   "name": "commandvue",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "A production-grade Vue 3 template for operations dashboards — command-and-control, fleet monitoring, geospatial operations, and real-time telemetry. Cesium 3D globe, MapLibre 2D maps, Dockview panels, PrimeVue + Tailwind, standardized operational symbology, batteries included.",
