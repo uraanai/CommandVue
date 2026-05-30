@@ -7,6 +7,7 @@ import { computed, onMounted, onUnmounted, ref, shallowRef } from "vue";
 import ThemeCustomizerDialog from "@/components/dialogs/ThemeCustomizerDialog.vue";
 import ThemeImportDialog from "@/components/dialogs/ThemeImportDialog.vue";
 import Button from "@/components/ui/Button.vue";
+import { useConfirm } from "@/composables/useConfirm";
 import { themeRepo } from "@/modules/storage/themeRepo";
 import { downloadThemeFile } from "@/modules/themes/export";
 import { themeRegistry } from "@/modules/themes/registry";
@@ -45,6 +46,7 @@ const emit = defineEmits<{ "update:visible": [value: boolean] }>();
 const themes = shallowRef<readonly Theme[]>([]);
 const themeStore = useThemeStore();
 const workspaceStore = useWorkspaceStore();
+const { confirmIf } = useConfirm();
 
 const setAsWorkspaceDefault = ref(false);
 
@@ -150,38 +152,46 @@ async function apply(theme: Theme): Promise<void> {
 
 /**
  * Delete affordance for custom (non-built-in) themes. Built-ins are
- * registered, not stored, so they can't be deleted. We use a two-click
- * confirm (the first click arms the button, the second deletes) rather than
- * a native `confirm()` (blocked in this app) or wiring PrimeVue's
- * ConfirmationService for a single call site. Arming a different card, or
- * clicking elsewhere via `disarmDelete`, resets the pending state.
+ * registered, not stored, so they can't be deleted.
+ *
+ * Deleting routes through the app-wide confirmation modal (`useConfirm`): a
+ * single delete icon opens a proper confirm dialog with the theme's details,
+ * rather than a two-click inline "arm then confirm" affordance (which leaked
+ * its armed state across picker close/reopen and made the footer row jump
+ * height). `REQUIRE_DELETE_CONFIRM` is the "confirm or not" switch — flip it
+ * to `false` and deletes proceed with no modal.
  *
  * `themeRepo.delete` cleans up workspace bindings (Phase A) and unregisters
  * from `themeRegistry` (Phase C), which the `subscribe` listener above turns
  * into a live card removal.
  */
-const pendingDeleteId = ref<ThemeId | null>(null);
+const REQUIRE_DELETE_CONFIRM = true;
 
 function isDeletable(theme: Theme): boolean {
   return theme.source !== "built-in";
 }
 
-async function onDeleteClick(theme: Theme): Promise<void> {
-  if (pendingDeleteId.value !== theme.id) {
-    pendingDeleteId.value = theme.id;
-    return;
-  }
-  // Second click — confirm. If the theme is currently applied, fall back to
-  // the global default first so we never sit on a deleted id.
+async function requestDelete(theme: Theme): Promise<void> {
+  const sourceLabel = theme.source.charAt(0).toUpperCase() + theme.source.slice(1);
+  const ok = await confirmIf(REQUIRE_DELETE_CONFIRM, {
+    title: "Delete theme?",
+    message: `"${theme.name}" will be permanently deleted. Any workspace bound to it falls back to the default theme.`,
+    details: [
+      `Name: ${theme.name}`,
+      `Source: ${sourceLabel}`,
+      `Mode: ${theme.mode} · Density: ${theme.density}`,
+    ],
+    confirmLabel: "Delete",
+    cancelLabel: "Cancel",
+    danger: true,
+  });
+  if (!ok) return;
+  // If the theme is currently applied, fall back to the global default first
+  // so we never sit on a deleted id.
   if (themeStore.currentThemeId === theme.id) {
     await themeStore.setTheme("compact-light", workspaceStore.currentWorkspaceId);
   }
   await themeRepo.delete(theme.id);
-  pendingDeleteId.value = null;
-}
-
-function disarmDelete(): void {
-  pendingDeleteId.value = null;
 }
 
 // --- Export / Edit / Import (Prompt 4 Phase G) ----------------------------
@@ -325,27 +335,15 @@ function openImport(): void {
                 >
                   <Pencil class="size-3.5" />
                 </Button>
-                <!-- Delete (custom themes only). Two-click confirm: the first
-                     click arms, the second deletes. Built-ins are registered,
-                     not stored, so they have no delete affordance. -->
+                <!-- Delete (custom themes only) → app-wide confirm modal.
+                     Built-ins are registered, not stored, so no delete here. -->
                 <Button
-                  v-if="isDeletable(theme) && pendingDeleteId === theme.id"
-                  size="sm"
-                  variant="danger"
-                  title="Click again to permanently delete this theme"
-                  @click="onDeleteClick(theme)"
-                  @blur="disarmDelete"
-                >
-                  <Trash2 class="size-3" />
-                  Delete?
-                </Button>
-                <Button
-                  v-else-if="isDeletable(theme)"
+                  v-if="isDeletable(theme)"
                   size="sm"
                   variant="ghost"
                   aria-label="Delete theme"
                   title="Delete theme"
-                  @click="onDeleteClick(theme)"
+                  @click="requestDelete(theme)"
                 >
                   <Trash2 class="size-3.5" />
                 </Button>
