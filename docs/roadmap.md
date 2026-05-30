@@ -71,6 +71,34 @@ deferred" decisions. File an issue if you want to take any of them on.
   `ToastService` is registered with PrimeVue. A producer-side composable
   (`useNotify`) on top of PrimeVue's `useToast` would finish the loop.
 
+## Theming
+
+The runtime theme authoring system (Prompt 4) ships storage, an OKLCH
+generation engine, a constrained customizer, per-workspace binding, and
+JSON import/export. Deferred extensions:
+
+- **Raw JSON editor with live preview** — a built-in editor (Monaco /
+  CodeMirror) where power users type theme JSON and see it apply live, with
+  inline validation. The constrained customizer (`ThemeCustomizerDialog`) plus
+  JSON import (`ThemeImportDialog`) cover the 90% case; a raw editor's UX
+  guardrails need more thought. Foundation already in place: the schema
+  (`src/types/theme.ts`), the Zod validator
+  (`src/modules/themes/portableSchema.ts`), the apply engine (`apply.ts`), the
+  registry (custom themes), and the known-token allowlist.
+- **Theme marketplace / community sharing** — browse and install community
+  themes from inside the app. Server-side; lands with the Supabase migration.
+  The `PortableTheme` JSON wire format + [`docs/theme-schema-for-llms.md`](./theme-schema-for-llms.md)
+  are the foundation it would build on.
+- **Accessibility theme variants** — high-contrast and color-blind-safe
+  variants generated from the same customizer inputs (pin contrast to max,
+  shift status hues to a CVD-safe set). The engine already computes WCAG
+  ratios; this exposes them as first-class variants. See
+  [`docs/theme-generation-algorithm.md` → Beyond colors](./theme-generation-algorithm.md#beyond-colors-other-themeable-dimensions).
+- **Typography & motion theming** — the generator emits color tokens today.
+  Role-based fonts (`body` / `ui` / `display` / `mono`), a type scale, and
+  motion-duration tokens are the next pillars — design + decision tree in
+  [`docs/theme-generation-algorithm.md` → Beyond colors](./theme-generation-algorithm.md#beyond-colors-other-themeable-dimensions).
+
 ## Tooling
 
 - **CSP nonce emission** — Tailwind's compiled CSS currently requires

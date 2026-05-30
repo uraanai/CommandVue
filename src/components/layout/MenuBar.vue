@@ -12,6 +12,7 @@ import ManagePresetsDialog from "@/components/dialogs/ManagePresetsDialog.vue";
 import ManageWorkspacesDialog from "@/components/dialogs/ManageWorkspacesDialog.vue";
 import SaveLayoutAsDialog from "@/components/dialogs/SaveLayoutAsDialog.vue";
 import ThemeCustomizerDialog from "@/components/dialogs/ThemeCustomizerDialog.vue";
+import ThemeImportDialog from "@/components/dialogs/ThemeImportDialog.vue";
 import ThemePickerDialog from "@/components/dialogs/ThemePickerDialog.vue";
 import FileUpload from "@/components/ui/FileUpload.vue";
 import Menubar from "@/components/ui/Menubar.vue";
@@ -40,6 +41,7 @@ const manageWorkspacesOpen = ref(false);
 const manageLayoutsOpen = ref(false);
 const managePresetsOpen = ref(false);
 const themePickerOpen = ref(false);
+const themeImportOpen = ref(false);
 const themeCustomizerOpen = ref(false);
 // When set, the customizer opens in edit mode pre-filled from this theme.
 // Cleared on dialog close so a subsequent "Create new theme…" starts blank.
@@ -317,6 +319,7 @@ const menuItems = computed<MenuItem[]>(() => [
         command: () => openCustomizer(true),
         disabled: !canEditCurrentTheme.value,
       },
+      { label: "Import theme…", command: () => (themeImportOpen.value = true) },
       { separator: true },
       { label: "Discard Changes", command: () => void discardChanges(), disabled: !session.dirty },
     ],
@@ -377,6 +380,7 @@ const menuItems = computed<MenuItem[]>(() => [
   <ManageLayoutsDialog v-model:visible="manageLayoutsOpen" />
   <ManagePresetsDialog v-model:visible="managePresetsOpen" />
   <ThemePickerDialog v-model:visible="themePickerOpen" />
+  <ThemeImportDialog v-model:visible="themeImportOpen" />
   <ThemeCustomizerDialog
     :visible="themeCustomizerOpen"
     :theme-to-edit="themeToEdit"

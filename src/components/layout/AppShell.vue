@@ -4,6 +4,7 @@ import { RouterView } from "vue-router";
 
 import ChromeBar from "@/components/chrome/ChromeBar.vue";
 import EditModeOverlay from "@/components/chrome/EditModeOverlay.vue";
+import ConfirmDialog from "@/components/dialogs/ConfirmDialog.vue";
 import SaveLayoutAsDialog from "@/components/dialogs/SaveLayoutAsDialog.vue";
 import { useKeyboardShortcuts } from "@/composables/useKeyboardShortcuts";
 import { useTheme } from "@/composables/useTheme";
@@ -113,6 +114,9 @@ useKeyboardShortcuts({
     </main>
     <ChromeBar v-if="chrome.statusBarVisible" position="status" />
     <CommandPalette />
+    <!-- App-wide confirmation host. Driven by useConfirm(); mounted once here
+         so any component can `await useConfirm().confirm({ … })`. -->
+    <ConfirmDialog />
     <SaveLayoutAsDialog
       v-model:visible="saveAsOpen"
       :default-name="(layoutStore.currentLayout?.name ?? '') + ' (saved)'"
