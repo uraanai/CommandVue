@@ -158,5 +158,14 @@ docs/.vitepress/dist/
 # Playwright MCP writes per-interaction snapshots + console logs here
 .playwright-mcp/
 
+# Verification-protocol screenshots — Stage 1 captures from Playwright runs.
+# Referenced by relative path in PR descriptions; not committed.
+.verification-screenshots/
+
 # Scratch / temp dirs used during agent sessions
 temp/
+
+# Internal planning documents — tracked intentionally, not public
+# The ! rule below prevents accidental exclusion by future blanket dotfile rules
+!.internal/
+!.internal/**

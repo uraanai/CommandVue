@@ -1,11 +1,25 @@
 <script setup lang="ts">
 import type { ChromeItemId, ChromeSlot } from "@/types/chrome";
+import type { MenuItem } from "primevue/menuitem";
+import type { ComponentPublicInstance } from "vue";
 
+import {
+  attachClosestEdge,
+  type Edge,
+  extractClosestEdge,
+} from "@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge";
+import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
+import {
+  draggable,
+  dropTargetForElements,
+} from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import { Plus, X } from "@lucide/vue";
-import { computed, defineAsyncComponent, ref } from "vue";
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, ref, watch } from "vue";
 
+import IconButton from "@/components/ui/IconButton.vue";
 import { chromeItemRegistry } from "@/modules/chrome/registry";
 import { useChromeStore } from "@/stores/chrome";
+import Menu from "@/volt/Menu.vue";
 
 interface Props {
   slotName: ChromeSlot;
@@ -15,7 +29,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), { align: "start" });
 
 const chrome = useChromeStore();
-const addOpen = ref(false);
+const addMenu = ref<InstanceType<typeof Menu> | null>(null);
 
 const itemIds = computed<ChromeItemId[]>(() => chrome.slotItems(props.slotName));
 
@@ -33,16 +47,26 @@ function loadItem(id: ChromeItemId) {
   return defineAsyncComponent(def.component);
 }
 
-function addableItems(): { id: ChromeItemId; title: string }[] {
+const addableItems = computed<{ id: ChromeItemId; title: string }[]>(() => {
   const present = new Set(itemIds.value);
   return chromeItemRegistry
     .listForSlot(props.slotName)
     .filter((def) => !present.has(def.id))
     .map((def) => ({ id: def.id, title: def.title }));
+});
+
+const addMenuItems = computed<MenuItem[]>(() =>
+  addableItems.value.map((entry) => ({
+    label: entry.title,
+    command: () => void addItem(entry.id),
+  })),
+);
+
+function toggleAddMenu(event: MouseEvent): void {
+  addMenu.value?.toggle(event);
 }
 
 async function addItem(id: ChromeItemId): Promise<void> {
-  addOpen.value = false;
   await chrome.addItemToSlot(id, props.slotName);
 }
 
@@ -51,6 +75,134 @@ async function removeItem(id: ChromeItemId): Promise<void> {
   if (def && !def.removable) return;
   await chrome.removeItemFromSlot(id, props.slotName);
 }
+
+/* ---------------------------------------------------------------------------
+ * Drag-and-drop reorder (edit mode only, same-slot only).
+ *
+ * Uses @atlaskit/pragmatic-drag-and-drop. Every item wrapper acts as both
+ * `draggable` and `dropTargetForElements`. The hitbox helper reports which
+ * side of the target the cursor is closest to ("left" / "right" because slots
+ * are horizontal); a vertical accent-coloured bar marks the prospective
+ * insertion point.
+ *
+ * On drop, the store's `addItemToSlot(itemId, slot, position)` is reused
+ * (it already removes the item from any prior slot, including itself, and
+ * re-inserts at the chosen position). We adjust the post-removal index when
+ * the source was originally before the target.
+ *
+ * Cross-slot drag is intentionally out of scope for this PR. `canDrop`
+ * filters by matching `slotName` so dragging from one slot to another is a
+ * no-op.
+ * ------------------------------------------------------------------------- */
+type ItemDragData = { itemId: ChromeItemId; slotName: ChromeSlot };
+
+const itemRefs = ref<Record<string, HTMLElement | null>>({});
+const dragSourceId = ref<ChromeItemId | null>(null);
+const dropTargetId = ref<ChromeItemId | null>(null);
+const dropTargetEdge = ref<Edge | null>(null);
+
+const cleanupsByItem: Record<string, () => void> = {};
+
+function setItemRef(id: ChromeItemId, el: Element | ComponentPublicInstance | null): void {
+  itemRefs.value[id] = el instanceof HTMLElement ? el : null;
+}
+
+function teardownItemDnD(id: ChromeItemId): void {
+  cleanupsByItem[id]?.();
+  delete cleanupsByItem[id];
+}
+
+function teardownAll(): void {
+  for (const id of Object.keys(cleanupsByItem)) {
+    cleanupsByItem[id]?.();
+  }
+  for (const k of Object.keys(cleanupsByItem)) delete cleanupsByItem[k];
+  dragSourceId.value = null;
+  dropTargetId.value = null;
+  dropTargetEdge.value = null;
+}
+
+function setupItemDnD(id: ChromeItemId): void {
+  const el = itemRefs.value[id];
+  if (!el) return;
+  teardownItemDnD(id);
+  const def = chromeItemRegistry.get(id);
+  const removable = def?.removable ?? true;
+  // Non-removable items (the always-on app icon) shouldn't drag — keep them
+  // anchored at their canonical position.
+  if (!removable) return;
+  const cleanup = combine(
+    draggable({
+      element: el,
+      getInitialData: () => ({ itemId: id, slotName: props.slotName }) as ItemDragData,
+      onDragStart: () => {
+        dragSourceId.value = id;
+      },
+      onDrop: () => {
+        dragSourceId.value = null;
+        dropTargetId.value = null;
+        dropTargetEdge.value = null;
+      },
+    }),
+    dropTargetForElements({
+      element: el,
+      canDrop: ({ source }) => (source.data as ItemDragData).slotName === props.slotName,
+      getData: ({ input, element }) =>
+        attachClosestEdge({ itemId: id }, { input, element, allowedEdges: ["left", "right"] }),
+      onDrag: ({ self, source }) => {
+        const sourceId = (source.data as ItemDragData).itemId;
+        if (sourceId === id) return;
+        dropTargetId.value = id;
+        dropTargetEdge.value = extractClosestEdge(self.data);
+      },
+      onDragLeave: () => {
+        if (dropTargetId.value === id) {
+          dropTargetId.value = null;
+          dropTargetEdge.value = null;
+        }
+      },
+      onDrop: ({ source, self }) => {
+        const sourceId = (source.data as ItemDragData).itemId;
+        const targetEdge = extractClosestEdge(self.data);
+        if (sourceId === id) return;
+        const list = itemIds.value;
+        const sourceIdx = list.indexOf(sourceId);
+        const targetIdx = list.indexOf(id);
+        if (sourceIdx === -1 || targetIdx === -1) return;
+        let newIdx = targetEdge === "right" ? targetIdx + 1 : targetIdx;
+        if (sourceIdx < newIdx) newIdx -= 1;
+        if (newIdx === sourceIdx) return;
+        void chrome.addItemToSlot(sourceId, props.slotName, newIdx);
+      },
+    }),
+  );
+  cleanupsByItem[id] = cleanup;
+}
+
+function reconcileDnD(): void {
+  if (!chrome.editMode) {
+    teardownAll();
+    return;
+  }
+  // Tear down items that no longer exist
+  for (const id of Object.keys(cleanupsByItem)) {
+    if (!itemIds.value.includes(id as ChromeItemId)) teardownItemDnD(id as ChromeItemId);
+  }
+  // Wire up newly present items
+  for (const id of itemIds.value) {
+    if (!cleanupsByItem[id]) setupItemDnD(id);
+  }
+}
+
+watch(
+  [() => chrome.editMode, itemIds],
+  () => {
+    void nextTick(() => reconcileDnD());
+  },
+  { immediate: true, flush: "post" },
+);
+
+onBeforeUnmount(() => teardownAll());
 </script>
 
 <template>
@@ -65,48 +217,58 @@ async function removeItem(id: ChromeItemId): Promise<void> {
     <div
       v-for="id in itemIds"
       :key="id"
+      :ref="(el) => setItemRef(id, el)"
       class="relative"
-      :class="chrome.editMode ? 'ring-accent-500/40 rounded px-0.5 ring-1' : ''"
+      :class="[
+        chrome.editMode ? 'ring-accent-500/40 rounded px-0.5 ring-1' : '',
+        chrome.editMode && chromeItemRegistry.get(id)?.removable
+          ? 'cursor-grab active:cursor-grabbing'
+          : '',
+        dragSourceId === id ? 'opacity-40' : '',
+      ]"
     >
+      <!-- Drop indicator: vertical bar on left/right of the hovered target -->
+      <span
+        v-if="dropTargetId === id && dropTargetEdge === 'left'"
+        aria-hidden="true"
+        class="bg-accent-500 pointer-events-none absolute top-0 -left-1 z-10 h-full w-0.5 rounded"
+      />
+      <span
+        v-if="dropTargetId === id && dropTargetEdge === 'right'"
+        aria-hidden="true"
+        class="bg-accent-500 pointer-events-none absolute top-0 -right-1 z-10 h-full w-0.5 rounded"
+      />
       <component :is="loadItem(id)" v-if="loadItem(id)" />
-      <button
+      <!--
+        The remove badge is a fixed tiny overlay, not a density-scaled control.
+        `IconButton size="sm"` pulls `min-h`/`min-w`/`[&_svg]:size` from the
+        `--density-*` tokens, which would otherwise inflate this badge to the
+        full control height (~26px). `h-*`/`w-*` can't override `min-h`/`min-w`
+        (different tailwind-merge groups), so neutralize them with `min-h-0` /
+        `min-w-0` and pin the icon size explicitly.
+      -->
+      <IconButton
         v-if="chrome.editMode && chromeItemRegistry.get(id)?.removable"
-        type="button"
-        class="bg-danger absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full text-[8px] text-white"
-        title="Remove from slot"
+        label="Remove from slot"
+        size="sm"
+        class="bg-danger absolute -top-1.5 -right-1.5 h-4 min-h-0 w-4 min-w-0 rounded-full p-0 text-white hover:opacity-90 [&_svg]:size-2.5"
         @click="removeItem(id)"
       >
-        <X class="size-2.5" />
-      </button>
+        <X />
+      </IconButton>
     </div>
 
     <div v-if="chrome.editMode" class="relative">
-      <button
-        type="button"
-        class="text-muted hover:bg-surface-sunken flex items-center gap-1 rounded px-1.5 py-0.5 text-xs"
-        title="Add item to this slot"
-        @click="addOpen = !addOpen"
+      <IconButton
+        label="Add item to this slot"
+        variant="ghost"
+        size="sm"
+        :disabled="addableItems.length === 0"
+        @click="toggleAddMenu"
       >
         <Plus class="size-3" />
-      </button>
-      <div
-        v-if="addOpen"
-        class="border-border bg-surface-raised absolute z-50 mt-1 min-w-[200px] rounded-md border py-1 shadow-lg"
-        :class="align === 'end' ? 'right-0' : 'left-0'"
-      >
-        <div v-if="addableItems().length === 0" class="text-muted px-3 py-2 text-xs">
-          No more items available
-        </div>
-        <button
-          v-for="entry in addableItems()"
-          :key="entry.id"
-          type="button"
-          class="text-foreground hover:bg-surface-sunken block w-full px-3 py-1.5 text-left text-sm"
-          @click="addItem(entry.id)"
-        >
-          {{ entry.title }}
-        </button>
-      </div>
+      </IconButton>
+      <Menu ref="addMenu" :model="addMenuItems" popup />
     </div>
   </div>
 </template>

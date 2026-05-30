@@ -116,6 +116,36 @@ Do not substitute libraries from this list without explicit instruction.
 
 ---
 
+## UI primitives — PrimeVue-first rule
+
+CommandVue uses PrimeVue (unstyled mode) as the foundation for all UI primitives. The active decision is **Option C — hybrid** from ADR 0002.
+
+- **Chosen approach:** hybrid — density-critical / project-API-masked primitives stay hand-rolled in `src/components/ui/*`; general-purpose primitives are installed via Volt (`npx volt-vue add <Name>`) to `src/volt/*`. See `docs/decisions/0002-volt-vs-handrolled-wrappers.md` for the full rationale and the file-by-file split.
+- **Default location for new UI primitives:**
+  - Density-critical (used in dense lists/forms) or surfaces a deliberately narrowed API → `src/components/ui/<Name>.vue` (hand-rolled).
+  - General-purpose, one-off, or composed of standard PrimeVue surfaces → `src/volt/<Name>.vue` (installed via Volt).
+  - When in doubt: install via Volt first; promote to hand-rolled only if the consumer surface demands it.
+- **Stays hand-rolled today:** `Button`, `IconButton`, `Select`, `Tabs`, `Toast`, `Tooltip` (specialized — floating-ui), `ColorPicker` (specialized — palette + popover), plus `DataTable` (separate; governed by ADR 0001).
+- **Adopts Volt today:** `Dialog`, `Input` (PrimeVue `InputText`), `Checkbox`, `Slider`, `Textarea`, `Fieldset`, `Tag`, `Menu`, `Menubar`, `ContextMenu`, `FileUpload`.
+- **Forbidden:** raw `<button>`, `<input>`, `<select>`, `<textarea>` outside the UI-primitive definitions themselves. Use the wrapper or the Volt file. ESLint enforces this in Phase 2.4 (warn-level).
+- **Forbidden:** non-PrimeVue UI libraries (Element Plus, Naive UI, Vuetify, reka-ui, etc.) without an ADR justifying the exception. `@tanstack/vue-table` is the documented exception per ADR 0001 — tabular data only.
+
+### When adding a new UI primitive
+
+1. Check the PrimeVue catalog (https://primevue.org). If it exists and matches the use case, decide between the two installation targets above and install/wrap accordingly.
+2. Check the Volt catalog (https://volt.primevue.org). If Volt covers it and the component fits the "general-purpose" criterion, prefer `npx volt-vue add <Name>` over hand-rolling.
+3. If neither has it, document the rationale in the component file's header comment and proceed with a thin hand-rolled wrapper in `src/components/ui/<Name>.vue`.
+4. Downstream apps override styling via Tailwind classes (Volt) or `:pt` passthrough (hand-rolled wrappers). Both resolve to the project's CSS-token vocabulary.
+
+### Active artifacts
+
+- ADR: `docs/decisions/0002-volt-vs-handrolled-wrappers.md` (Accepted 2026-05-24).
+- Compliance audit: `docs/audits/primevue-firstrule-audit-2026-05-24.md`. Tracks Phase 2.3 migration scope.
+- Wrapper inventory: `docs/audits/ui-wrappers-inventory.md`.
+- PrimeVue usage inventory: `docs/audits/primevue-component-usage.md`.
+
+---
+
 ## Icon usage rules
 
 - **@lucide/vue** — UI chrome only (buttons, toolbars, panel controls, status indicators).
@@ -295,6 +325,24 @@ Settings live there; don't loosen without the user's explicit go-ahead.
 
 ---
 
+## Internal planning documents
+
+Private planning and strategic documents live under `.internal/`. They are
+tracked in git (intentionally, for version history) but are not part of the
+public `docs/` tree.
+
+Rules for agents:
+
+- Never reference `.internal/` files from public-facing documentation, READMEs,
+  changelogs, or agent-skill files
+- Never suggest moving `.internal/` content into `docs/`
+- When asked to update the roadmap or internal planning docs, edit files under
+  `.internal/` directly
+- `.internal/` contents are not browsable by the public; treat them as private
+  even though they are in the repo
+
+---
+
 ## Runtime verification (mandatory after major-version bumps)
 
 The static gauntlet (`pnpm lint && pnpm type-check && pnpm test && pnpm spell && pnpm build && pnpm docs:build`) does **not** prove a major-version migration is safe. All five can pass while the running app is broken in ways that only surface when components actually mount in the browser.
@@ -314,6 +362,25 @@ The static gauntlet (`pnpm lint && pnpm type-check && pnpm test && pnpm spell &&
 **Do not** report a migration complete until the running app has been clicked through.
 
 When multiple major bumps land in one session, plan to spend the **back half** of the session on runtime fixes — the static work is the easier half.
+
+---
+
+## Verification protocol — automated + human review
+
+Every phase of every prompt ends with two verification stages, in this order:
+
+1. **Automated functional verification** — Claude Code uses Playwright MCP to drive a real browser through the changes and assert on observable state (DOM attributes, computed styles, console output, screenshots at named checkpoints). Binary pass/fail. No design judgment. **Claude Code does not open a PR until this stage is fully green.** If any assertion fails, fix the underlying issue and re-run until it passes; do not embed failing results in the PR description.
+2. **Human design review** — A short, focused checklist (3–7 items max) of subjective quality checks that automation cannot make: typography balance, color harmony, density feel, hover-state polish. The user runs this after the PR is open.
+
+**Tool availability:** At the start of each phase's verification, Claude Code probes for `mcp__plugin_playwright_playwright__*` tools. If unavailable, run `ToolSearch` with `query: "playwright browser"` to load them. If still unavailable, fall back to a manual smoke-test checklist, state this explicitly in the PR description, and do not embed Stage 1 results.
+
+**Screenshots:** Capture to `.verification-screenshots/<branch-name>/<checkpoint-name>.png`. The directory is gitignored. PR descriptions reference screenshots by relative path — reviewers open them locally rather than viewing them inline.
+
+**Stage 1 result table:** Embedded in every PR description as a structured Markdown table — assertion id, description, result, screenshot. Plus console-error count, console-warning count, and a PASS/FAIL summary line. The table reflects actual Playwright run results, never "expected pass."
+
+**Stage 2 review section:** Closes the PR description. 3–7 design-judgment checkboxes plus a 2–3 sentence "things to specifically scrutinize for this phase" callout.
+
+**Rule:** This protocol applies to all current and future agent-driven work on CommandVue. No exceptions without explicit user override.
 
 ---
 

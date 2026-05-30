@@ -5,72 +5,122 @@
 @plugin "@tailwindcss/forms";
 @plugin "@tailwindcss/typography";
 
+/* tailwindcss-primeui ships PrimeVue's surface-0…surface-950 palette and the
+ * `p-modal:` / `p-filled:` / `p-invalid:` / `p-fluid:` / `p-small:` /
+ * `p-large:` / `p-maximized:` etc. data-attribute variants that Volt files
+ * reference. The package's Tailwind v4 entry is a CSS file (exposed via
+ * `exports.style`); `@plugin` loads the v3 JS plugin which is missing the
+ * variants, so use `@import` to pull in the v4 stylesheet directly. */
+@import "tailwindcss-primeui";
+
 /* Enable the `dark:` variant on the `data-theme="dark"` attribute.
    Toggled via `useTheme()` (composable) on the <html> element. */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /*
- * Design tokens — light-theme baseline + raw palette.
- * Dark-theme overrides live in `./tokens.css`.
- * See `docs/theming.md` for the brand override walkthrough.
+ * ==========================================================================
+ * Tailwind v4 @theme — additional utility-name bridges.
+ *
+ * The full primitive + semantic + component token system lives in
+ * `tokens.css` (where the @theme block already exposes them as utilities).
+ * The bridge below adds short-name aliases for new tokens — `bg-fg`,
+ * `bg-success-subtle`, etc. — without re-declaring tokens that already exist
+ * in `tokens.css`. Self-referencing the same CSS var would produce a
+ * circular fallback (resolving to nothing); the values here reference the
+ * underlying semantic tokens, not utility-name aliases.
+ * ==========================================================================
  */
 @theme {
-  /* Brand palette (slate-tinted neutrals, fixed across themes). */
-  --color-brand-50: #f8fafc;
-  --color-brand-100: #f1f5f9;
-  --color-brand-200: #e2e8f0;
-  --color-brand-300: #cbd5e1;
-  --color-brand-400: #94a3b8;
-  --color-brand-500: #64748b;
-  --color-brand-600: #475569;
-  --color-brand-700: #334155;
-  --color-brand-800: #1e293b;
-  --color-brand-900: #0f172a;
-  --color-brand-950: #020617;
+  /* Text — short aliases for the new text-* semantic names */
+  --color-fg: var(--color-text-primary);
+  --color-fg-muted: var(--color-text-secondary);
+  --color-fg-faint: var(--color-text-tertiary);
+  --color-fg-disabled: var(--color-text-disabled);
+  --color-fg-inverse: var(--color-text-inverse);
 
-  /* Accent palette (active states, focus rings, links). */
-  --color-accent-50: #eff6ff;
-  --color-accent-100: #dbeafe;
-  --color-accent-200: #bfdbfe;
-  --color-accent-300: #93c5fd;
-  --color-accent-400: #60a5fa;
-  --color-accent-500: #3b82f6;
-  --color-accent-600: #2563eb;
-  --color-accent-700: #1d4ed8;
-  --color-accent-800: #1e40af;
-  --color-accent-900: #1e3a8a;
+  /* Animation — fadeIn keyframe used by `animate-fade-in` */
+  --animate-fade-in: fadeIn var(--motion-duration-normal) var(--motion-easing-standard);
+}
 
-  /* Semantic tokens (light-theme baseline; overridden in tokens.css). */
-  --color-surface: #ffffff;
-  --color-surface-raised: #f8fafc;
-  --color-surface-sunken: #f1f5f9;
-  --color-foreground: #0f172a;
-  --color-muted: #475569;
-  --color-faint: #94a3b8;
-  --color-border: #e2e8f0;
-  --color-border-strong: #cbd5e1;
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
 
-  /* Status colors. */
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
-  --color-danger: #ef4444;
-  --color-info: #3b82f6;
+/* PrimeVue runtime palette — read by PrimeVue's unstyled-mode theme system
+ * at JS runtime (separate from the Tailwind `@theme` block above). Mirrors
+ * the slate scale from `tokens.css`. */
+:root {
+  --p-surface-0: #ffffff;
+  --p-surface-50: oklch(98.4% 0.003 247.858);
+  --p-surface-100: oklch(96.8% 0.007 247.896);
+  --p-surface-200: oklch(92.9% 0.013 255.508);
+  --p-surface-300: oklch(86.9% 0.022 252.894);
+  --p-surface-400: oklch(70.4% 0.04 256.788);
+  --p-surface-500: oklch(55.4% 0.046 257.417);
+  --p-surface-600: oklch(44.6% 0.043 257.281);
+  --p-surface-700: oklch(37.2% 0.044 257.287);
+  --p-surface-800: oklch(27.9% 0.041 260.031);
+  --p-surface-900: oklch(20.8% 0.042 265.755);
+  --p-surface-950: oklch(12.9% 0.042 264.695);
 
-  /* Typography. */
-  --font-sans:
-    "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-mono: ui-monospace, "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  /* Primary palette — Volt's Button etc. use `bg-primary` for the active
+   * fill. Align with CommandVue's accent (blue) scale. */
+  --p-primary-color: var(--color-interactive);
+  --p-primary-hover-color: var(--color-interactive-hover);
+  --p-primary-active-color: var(--color-interactive-active);
+  --p-primary-contrast-color: var(--color-on-interactive);
+}
 
-  /* Motion. */
-  --duration-fast: 120ms;
-  --duration-normal: 200ms;
-  --duration-slow: 400ms;
-  --ease-out: cubic-bezier(0, 0, 0.2, 1);
-  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+/*
+ * ==========================================================================
+ * Theme-aware scrollbars.
+ *
+ * Browser-default scrollbars are pure-white in light mode and OS-grey in
+ * dark mode — both clash with the operations-dashboard surfaces. Use the
+ * semantic surface + border tokens so the scrollbar automatically flips
+ * with `data-theme`.
+ *
+ * Firefox: `scrollbar-color` (thumb track). `scrollbar-width: thin` is the
+ * closest cross-browser equivalent to WebKit's narrow scrollbar.
+ *
+ * WebKit / Chromium / Edge: the `::-webkit-scrollbar-*` pseudo-elements.
+ * `border` on the thumb gives it the appearance of "floating" inside the
+ * track for a softer look.
+ * ==========================================================================
+ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
+}
 
-  /* Layout chrome heights. */
-  --spacing-titlebar: 3rem;
-  --spacing-statusbar: 1.75rem;
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-strong);
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-text-tertiary);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 @layer base {
@@ -81,13 +131,13 @@
 
   body {
     margin: 0;
-    background-color: var(--color-surface);
-    color: var(--color-foreground);
-    font-family: var(--font-sans);
+    background-color: var(--color-surface-base);
+    color: var(--color-text-primary);
+    font-family: var(--font-family-body);
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     transition:
-      background-color var(--duration-normal) var(--ease-in-out),
-      color var(--duration-normal) var(--ease-in-out);
+      background-color var(--motion-duration-normal) var(--motion-easing-standard),
+      color var(--motion-duration-normal) var(--motion-easing-standard);
   }
 
   *,
@@ -97,7 +147,71 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-accent-500);
+    outline: 2px solid var(--color-focus-ring);
     outline-offset: 2px;
   }
+}
+
+/*
+ * Cursor affordance for interactive elements.
+ *
+ * Browser default for `<button>` is `cursor: default`, which makes
+ * top-bar / status-bar / menubar buttons feel unclickable. PrimeVue's
+ * unstyled mode also doesn't add `cursor: pointer` automatically.
+ * This rule scopes the pointer cursor to non-disabled interactive
+ * elements site-wide so we don't have to add `cursor-pointer` to
+ * every wrapper / consumer.
+ */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+[role="menuitem"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
+/*
+ * PrimeVue Menubar — nested fly-out positioning.
+ *
+ * The Menubar's first-level dropdown opens below its menubar item (top:full,
+ * left:0). Second-level submenus (e.g. View → Add Component → Charts/Data/…)
+ * inherit the same positioning by default and end up overlapping the
+ * first-level dropdown. The rule below positions any nested submenu to the
+ * right of its parent menuitem instead, leaving the first-level dropdown
+ * intact behind it.
+ *
+ * Specificity uses double `[data-pc-section="submenu"]` to scope strictly to
+ * nested levels; the first-level container only matches one. `!important`
+ * overrides PrimeVue's inline `top` / `left` styles set at runtime.
+ */
+[data-pc-section="submenu"] [data-pc-section="submenu"] {
+  position: absolute !important;
+  top: 0 !important;
+  left: 100% !important;
+  margin-left: 0.25rem;
+}
+
+/*
+ * PrimeVue ContextMenu — every submenu opens to the right.
+ *
+ * Unlike Menubar (whose first-level dropdown drops below the horizontal bar),
+ * a ContextMenu's outer list is already vertical, so EVERY nested submenu —
+ * starting from depth-1 — should fly out to the right of its parent
+ * menuitem. PrimeVue's default `top:full; left:0` positioning instead opens
+ * the submenu in-place, pushing the parent's later items down.
+ *
+ * Scoping by `[data-pc-name="contextmenu"]` ensures Menubar's first-level
+ * dropdown keeps its "open below" placement.
+ */
+[data-pc-name="contextmenu"] [data-pc-section="submenu"] {
+  position: absolute !important;
+  top: 0 !important;
+  left: 100% !important;
+  margin-left: 0.25rem;
+}
+
+/*
+ * The submenu's parent item needs `position: relative` so the absolute
+ * positioning above is relative to the item (not the viewport / root list).
+ */
+[data-pc-name="contextmenu"] [data-pc-section="item"] {
+  position: relative;
 }

@@ -22,4 +22,15 @@ export const appMetaRepo = {
     const db = await getDb();
     await db.delete("app-meta", key);
   },
+
+  /**
+   * Return every stored key that starts with `prefix`. Used to find all
+   * per-workspace theme bindings (`commandvue:workspace-theme-*`) when a
+   * custom theme is deleted. The store is tiny, so a full key scan is cheap.
+   */
+  async getKeysByPrefix(prefix: string): Promise<string[]> {
+    const db = await getDb();
+    const keys = await db.getAllKeys("app-meta");
+    return keys.filter((k): k is string => typeof k === "string" && k.startsWith(prefix));
+  },
 };

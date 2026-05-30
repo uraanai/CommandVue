@@ -50,8 +50,10 @@ const statusLabel = computed(() => {
 });
 
 const statusColor = computed(() => {
-  if (status.value === "OPEN") return "text-emerald-400";
-  if (status.value === "CONNECTING") return "text-yellow-400";
+  // Use semantic status tokens so OPEN/CONNECTING follow the active theme's
+  // success/warning hues — not hardcoded Tailwind colors that ignore themes.
+  if (status.value === "OPEN") return "text-success";
+  if (status.value === "CONNECTING") return "text-warning";
   return "text-faint";
 });
 

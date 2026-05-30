@@ -4,10 +4,10 @@ import type { Preset } from "@/types/preset";
 import { computed, defineAsyncComponent, ref, watch } from "vue";
 
 import Button from "@/components/ui/Button.vue";
-import Dialog from "@/components/ui/Dialog.vue";
 import Input from "@/components/ui/Input.vue";
 import { presetTypeRegistry } from "@/modules/presets/registry";
 import { usePresetStore } from "@/stores/preset";
+import Dialog from "@/volt/Dialog.vue";
 
 interface Props {
   visible: boolean;
@@ -63,7 +63,7 @@ async function save(): Promise<void> {
   <Dialog
     :visible="visible"
     :header="preset ? `Edit preset · ${typeDef?.title ?? preset.presetTypeId}` : 'Edit preset'"
-    @update:visible="(v) => emit('update:visible', v)"
+    @update:visible="(v: boolean) => emit('update:visible', v)"
   >
     <div v-if="preset" class="flex flex-col gap-3">
       <label class="flex flex-col gap-1">
@@ -79,7 +79,7 @@ async function save(): Promise<void> {
       <p v-else class="text-muted text-xs">No editor registered for this preset type.</p>
     </div>
     <template #footer>
-      <Button variant="ghost" size="sm" @click="close">Cancel</Button>
+      <Button variant="secondary" size="sm" @click="close">Cancel</Button>
       <Button variant="primary" size="sm" :disabled="!name.trim()" @click="save">Save</Button>
     </template>
   </Dialog>

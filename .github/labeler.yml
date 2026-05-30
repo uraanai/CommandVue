@@ -1,0 +1,4 @@
+"area: internal":
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".internal/**"

@@ -39,8 +39,12 @@ const variantClass: Record<Variant, string> = {
   danger: "bg-danger text-white hover:opacity-90 active:opacity-80",
 };
 
+// `sm` is the density-driven default — its padding, font-size, and min-height
+// all pull from the `--density-*` CSS variables so the entire app rescales
+// with the `data-density` attribute on `<html>`. `md` and `lg` are explicit
+// larger presets for callouts where a fixed size is intentional.
 const sizeClass: Record<Size, string> = {
-  sm: "px-2.5 py-1 text-xs",
+  sm: "px-[var(--density-cell-padding-x)] py-[var(--density-cell-padding-y)] text-[length:var(--density-font-size)] min-h-[var(--density-control-height)]",
   md: "px-3.5 py-1.5 text-sm",
   lg: "px-5 py-2.5 text-base",
 };

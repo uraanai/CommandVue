@@ -1,7 +1,12 @@
 # Project-specific words for CommandVue.
 
+customizer
+titlebox
 commandvue
 CommandVue
+dockpanel
+menubar
+statusbar
 uraanai
 Uraan
 awaisali
@@ -36,3 +41,10 @@ spawnable
 Repoint
 retheme
 touchpoints
+handrolled
+affordances
+WCAG
+Volted
+Vuetify
+firstrule
+browsable

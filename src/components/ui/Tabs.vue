@@ -58,7 +58,9 @@ function tabClass(tab: Tab) {
         :disabled="tab.disabled"
         :pt="{ root: { class: tabClass(tab) } }"
       >
-        {{ tab.label }}
+        <slot :name="`tab-${tab.id}`" :tab="tab">
+          {{ tab.label }}
+        </slot>
       </PvTab>
     </PvTabList>
     <PvTabPanels :pt="{ root: { class: 'pt-3' } }">

@@ -1,15 +1,21 @@
 <script setup lang="ts">
 import type { PanelDefinition } from "@/modules/panels/types";
+import type { Theme } from "@/types/theme";
 import type { MenuItem } from "primevue/menuitem";
 
-import FileUpload, { type FileUploadSelectEvent } from "primevue/fileupload";
-import Menubar from "primevue/menubar";
+import { ChevronDown, ChevronRight } from "@lucide/vue";
+import { type FileUploadSelectEvent } from "primevue/fileupload";
 import { computed, ref } from "vue";
 
 import ManageLayoutsDialog from "@/components/dialogs/ManageLayoutsDialog.vue";
 import ManagePresetsDialog from "@/components/dialogs/ManagePresetsDialog.vue";
 import ManageWorkspacesDialog from "@/components/dialogs/ManageWorkspacesDialog.vue";
 import SaveLayoutAsDialog from "@/components/dialogs/SaveLayoutAsDialog.vue";
+import ThemeCustomizerDialog from "@/components/dialogs/ThemeCustomizerDialog.vue";
+import ThemeImportDialog from "@/components/dialogs/ThemeImportDialog.vue";
+import ThemePickerDialog from "@/components/dialogs/ThemePickerDialog.vue";
+import FileUpload from "@/components/ui/FileUpload.vue";
+import Menubar from "@/components/ui/Menubar.vue";
 import { panelRegistry } from "@/modules/panels/registry";
 import { UNASSIGNED_PANEL_TYPE } from "@/modules/panels/unassigned";
 import { formatCombo } from "@/modules/shortcuts/catalog";
@@ -22,26 +28,49 @@ import {
 import { useLayoutStore } from "@/stores/layout";
 import { usePanelStateStore } from "@/stores/panelState";
 import { useSessionStore } from "@/stores/session";
+import { useThemeStore } from "@/stores/theme";
 import { useWorkspaceStore } from "@/stores/workspace";
 
 const session = useSessionStore();
 const layoutStore = useLayoutStore();
 const workspace = useWorkspaceStore();
 const panelStateStore = usePanelStateStore();
+const themeStore = useThemeStore();
 
 const manageWorkspacesOpen = ref(false);
 const manageLayoutsOpen = ref(false);
 const managePresetsOpen = ref(false);
+const themePickerOpen = ref(false);
+const themeImportOpen = ref(false);
+const themeCustomizerOpen = ref(false);
+// When set, the customizer opens in edit mode pre-filled from this theme.
+// Cleared on dialog close so a subsequent "Create new theme…" starts blank.
+const themeToEdit = ref<Theme | null>(null);
 const saveAsOpen = ref(false);
 
-// PrimeVue FileUpload — kept hidden via PT; menu items trigger choose()
+// "Edit current theme…" is only meaningful when the active theme is one the
+// engine produced — built-in / user / imported themes don't carry the
+// `generation` block the customizer needs to pre-fill its inputs.
+const canEditCurrentTheme = computed(
+  () => themeStore.currentTheme?.source === "generated" && !!themeStore.currentTheme.generation,
+);
+
+function openCustomizer(edit: boolean): void {
+  themeToEdit.value = edit ? themeStore.currentTheme : null;
+  themeCustomizerOpen.value = true;
+}
+
+function onCustomizerVisibleChange(visible: boolean): void {
+  themeCustomizerOpen.value = visible;
+  if (!visible) themeToEdit.value = null;
+}
+
+// FileUpload — kept hidden by the wrapper; menu items trigger `choose()`
 // programmatically. customUpload + auto means @select fires immediately with
-// the picked file without any HTTP round-trip.
-//
-// `choose()` and `clear()` are runtime instance methods PrimeVue exposes on
-// FileUpload but doesn't surface on its exported component type — typed
-// manually here.
-const importFileRef = ref<null | { choose: () => void; clear: () => void }>(null);
+// the picked file without any HTTP round-trip. The wrapper exposes `choose`
+// and `clear` via `defineExpose` so the manual ref typing the previous
+// direct-PrimeVue usage required is no longer needed.
+const importFileRef = ref<InstanceType<typeof FileUpload> | null>(null);
 
 async function saveLayout(): Promise<void> {
   if (!session.loadedLayoutId) return;
@@ -262,7 +291,7 @@ const menuItems = computed<MenuItem[]>(() => [
       { label: "Undo", disabled: true },
       { label: "Redo", disabled: true },
       { separator: true },
-      { label: "Rename Layout…", command: () => (manageLayoutsOpen.value = true) },
+      { label: "Manage Layouts…", command: () => (manageLayoutsOpen.value = true) },
       { label: "Duplicate Layout", command: () => void duplicateCurrentLayout() },
       { label: "Delete Layout…", command: () => void deleteCurrentLayout() },
       { separator: true },
@@ -283,6 +312,14 @@ const menuItems = computed<MenuItem[]>(() => [
         command: () => toggleComponentsPanel(),
         shortcut: formatCombo("mod+b", isMac),
       },
+      { label: "Themes…", command: () => (themePickerOpen.value = true) },
+      { label: "Create new theme…", command: () => openCustomizer(false) },
+      {
+        label: "Edit current theme…",
+        command: () => openCustomizer(true),
+        disabled: !canEditCurrentTheme.value,
+      },
+      { label: "Import theme…", command: () => (themeImportOpen.value = true) },
       { separator: true },
       { label: "Discard Changes", command: () => void discardChanges(), disabled: !session.dirty },
     ],
@@ -294,57 +331,61 @@ const menuItems = computed<MenuItem[]>(() => [
   <Menubar
     :model="menuItems"
     :pt="{
-      root: { class: 'flex items-stretch gap-0 px-2 py-0 bg-transparent border-0' },
+      // Override the wrapper's default top-bar surface; the layout MenuBar
+      // sits inside the chrome bar which already paints surface-raised + a
+      // bottom border, so we keep this one transparent.
+      root: { class: 'flex items-stretch gap-0 border-0 bg-transparent px-2 py-0' },
       rootList: { class: 'flex items-stretch gap-0' },
-      submenu: {
-        class:
-          'absolute z-50 min-w-[220px] rounded-md border border-border bg-surface-raised py-1 shadow-lg',
-      },
-      separator: { class: 'my-1 border-t border-border' },
     }"
   >
     <template #item="{ item, props: itemProps, hasSubmenu, root }">
-      <a v-bind="itemProps.action" class="flex items-center">
+      <!--
+        Hover background + rounded corners come from the Menubar wrapper's
+        `itemContent` PT. The consumer template here only owns text color,
+        padding (which differs between root buttons and nested items), text
+        size, and the icon/shortcut layout. Adding `hover:bg-…` or `rounded`
+        here would stack on top of the wrapper and produce a visible nested
+        frame on hover.
+      -->
+      <a
+        v-bind="itemProps.action"
+        :class="[
+          'flex w-full items-center gap-1 px-[var(--density-cell-padding-x)] py-[var(--density-cell-padding-y)] text-[length:var(--density-font-size)] leading-none',
+          root ? 'text-muted hover:text-foreground' : 'text-foreground',
+          (item as MenuItem & { disabled?: boolean }).disabled
+            ? 'cursor-not-allowed opacity-40'
+            : 'cursor-pointer',
+        ]"
+      >
+        <span class="flex-1 leading-none">{{ item.label }}</span>
         <span
-          :class="[
-            'flex w-full items-center gap-2 px-2 py-1 text-xs',
-            root
-              ? 'text-muted hover:text-foreground rounded'
-              : 'text-foreground hover:bg-surface-sunken cursor-pointer rounded px-3 py-1.5 text-sm',
-            (item as MenuItem & { disabled?: boolean }).disabled
-              ? 'cursor-not-allowed opacity-40'
-              : '',
-          ]"
+          v-if="(item as MenuItem & { shortcut?: string }).shortcut"
+          class="text-faint font-mono text-[10px]"
         >
-          <span class="flex-1">{{ item.label }}</span>
-          <span
-            v-if="(item as MenuItem & { shortcut?: string }).shortcut"
-            class="text-faint font-mono text-[10px]"
-          >
-            {{ (item as MenuItem & { shortcut?: string }).shortcut }}
-          </span>
-          <span v-if="hasSubmenu" class="text-faint text-xs">▸</span>
+          {{ (item as MenuItem & { shortcut?: string }).shortcut }}
         </span>
+        <ChevronDown v-if="hasSubmenu && root" class="text-faint size-3" />
+        <ChevronRight v-else-if="hasSubmenu" class="text-faint size-3.5" />
       </a>
     </template>
   </Menubar>
 
-  <!-- Hidden PrimeVue FileUpload — triggered via importFileRef.choose() from
-       the File → Import Workspace… menu item. customUpload + auto means
-       @select fires immediately with the picked file; no HTTP round-trip. -->
-  <FileUpload
-    ref="importFileRef"
-    mode="basic"
-    accept="application/json,.json"
-    custom-upload
-    auto
-    :pt="{ root: { class: 'hidden' } }"
-    @select="onImportFileSelect"
-  />
+  <!-- Hidden FileUpload — triggered via importFileRef.choose() from
+       the File → Import Workspace… menu item. The wrapper defaults to
+       basic+customUpload+auto+hidden so consumers only need to pass accept
+       and a select handler. -->
+  <FileUpload ref="importFileRef" accept="application/json,.json" @select="onImportFileSelect" />
 
   <ManageWorkspacesDialog v-model:visible="manageWorkspacesOpen" />
   <ManageLayoutsDialog v-model:visible="manageLayoutsOpen" />
   <ManagePresetsDialog v-model:visible="managePresetsOpen" />
+  <ThemePickerDialog v-model:visible="themePickerOpen" />
+  <ThemeImportDialog v-model:visible="themeImportOpen" />
+  <ThemeCustomizerDialog
+    :visible="themeCustomizerOpen"
+    :theme-to-edit="themeToEdit"
+    @update:visible="onCustomizerVisibleChange"
+  />
   <SaveLayoutAsDialog
     v-model:visible="saveAsOpen"
     :default-name="(layoutStore.currentLayout?.name ?? '') + ' (saved)'"

@@ -4,21 +4,27 @@ import type { Preset } from "@/types/preset";
 import { ChevronRight, Copy, Globe, Layers, Pencil, Plus, Trash2 } from "@lucide/vue";
 import Column from "primevue/column";
 import DataTable from "primevue/datatable";
-import Tab from "primevue/tab";
-import TabList from "primevue/tablist";
-import TabPanel from "primevue/tabpanel";
-import TabPanels from "primevue/tabpanels";
-import Tabs from "primevue/tabs";
 import { ref, watch } from "vue";
 
 import Button from "@/components/ui/Button.vue";
-import Dialog from "@/components/ui/Dialog.vue";
+import Tabs from "@/components/ui/Tabs.vue";
 import { presetTypeRegistry } from "@/modules/presets/registry";
 import { usePresetStore } from "@/stores/preset";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { cn } from "@/utils/cn";
+import Dialog from "@/volt/Dialog.vue";
 
 import EditPresetDialog from "./EditPresetDialog.vue";
+
+interface TabDef {
+  id: "global" | "workspace";
+  label: string;
+}
+
+const tabs: TabDef[] = [
+  { id: "global", label: "Global" },
+  { id: "workspace", label: "Workspace" },
+];
 
 interface Props {
   visible: boolean;
@@ -107,52 +113,20 @@ const dataTablePT = {
   <Dialog
     :visible="visible"
     header="Manage presets"
-    @update:visible="(v) => emit('update:visible', v)"
+    @update:visible="(v: boolean) => emit('update:visible', v)"
   >
     <div class="flex flex-col gap-3">
-      <Tabs
-        v-model:value="activeTab"
-        :pt="{
-          tablist: { class: 'flex items-center gap-1 border-b border-border' },
-          activeBar: { class: 'hidden' },
-        }"
-      >
-        <TabList>
-          <Tab
-            value="global"
-            :pt="{
-              root: {
-                class: cn(
-                  'inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-xs font-medium transition-colors',
-                  activeTab === 'global'
-                    ? 'border-accent-500 text-foreground'
-                    : 'border-transparent text-muted hover:text-foreground',
-                ),
-              },
-            }"
-          >
-            <Globe class="size-3" />
-            Global ({{ presetStore.globalPresets.length }})
-          </Tab>
-          <Tab
-            value="workspace"
-            :pt="{
-              root: {
-                class: cn(
-                  'inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-xs font-medium transition-colors',
-                  activeTab === 'workspace'
-                    ? 'border-accent-500 text-foreground'
-                    : 'border-transparent text-muted hover:text-foreground',
-                ),
-              },
-            }"
-          >
-            <Layers class="size-3" />
-            Workspace ({{ presetStore.workspacePresets.length }})
-          </Tab>
-        </TabList>
-        <TabPanels :pt="{ root: { class: 'pt-3' } }">
-          <TabPanel value="global">
+      <Tabs v-model="activeTab" :tabs="tabs">
+        <template #tab-global>
+          <Globe class="size-3" />
+          Global ({{ presetStore.globalPresets.length }})
+        </template>
+        <template #tab-workspace>
+          <Layers class="size-3" />
+          Workspace ({{ presetStore.workspacePresets.length }})
+        </template>
+        <template #default="{ active }">
+          <div v-if="active === 'global'">
             <div class="border-border bg-surface-sunken mb-3 rounded-md border p-3">
               <div class="text-faint mb-2 text-[10px] tracking-[0.18em] uppercase">
                 Create new global preset
@@ -213,8 +187,8 @@ const dataTablePT = {
                 </template>
               </Column>
             </DataTable>
-          </TabPanel>
-          <TabPanel value="workspace">
+          </div>
+          <div v-else-if="active === 'workspace'">
             <div class="border-border bg-surface-sunken mb-3 rounded-md border p-3">
               <div class="text-faint mb-2 text-[10px] tracking-[0.18em] uppercase">
                 Create new workspace-scoped preset
@@ -275,8 +249,8 @@ const dataTablePT = {
                 </template>
               </Column>
             </DataTable>
-          </TabPanel>
-        </TabPanels>
+          </div>
+        </template>
       </Tabs>
 
       <p v-if="error" class="text-danger text-xs">{{ error }}</p>

@@ -8,7 +8,7 @@ import {
 } from "echarts/components";
 import { use } from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
-import { computed, onBeforeUnmount, onMounted } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import VChart from "vue-echarts";
 
 import { useTelemetryStore } from "@/stores/telemetry";
@@ -17,10 +17,27 @@ use([CanvasRenderer, LineChart, TitleComponent, TooltipComponent, GridComponent,
 
 const telemetry = useTelemetryStore();
 
+const host = ref<HTMLDivElement | null>(null);
+const ready = ref(false);
+let resizeObserver: ResizeObserver | null = null;
+
 // Synthetic 1 Hz signal — sine wave plus noise. Real data is plumbed in
 // later by panels that consume `useWebSocketClient`'s `lastMessage`.
 let timer: ReturnType<typeof setInterval> | null = null;
 onMounted(() => {
+  // Dockview can mount panels in a 0×0 container (floating-before-position,
+  // hidden tab, etc.). Initializing ECharts then prints a "Can't get DOM
+  // width or height" warning. Gate the chart on a ResizeObserver so it only
+  // renders once the host has real dimensions.
+  if (host.value) {
+    resizeObserver = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const { width, height } = entry.contentRect;
+      if (width > 0 && height > 0) ready.value = true;
+    });
+    resizeObserver.observe(host.value);
+  }
   timer = setInterval(() => {
     const t = Date.now();
     const value = 50 + 30 * Math.sin(t / 4000) + Math.random() * 4 - 2;
@@ -29,8 +46,16 @@ onMounted(() => {
 });
 onBeforeUnmount(() => {
   if (timer) clearInterval(timer);
+  resizeObserver?.disconnect();
+  resizeObserver = null;
 });
 
+// ECharts can't read CSS variables directly; colors here are hardcoded to
+// slate/blue primitive values so the chart works in dark mode (the active
+// theme today). Phase 3.2 ships the Light/Dark/Auto toggle plus a JS bridge
+// that resolves `--color-*` tokens at runtime and re-applies `option` on
+// theme change. Until then, keep the values literal but aligned with the
+// `slate-*` / `blue-*` primitive scale in `tokens.css`.
 const option = computed(() => ({
   grid: { top: 24, right: 18, bottom: 28, left: 38 },
   tooltip: { trigger: "axis" },
@@ -61,7 +86,7 @@ const option = computed(() => ({
 </script>
 
 <template>
-  <div class="bg-surface-sunken h-full w-full">
-    <VChart class="h-full w-full" :option="option" autoresize />
+  <div ref="host" class="bg-surface-sunken h-full w-full">
+    <VChart v-if="ready" class="h-full w-full" :option="option" autoresize />
   </div>
 </template>

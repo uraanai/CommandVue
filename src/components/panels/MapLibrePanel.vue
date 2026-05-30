@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import type { DockviewPanelApi } from "dockview-vue";
+import type { PanelApiProps } from "@/composables/usePanelApi";
 
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 
 import { useMapLibre } from "@/composables/useMapLibre";
+import { usePanelApi } from "@/composables/usePanelApi";
 import { usePanelState } from "@/composables/usePanelState";
 import { useToolRegistry } from "@/composables/useToolRegistry";
 import { registerPanelInstance, unregisterPanelInstance } from "@/modules/panels/instances";
@@ -20,11 +21,10 @@ interface MapLibreState extends Record<string, unknown> {
   pitch: number;
 }
 
-interface Props {
-  api?: DockviewPanelApi;
-}
+const props = defineProps<PanelApiProps>();
 
-const props = defineProps<Props>();
+// dockview-vue passes the panel api inside the `params` bag — see usePanelApi.
+const { api } = usePanelApi(props);
 
 const container = ref<HTMLDivElement | null>(null);
 const { map, mount } = useMapLibre();
@@ -40,8 +40,9 @@ useToolRegistry(map, {
 });
 
 function applyAppliedPresets(): void {
-  if (!props.api) return;
-  const state = panelStateStore.getState(props.api.id);
+  const panelApi = api.value;
+  if (!panelApi) return;
+  const state = panelStateStore.getState(panelApi.id);
   if (!state) return;
   // Iterate appliedPresetIds in order — later overrides earlier (cascading).
   for (const presetId of state.appliedPresetIds) {
@@ -49,20 +50,21 @@ function applyAppliedPresets(): void {
     if (!preset) continue;
     const def = presetTypeRegistry.get(preset.presetTypeId);
     if (!def) continue;
-    void Promise.resolve(def.applyToPanel(props.api.id, preset.config));
+    void Promise.resolve(def.applyToPanel(panelApi.id, preset.config));
   }
 }
 
 onMounted(async () => {
   if (!container.value) return;
   const instance = mount(container.value);
-  if (props.api) {
-    registerPanelInstance(props.api.id, instance);
+  const panelApi = api.value;
+  if (panelApi) {
+    registerPanelInstance(panelApi.id, instance);
 
     // Wire per-panel state persistence (Phase G). The composable handles
     // debounce + flush-on-unmount + dirty marking; we only own serialize +
     // restore.
-    const { save } = usePanelState<MapLibreState>(props.api.id, {
+    const { save } = usePanelState<MapLibreState>(panelApi.id, {
       serialize: () => {
         const c = instance.getCenter();
         return {
@@ -73,12 +75,31 @@ onMounted(async () => {
         };
       },
       restore: (state) => {
-        instance.jumpTo({
-          center: state.center,
-          zoom: state.zoom,
-          bearing: state.bearing,
-          pitch: state.pitch,
-        });
+        // Seeded panels persist an empty `{}` state, and `usePanelState`
+        // dispatches restore for it (a `{}` is truthy). Guard every field
+        // before touching the map: `jumpTo` treats a present-but-`undefined`
+        // option as "apply it", so `jumpTo({ bearing: undefined })` feeds NaN
+        // into maplibre-gl's matrix math and throws. Mirrors the defensive
+        // restores in MarkdownPanel / EntityListPanel.
+        const { center, zoom, bearing, pitch } = state;
+        if (
+          !Array.isArray(center) ||
+          center.length !== 2 ||
+          typeof zoom !== "number" ||
+          typeof bearing !== "number" ||
+          typeof pitch !== "number"
+        ) {
+          return;
+        }
+        // `usePanelState`'s watcher is `immediate`, so restore runs on mount —
+        // before MapLibre has built its style + transform. Calling jumpTo that
+        // early reads a null projection matrix and throws, so defer the camera
+        // restore until the map is ready (mirrors the preset re-apply below).
+        const applyCamera = (): void => {
+          instance.jumpTo({ center, zoom, bearing, pitch });
+        };
+        if (instance.loaded()) applyCamera();
+        else instance.once("load", applyCamera);
       },
     });
     instance.on("moveend", save);
@@ -93,13 +114,14 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
-  if (props.api) unregisterPanelInstance(props.api.id);
+  const panelApi = api.value;
+  if (panelApi) unregisterPanelInstance(panelApi.id);
 });
 
 // Re-apply when this panel's appliedPresetIds changes (e.g. user picks a
 // new preset via the Apply Preset dialog while the panel is mounted).
 watch(
-  () => (props.api ? panelStateStore.getState(props.api.id)?.appliedPresetIds : []),
+  () => (api.value ? panelStateStore.getState(api.value.id)?.appliedPresetIds : []),
   () => applyAppliedPresets(),
   { deep: true },
 );

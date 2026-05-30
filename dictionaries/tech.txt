@@ -1,5 +1,16 @@
 # Tech / library / API terms used throughout the template.
 
+# Color science / theme generation (Prompt 4)
+culori
+colorizr
+APCA
+OLED
+LLMs
+llms
+
+# Font / typography (Prompt 4 Phase E curated font stacks)
+Segoe
+
 pnpm
 vite
 vitest
@@ -190,3 +201,25 @@ postgres
 Postgres
 RLS
 auth
+dismissable
+usetoast
+useconfirm
+Cascadia
+FOUC
+unstub
+Tauri
+Anduril
+unsub
+primeui
+closebutton
+maximizebutton
+windowmaximize
+windowminimize
+togglericon
+toggleable
+themable
+paginatorcontainer
+angledoubleleft
+angledoubleright
+angleleft
+angleright

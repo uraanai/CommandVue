@@ -1,0 +1,92 @@
+<script setup lang="ts">
+import type { MenuItem } from "primevue/menuitem";
+
+import PvContextMenu from "primevue/contextmenu";
+import { twMerge } from "tailwind-merge";
+import { computed, ref } from "vue";
+
+/**
+ * ContextMenu — thin wrapper over PrimeVue `ContextMenu` in Unstyled mode.
+ *
+ * Hand-rolled exception to the Volt-default rule (ADR 0002 Option C): Volt's
+ * catalog as of 2026-05-24 has no `ContextMenu` component. Tracked for
+ * promotion to `@/volt/ContextMenu.vue` if Volt ships it later.
+ *
+ * Exposes `show(event)` and `hide()` from the underlying PrimeVue instance so
+ * callers can drive it imperatively from a `@contextmenu` handler. Consumers
+ * can supply an `#item` slot template to fully customize each row (shortcuts,
+ * chevrons, custom icons) — same pattern as the project Menubar wrapper.
+ *
+ * The `pt` prop merges into the wrapper's defaults via `twMerge` on class
+ * strings, so consumers can override per-slot styling without losing the
+ * structural shell.
+ */
+interface PtSlot {
+  class?: string;
+  [key: string]: unknown;
+}
+
+interface Props {
+  model: MenuItem[];
+  pt?: Record<string, PtSlot>;
+}
+
+const props = defineProps<Props>();
+
+const cm = ref<InstanceType<typeof PvContextMenu> | null>(null);
+
+function show(event: MouseEvent): void {
+  cm.value?.show(event);
+}
+
+function hide(): void {
+  cm.value?.hide();
+}
+
+defineExpose({ show, hide });
+
+const baseTheme: Record<string, PtSlot> = {
+  root: {
+    class: "border-border bg-surface-raised z-50 min-w-[220px] rounded-md border py-1 shadow-xl",
+  },
+  rootList: { class: "flex flex-col" },
+  item: { class: "relative" },
+  itemContent: { class: "hover:bg-surface-sunken cursor-pointer transition-colors" },
+  itemLink: {
+    // Density-driven padding + font-size so right-click menus rescale with
+    // `data-density` on `<html>`.
+    class:
+      "text-foreground flex items-center gap-2 px-[var(--density-cell-padding-x)] py-[var(--density-cell-padding-y)] text-[length:var(--density-font-size)]",
+  },
+  itemIcon: { class: "text-muted size-3.5" },
+  submenu: {
+    class: "border-border bg-surface-raised z-50 min-w-[220px] rounded-md border py-1 shadow-xl",
+  },
+  submenuIcon: { class: "text-muted ml-auto size-3" },
+  separator: { class: "border-border my-1 border-t" },
+};
+
+const mergedPt = computed(() => {
+  const consumer = props.pt ?? {};
+  const out: Record<string, PtSlot> = {};
+  const keys = new Set([...Object.keys(baseTheme), ...Object.keys(consumer)]);
+  for (const key of keys) {
+    const base = baseTheme[key] ?? {};
+    const over = consumer[key] ?? {};
+    out[key] = {
+      ...base,
+      ...over,
+      class: twMerge(base.class, over.class),
+    };
+  }
+  return out;
+});
+</script>
+
+<template>
+  <PvContextMenu ref="cm" :model="model" unstyled :pt="mergedPt">
+    <template v-if="$slots.item" #item="slotProps">
+      <slot name="item" v-bind="slotProps" />
+    </template>
+  </PvContextMenu>
+</template>

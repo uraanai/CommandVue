@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import Button from "@/components/ui/Button.vue";
-import Dialog from "@/components/ui/Dialog.vue";
+import Dialog from "@/volt/Dialog.vue";
 
 export type UnsavedChoice = "save" | "save-as" | "discard" | "cancel";
 
@@ -28,7 +28,7 @@ function pick(choice: UnsavedChoice): void {
   <Dialog
     :visible="visible"
     header="Unsaved changes"
-    @update:visible="(v) => emit('update:visible', v)"
+    @update:visible="(v: boolean) => emit('update:visible', v)"
   >
     <p class="text-muted text-sm">{{ message }}</p>
     <template #footer>

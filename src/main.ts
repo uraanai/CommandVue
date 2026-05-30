@@ -7,12 +7,16 @@ import { createPinia } from "pinia";
 import PrimeVue from "primevue/config";
 import { createApp, defineAsyncComponent } from "vue";
 
+import { initializeTheme } from "@/composables/useTheme";
 import { registerBuiltinChromeItems } from "@/modules/chrome/builtin";
 import { registerBuiltinPanels } from "@/modules/panels/builtin";
 import { MISSING_PANEL_TYPE, registerMissingPanel } from "@/modules/panels/missing";
 import { registerUnassignedPanel, UNASSIGNED_PANEL_TYPE } from "@/modules/panels/unassigned";
 import { registerBuiltinPresetTypes } from "@/modules/presets/builtin";
 import { seedIfEmpty } from "@/modules/storage/seed";
+import { themeRepo } from "@/modules/storage/themeRepo";
+import { registerBuiltinThemes } from "@/modules/themes/builtin";
+import { themeRegistry } from "@/modules/themes/registry";
 
 import App from "./App.vue";
 import { router } from "./router";
@@ -21,6 +25,35 @@ import { router } from "./router";
 // supported by Vite for entry modules; ensures the Operations workspace,
 // Default layout, and Default chrome profile exist before App.vue mounts.
 await seedIfEmpty();
+
+// Theme bootstrap. Hydrates `useTheme()`'s in-memory mode from IDB (the
+// authoritative store), wires the prefers-color-scheme listener for auto
+// mode, and re-applies the resolved theme to `data-theme` on <html>. The
+// anti-FOUC inline script in `index.html` already set a paint-safe value;
+// this call reconciles IDB with that and fixes the rare case where the
+// localStorage mirror diverged from IDB (private mode, storage cleared, …).
+await initializeTheme();
+
+// Suppress the browser's native context menu site-wide. CommandVue's
+// right-click affordances are handled by PrimeVue ContextMenu instances
+// throughout the app, and the native menu would otherwise overlay them.
+// Native menu is preserved for text editing surfaces (`<input>`,
+// `<textarea>`, and any `contenteditable` host) so users keep cut / copy /
+// paste / spell-check. This deliberately mimics the eventual desktop
+// (Tauri / Electron) packaging where the OS has no browser-tab chrome to
+// host a native page menu at all.
+window.addEventListener(
+  "contextmenu",
+  (event) => {
+    const target = event.target as HTMLElement | null;
+    if (!target) return;
+    if (target.closest("input, textarea, [contenteditable=''], [contenteditable='true']")) {
+      return;
+    }
+    event.preventDefault();
+  },
+  { capture: true },
+);
 
 // Populate the panel registry before mount. The registry sits alongside the
 // global `app.component()` registrations below — Dockview resolves panel
@@ -32,6 +65,14 @@ registerUnassignedPanel();
 registerMissingPanel();
 registerBuiltinChromeItems();
 registerBuiltinPresetTypes();
+registerBuiltinThemes();
+
+// Hydrate the theme registry with any custom themes persisted in IndexedDB
+// (Prompt 4 Phase C). Runs AFTER `registerBuiltinThemes()` so the built-ins
+// own the canonical ids first; loadFromRepo skips already-registered ids. The
+// fetcher is passed in (rather than the registry importing themeRepo) to keep
+// the registry storage-agnostic and avoid a circular import.
+await themeRegistry.loadFromRepo(() => themeRepo.getAll());
 
 const app = createApp(App);
 

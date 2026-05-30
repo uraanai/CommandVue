@@ -11,6 +11,7 @@ import { panelStateRepo } from "@/modules/storage/panelStateRepo";
 
 import { useLayoutStore } from "./layout";
 import { usePanelStateStore } from "./panelState";
+import { useThemeStore } from "./theme";
 import { useWorkspaceStore } from "./workspace";
 
 /**
@@ -210,7 +211,12 @@ export const useSessionStore = defineStore("session", () => {
   async function switchWorkspace(workspaceId: Ulid): Promise<void> {
     const workspaceStore = useWorkspaceStore();
     const layoutStore = useLayoutStore();
+    const themeStore = useThemeStore();
     await workspaceStore.setCurrentWorkspace(workspaceId);
+    // Re-resolve the theme so any workspace-bound theme picks up before the
+    // new layout's panels mount and would otherwise paint with the previous
+    // workspace's variant.
+    await themeStore.loadInitial(workspaceId);
     await layoutStore.loadForWorkspace(workspaceId);
     const target = layoutStore.currentLayoutId;
     if (target) await loadLayout(target);
