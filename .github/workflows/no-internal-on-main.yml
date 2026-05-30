@@ -1,0 +1,31 @@
+name: No internal on main
+
+# Guards the "private planning docs stay out of main" rule. `.internal/` is
+# tracked on develop (and feature branches) but must never land on main —
+# this repo is public, and `.internal/` is excluded from releases by policy.
+# Fires on PRs targeting main (release PRs) and on the merge result; fails if
+# any tracked file under `.internal/` would end up on main.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    name: Reject .internal/ on main
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fail if .internal/ is present
+        run: |
+          internal_files="$(git ls-files '.internal' '.internal/**')"
+          if [ -n "$internal_files" ]; then
+            echo "::error::.internal/ must not be merged into main. Remove it from this release PR before merging."
+            echo "Offending files:"
+            echo "$internal_files"
+            exit 1
+          fi
+          echo "OK: no .internal/ files present in the merge result."
