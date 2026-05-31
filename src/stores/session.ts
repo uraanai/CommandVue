@@ -288,6 +288,30 @@ export const useSessionStore = defineStore("session", () => {
   }
 
   /**
+   * Remove a panel, but REFUSE (return false, no throw) if doing so would
+   * leave the layout with zero panels — the empty-workspace guard (spec §12).
+   * Returning a boolean lets the UI close control skip the last pane without
+   * an uncaught error in the click handler. Restoring-guarded around the
+   * structural mutation; marks dirty afterward so the user can persist it.
+   */
+  async function removePanelGuarded(panelId: Ulid): Promise<boolean> {
+    const api = dockviewApi.value;
+    if (!api) throw new Error("Dockview API not bound");
+    if (api.panels.length <= 1) return false;
+    const panel = api.getPanel(panelId);
+    if (!panel) return false;
+
+    setRestoring(true);
+    try {
+      api.removePanel(panel);
+    } finally {
+      setRestoring(false);
+    }
+    markDirty();
+    return true;
+  }
+
+  /**
    * Throw away in-memory edits and re-load the persisted layout state.
    */
   async function discardChanges(): Promise<void> {
@@ -330,6 +354,7 @@ export const useSessionStore = defineStore("session", () => {
     updateCurrentLayout,
     saveCurrentAsNewLayout,
     toggleHeaderless,
+    removePanelGuarded,
     discardChanges,
     switchWorkspace,
   };

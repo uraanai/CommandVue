@@ -421,9 +421,7 @@ describe("useSessionStore", () => {
     await session.loadLayout(layout.id);
 
     const fake = api as unknown as {
-      getPanel: (
-        id: string,
-      ) =>
+      getPanel: (id: string) =>
         | {
             api: {
               group: { id: string; header: { hidden: boolean }; panels: { id: string }[] };
@@ -443,6 +441,34 @@ describe("useSessionStore", () => {
     expect(fake.getPanel(p1.id)!.api.group.header.hidden).toBe(true);
     // p2 untouched.
     expect(fake.getPanel(p2.id)!.api.group.header.hidden).toBe(false);
+  });
+
+  it("removePanelGuarded removes a panel when more than one remains", async () => {
+    const { layout, p1, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+
+    const removed = await session.removePanelGuarded(p2.id);
+    expect(removed).toBe(true);
+    expect((api as unknown as DockviewApi).panels.map((p) => p.id)).toEqual([p1.id]);
+  });
+
+  it("removePanelGuarded refuses to remove the last remaining panel", async () => {
+    const { layout, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+
+    // Remove one so a single panel remains.
+    await session.removePanelGuarded(p2.id);
+    const remainingId = (api as unknown as DockviewApi).panels[0]!.id;
+
+    const removed = await session.removePanelGuarded(remainingId);
+    expect(removed).toBe(false);
+    expect((api as unknown as DockviewApi).panels).toHaveLength(1);
   });
 
   it("switchWorkspace updates pointers and loads the other workspace's default layout", async () => {
