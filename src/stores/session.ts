@@ -379,13 +379,18 @@ export const useSessionStore = defineStore("session", () => {
   }
 
   /**
-   * Split a clean pane: add a new panel of the CHOSEN `panelType` (picked by the
-   * user from the Split picker) as a NEW clean neighbor to the right of the
-   * source group. Creates a fresh headerless panel-state record so the new pane
-   * round-trips. Returns the new panel id, or null when there is no loaded
-   * layout / source panel. Restoring-guarded around the mutation; marks the
-   * session dirty afterward so the new pane is savable (matches
-   * removePanelGuarded — splitting is a real user edit).
+   * Split a clean pane: add a new panel of the given `panelType` as a NEW clean
+   * neighbor to the right of the source group. Creates a fresh headerless
+   * panel-state record so the new pane round-trips. Returns the new panel id, or
+   * null when there is no loaded layout / source panel. Restoring-guarded around
+   * the mutation; marks the session dirty afterward so the new pane is savable
+   * (matches removePanelGuarded — splitting is a real user edit).
+   *
+   * Not currently wired to any UI: the dock context menu's Split item was removed
+   * (a per-type submenu does not scale to a large component catalog; adding a
+   * neighbor is done via the Add-Component menu + dockview drag-to-split). Kept
+   * as tested store API for downstream apps / a future "add component as split"
+   * flow to drive programmatically.
    */
   async function splitCleanNeighbor(
     sourcePanelId: Ulid,

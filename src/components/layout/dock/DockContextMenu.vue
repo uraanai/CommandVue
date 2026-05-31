@@ -9,15 +9,11 @@ import {
   Minimize2,
   PanelTop,
   PanelTopClose,
-  SquareSplitHorizontal,
   X,
 } from "@lucide/vue";
 import { onUnmounted, ref, watch, type Component } from "vue";
 
 import ContextMenu from "@/components/ui/ContextMenu.vue";
-import { MISSING_PANEL_TYPE } from "@/modules/panels/missing";
-import { panelRegistry } from "@/modules/panels/registry";
-import { UNASSIGNED_PANEL_TYPE } from "@/modules/panels/unassigned";
 import { useSessionStore } from "@/stores/session";
 
 import { cleanPaneControls } from "./cleanPaneControls";
@@ -33,13 +29,16 @@ import { tabbedPaneControls } from "./tabbedPaneControls";
  * `DockviewApi` itself has no `.element`) and open a PrimeVue `ContextMenu`
  * at the cursor with a model that depends on the right-clicked group's mode:
  *
- * Both menus share ONE skeleton for cross-state consistency -
- * [header toggle, secondary action, Maximize, separator, Close] - so the header
- * toggle, Maximize, and Close never change position between right-clicks; only
- * the single state-specific "secondary" item differs:
+ * Both menus share consistent anchors - the header toggle is always first,
+ * Maximize is always the item just before the separator, and Close is always
+ * last - so those never move between right-clicks. The tabbed menu carries one
+ * extra state-specific item (Close others); the clean menu has none:
  *
- *  - CLEAN group (`header.hidden === true`): Show header / Split / Maximize /
- *    -- / Close - the Phase-1 clean-pane menu, now with Maximize.
+ *  - CLEAN group (`header.hidden === true`): Show header / Maximize / -- /
+ *    Close. There is deliberately NO "Split" item: adding a neighbor is done
+ *    via the Add-Component menu / command palette + dockview's native
+ *    drag-tab-to-edge split. A Split submenu would not scale to a large
+ *    component catalog (hundreds of types in a long, unsearchable list).
  *  - TABBED group (`header.hidden === false`): Hide header / Close others /
  *    Maximize / -- / Close. "Hide header" routes through the same
  *    `session.toggleHeaderless`, completing the clean<->tabbed round-trip.
@@ -67,23 +66,6 @@ const model = ref<DockMenuItem[]>([]);
 const disposers: Array<() => void> = [];
 
 /**
- * Registered panel types eligible as a split target - the synthetic
- * `__unassigned__` and `__missing__` placeholder types and the
- * components-browser shell are filtered out, mirroring MenuBar's
- * Add-Component picker.
- */
-function panelChoices() {
-  return panelRegistry
-    .list()
-    .filter(
-      (d) =>
-        d.id !== UNASSIGNED_PANEL_TYPE &&
-        d.id !== MISSING_PANEL_TYPE &&
-        d.id !== "components-browser",
-    );
-}
-
-/**
  * Maximize/Restore item shared by both menus. Label + icon flip on live state;
  * disabled off-grid so the affordance matches `session.toggleMaximize`'s
  * grid-only gate (floating / pop-out / edge groups have no maximize concept -
@@ -101,11 +83,13 @@ function maximizeItem(panel: IDockviewPanel): DockMenuItem {
 }
 
 /**
- * CLEAN pane menu (group.header.hidden === true). Phase-1 items + Maximize, in
- * the shared skeleton [header toggle, secondary action, Maximize, --, Close]
- * that buildTabbedModel also follows. `totalPanels` drives the Close
- * empty-workspace guard; the group is always clean here, so Show-header is
- * derived with `isHeaderless: true`.
+ * CLEAN pane menu (group.header.hidden === true). Show header / Maximize / -- /
+ * Close - sharing the header-toggle-first, Maximize-then-Close anchors with
+ * buildTabbedModel. No Split item by design: adding a neighbor is done from the
+ * Add-Component menu + dockview drag-to-split (a Split submenu would not scale
+ * to a large component catalog). `totalPanels` drives the Close empty-workspace
+ * guard; the group is always clean here, so Show-header is derived with
+ * `isHeaderless: true`.
  */
 function buildCleanModel(panel: IDockviewPanel, totalPanels: number): DockMenuItem[] {
   const controls = cleanPaneControls({ isHeaderless: true, totalPanels });
@@ -117,14 +101,6 @@ function buildCleanModel(panel: IDockviewPanel, totalPanels: number): DockMenuIt
       label: showHeader?.label ?? "Show header",
       lucide: PanelTop,
       command: () => void session.toggleHeaderless(panel.id),
-    },
-    {
-      label: "Split",
-      lucide: SquareSplitHorizontal,
-      items: panelChoices().map((def) => ({
-        label: def.title,
-        command: () => void session.splitCleanNeighbor(panel.id, def.id),
-      })),
     },
     maximizeItem(panel),
     { separator: true },
