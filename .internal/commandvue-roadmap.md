@@ -22,6 +22,9 @@ The CommandVue foundation is complete once all four prompts are merged into `dev
 
 ### Theming
 
+**Comprehensive theming overhaul (Track A) — IN PLANNING**
+The single most-requested gap. Today's theming is generative-only (a ~4-input modal) with status/notification colors hardcoded in `generate.ts` and a two-surface seam (`--color-surface-*` vs `--color-p-surface-*`) that makes modals look like a different app. The overhaul makes a user able to change _anything_ — surfaces, buttons, borders, and the success/danger/warning/info toast + status colors — and moves theme creation/editing **out of a modal into a dockview "Theme Studio" panel** that can float or pop out to another monitor and live-recolor every open window at once (depends on Track B's pop-out + theme-mirroring). Scope: a generated-base + sparse-overrides data model (`theme.ts` v2 + migration); unlock status/toast colors; fix the surface seam; a richer, less-"flat" palette (Osiris-inspired tiered colored borders + triple-layer surface bevel + per-accent `{primary,dim,glow}` triads) folded into the semantic token layer; a searchable, manifest-driven per-token Customize editor with live (advisory) WCAG; and themeable multi-color/duotone icons (in-house duotone set mapped to `--icon-tone-*`) plus an icon on every control. Phased: (1) fast visible wins — status/toast unlock + surface fix + palette; (2) the Theme Studio panel + per-token editor. Large, phased. Sequenced **after** Track B because the Theme Studio rides its pop-out. (Supersedes the raw-JSON-editor idea below by exposing a structured per-token editor instead.)
+
 **Raw JSON editor with live preview**
 Power-user authoring surface. Embed Monaco or CodeMirror inside the theme authoring dialog. Debounced validation as user types. Live preview with rollback on error. Diff view against current theme. Foundation fully in place after Prompt 4 (schema, Zod validator, application engine, registry). Needs UX thinking on guardrails before building. Medium effort.
 
@@ -30,6 +33,13 @@ High-contrast mode and color-blind safe mode. The generation algorithm already s
 
 **Theme marketplace / community sharing**
 Browse and install community themes from inside the app. Needs server infrastructure. Later.
+
+---
+
+### Windowing & dock panels (Track B)
+
+**Dockview windowing — main window, tab controls, float/pop-out, minimize/maximize**
+Today a dock tab has only a close button. Track B adds VS Code-style windowing: a pinned, tab-less central **main window** (a promoted map panel) that other panels dock around; per-tab close + minimize and per-header maximize/float/pop-out; a right-click tab context menu; **maximize**, **minimize-to-tray**, in-window **float**, and separate-browser-window **pop-out** (with the theme mirrored into the child window); a **switch** to swap a panel into the center; and a cross-screen **"Pin Main Window here"** content swap (a true window-role transfer is infeasible — pop-outs are render targets of the one dock engine — so it ships as a content swap, gated on map/3D surviving the cross-window move). Verified against `dockview-core@6.6.1`. **Sequenced first** — it is a hard prerequisite for Track A's pop-outable Theme Studio. Full design + 7-phase plan: [`specs/track-b-dockview-windowing.md`](./specs/track-b-dockview-windowing.md). Status: design approved, ready for implementation-plan breakdown. Large, phased.
 
 ---
 
