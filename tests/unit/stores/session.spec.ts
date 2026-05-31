@@ -840,6 +840,22 @@ describe("useSessionStore", () => {
     expect(calls[1]![1]).toMatchObject({ x: 148, y: 148 });
   });
 
+  it("the cascade counter uses the live float count (resets on dock-back)", async () => {
+    const { layout, p1 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    await session.floatPanel(p1.id); // 0 floats -> x 120
+    await session.dockBack(p1.id); // none floating now
+    await session.floatPanel(p1.id); // 0 floats again -> x 120, NOT 148
+    const calls = (api as unknown as { addFloatingGroup: { mock: { calls: unknown[][] } } })
+      .addFloatingGroup.mock.calls;
+    expect(calls).toHaveLength(2);
+    expect(calls[0]![1]).toMatchObject({ x: 120 });
+    expect(calls[1]![1]).toMatchObject({ x: 120 });
+  });
+
   it("clean mode survives a toJSON -> fromJSON round-trip via persisted state", async () => {
     const { layout, p1 } = await seedWorkspace();
     // Persist a dockviewState (carrying the panel id) so loadLayout takes the

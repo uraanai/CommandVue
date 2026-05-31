@@ -432,6 +432,7 @@ export const useSessionStore = defineStore("session", () => {
       const panelStateStore = usePanelStateStore();
       const restoreClean = floatWasHeaderless(panelStateStore.getState(panelId)?.state);
       panel.api.group.api.moveTo({ position: "right" }); // new right-edge grid group
+      // `panel.api.group` is a live getter — it now resolves to that NEW grid group.
       if (restoreClean) panel.api.group.header.hidden = true; // restore clean status
       await panelStateStore.updateState(panelId, {
         state: withFloatPrevHeaderless(
