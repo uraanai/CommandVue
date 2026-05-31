@@ -1,12 +1,13 @@
 import type { Layout, PanelState, Ulid } from "@/types/workspace";
-import type { DockviewApi } from "dockview-vue";
+import type { DockviewApi, DockviewGroupPanel, IDockviewPanel } from "dockview-vue";
 
 import { defineStore } from "pinia";
 import { ref, shallowRef } from "vue";
 
-import { isHeaderless } from "@/modules/panels/headerless";
+import { isHeaderless, withHeaderless } from "@/modules/panels/headerless";
 import { MISSING_PANEL_TYPE } from "@/modules/panels/missing";
 import { panelRegistry } from "@/modules/panels/registry";
+import { UNASSIGNED_PANEL_TYPE } from "@/modules/panels/unassigned";
 import { layoutRepo } from "@/modules/storage/layoutRepo";
 import { panelStateRepo } from "@/modules/storage/panelStateRepo";
 
@@ -96,6 +97,7 @@ export const useSessionStore = defineStore("session", () => {
       rebuildFromPanelStates(api, panelStates);
     }
 
+    await backfillCleanMainPane();
     applyHeaderlessGroups(api);
 
     loadedLayoutId.value = layoutId;
@@ -121,6 +123,26 @@ export const useSessionStore = defineStore("session", () => {
     } finally {
       setRestoring(false);
     }
+  }
+
+  /**
+   * Single idempotent backfill point for legacy/seeded layouts: if NO
+   * panel-state is headerless and a `mainPane`-typed panel exists, persist
+   * `headerless: true` on it (cache + repo in sync via the panelState store)
+   * so it survives into the next `fromJSON` path. No-op once any panel is
+   * clean. This is the ONLY backfill site — never in seed.ts.
+   */
+  async function backfillCleanMainPane(): Promise<void> {
+    const panelStateStore = usePanelStateStore();
+    const states = panelStateStore.listForLayout();
+    if (states.some((ps) => isHeaderless(ps.state))) return;
+    const mainType = panelRegistry.mainPanelType();
+    if (!mainType) return;
+    const target = states.find((ps) => ps.panelType === mainType);
+    if (!target) return;
+    await panelStateStore.updateState(target.id, {
+      state: withHeaderless(target.state, true),
+    });
   }
 
   /**
@@ -270,6 +292,7 @@ export const useSessionStore = defineStore("session", () => {
     setRestoring,
     loadLayout,
     applyHeaderlessGroups,
+    backfillCleanMainPane,
     updateCurrentLayout,
     saveCurrentAsNewLayout,
     discardChanges,
@@ -277,25 +300,64 @@ export const useSessionStore = defineStore("session", () => {
   };
 });
 
+/**
+ * Resolve a panel-state to its dockview `component` string + display title.
+ * Module-scope: uses only module-level imports, no store-ref closure access.
+ */
+function resolvePanelComponent(ps: PanelState): { component: string; title: string } {
+  if (!ps.panelType) return { component: UNASSIGNED_PANEL_TYPE, title: "Empty" };
+  const def = panelRegistry.get(ps.panelType);
+  if (def) return { component: ps.panelType, title: def.title };
+  // Unregistered panel type — render the missing-panel placeholder so the
+  // user can reassign or remove without losing the panel-state id.
+  return { component: MISSING_PANEL_TYPE, title: "Missing" };
+}
+
+/**
+ * Rebuild the dock from panel-state records. The `mainPane`-typed panel
+ * (e.g. cesium) is added FIRST as its own group; the first remaining panel
+ * docks to its `dockHint` side (default `'right'`) as a side group; the rest
+ * stack `'within'` that side group as tabs. `dockHint` is read from
+ * `PanelState.state` per panel.
+ *
+ * Module-scope (matching the current file): no closure over store refs.
+ */
 function rebuildFromPanelStates(api: DockviewApi, panelStates: PanelState[]): void {
-  for (const ps of panelStates) {
-    let component: string;
-    let title: string;
-    if (!ps.panelType) {
-      component = "__unassigned__";
-      title = "Empty";
-    } else if (panelRegistry.get(ps.panelType)) {
-      component = ps.panelType;
-      title = panelRegistry.get(ps.panelType)!.title;
-    } else {
-      // Unregistered panel type — render the missing-panel placeholder so
-      // the user can reassign or remove without losing the panel-state id
-      // (preserves preset references and dock position).
-      component = MISSING_PANEL_TYPE;
-      title = "Missing";
+  const mainType = panelRegistry.mainPanelType();
+  const mainIndex = mainType ? panelStates.findIndex((ps) => ps.panelType === mainType) : -1;
+  const ordered =
+    mainIndex >= 0
+      ? [panelStates[mainIndex]!, ...panelStates.filter((_, i) => i !== mainIndex)]
+      : [...panelStates];
+
+  let mainPanel: IDockviewPanel | undefined;
+  let sideGroup: DockviewGroupPanel | undefined;
+
+  ordered.forEach((ps, i) => {
+    const { component, title } = resolvePanelComponent(ps);
+    if (i === 0) {
+      mainPanel = api.addPanel({ id: ps.id, component, title });
+      return;
     }
-    api.addPanel({ id: ps.id, component, title });
-  }
+    const dockHint =
+      (ps.state.dockHint as "left" | "right" | "above" | "below" | undefined) ?? "right";
+    if (!sideGroup) {
+      const created = api.addPanel({
+        id: ps.id,
+        component,
+        title,
+        position: { referenceGroup: mainPanel!.api.group, direction: dockHint },
+      });
+      sideGroup = created.api.group;
+    } else {
+      api.addPanel({
+        id: ps.id,
+        component,
+        title,
+        position: { referenceGroup: sideGroup, direction: "within" },
+      });
+    }
+  });
 }
 
 /** Test-only — clear the module-scope DockviewApi so specs can rebind. */

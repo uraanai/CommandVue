@@ -198,7 +198,7 @@ describe("useSessionStore", () => {
     await expect(session.loadLayout(layout.id)).rejects.toThrow(/not bound/);
   });
 
-  it("loadLayout rebuilds the dock from panel-states when dockviewState is null", async () => {
+  it("loadLayout rebuilds the dock from panel-states with the main pane added first", async () => {
     const { layout, p1, p2 } = await seedWorkspace();
     const session = useSessionStore();
     const api = makeFakeApi();
@@ -207,10 +207,55 @@ describe("useSessionStore", () => {
 
     expect(api.clear).toHaveBeenCalled();
     expect(api.fromJSON).not.toHaveBeenCalled();
-    expect(api.addPanel).toHaveBeenCalledTimes(2);
+    // Both panels added (mainPane cesium first, others docked relative).
     const addedIds = vi.mocked(api.addPanel).mock.calls.map((c) => c[0]!.id);
-    expect(addedIds).toEqual([p1.id, p2.id]);
+    expect(addedIds[0]).toBe(p1.id); // cesium (mainPane) goes first
+    expect(addedIds).toContain(p2.id);
+    // The first sibling docked to the RIGHT of the main pane → its own group.
+    const fake = api as unknown as {
+      getPanel: (id: string) => { api: { group: unknown } } | undefined;
+    };
+    expect(fake.getPanel(p1.id)!.api.group).not.toBe(fake.getPanel(p2.id)!.api.group);
     expect(session.loadedLayoutId).toBe(layout.id);
+    expect(session.dirty).toBe(false);
+  });
+
+  it("loadLayout reorders the mainPane-typed panel first even when seeded last", async () => {
+    const ws = await workspaceRepo.create({ name: "WS", isGlobalDefault: true });
+    const layout = await layoutRepo.create({ workspaceId: ws.id, name: "L" });
+    // maplibre created FIRST (lower createdAt), cesium (mainPane) SECOND.
+    const maplibre = await panelStateRepo.create({ layoutId: layout.id, panelType: "maplibre" });
+    const cesium = await panelStateRepo.create({ layoutId: layout.id, panelType: "cesium" });
+    await layoutRepo.update(layout.id, { panelIds: [maplibre.id, cesium.id] });
+    await workspaceRepo.update(ws.id, { defaultLayoutId: layout.id });
+
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+
+    const addedIds = vi.mocked(api.addPanel).mock.calls.map((c) => c[0]!.id);
+    // Only passes if mainPanelType() reordering ran (creation order would put maplibre first).
+    expect(addedIds[0]).toBe(cesium.id);
+  });
+
+  it("loadLayout backfills cesium as clean when no panel-state is headerless", async () => {
+    const { layout, p1, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+
+    // Cesium (mainPane) promoted to clean even though nothing was flagged.
+    const fake = api as unknown as {
+      getPanel: (id: string) => { api: { group: { header: { hidden: boolean } } } } | undefined;
+    };
+    expect(fake.getPanel(p1.id)!.api.group.header.hidden).toBe(true);
+    expect(fake.getPanel(p2.id)!.api.group.header.hidden).toBe(false);
+
+    // Backfill PERSISTED headerless so it survives the next fromJSON load.
+    const persisted = await panelStateRepo.getById(p1.id);
+    expect(persisted?.state).toEqual({ headerless: true });
     expect(session.dirty).toBe(false);
   });
 
