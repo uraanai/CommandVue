@@ -577,7 +577,11 @@ describe("useSessionStore", () => {
     await session.loadLayout(layout.id);
 
     const fake = api as unknown as {
-      getPanel: (id: string) => { api: { group: { panels: { id: string }[] } } } | undefined;
+      getPanel: (
+        id: string,
+      ) =>
+        | { api: { group: { panels: { id: string }[] }; moveTo: (o: { group?: unknown }) => void } }
+        | undefined;
     };
     // Force p1 and p2 into the SAME (tabbed) group, then add a third tab.
     const targetGroup = fake.getPanel(p2.id)!.api.group;
@@ -624,7 +628,11 @@ describe("useSessionStore", () => {
     await session.loadLayout(layout.id);
 
     const fake = api as unknown as {
-      getPanel: (id: string) => { api: { group: { panels: { id: string }[] } } } | undefined;
+      getPanel: (
+        id: string,
+      ) =>
+        | { api: { group: { panels: { id: string }[] }; moveTo: (o: { group?: unknown }) => void } }
+        | undefined;
     };
     const targetGroup = fake.getPanel(p2.id)!.api.group;
     fake.getPanel(p1.id)!.api.moveTo({ group: targetGroup as never });
