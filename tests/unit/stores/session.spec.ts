@@ -494,4 +494,30 @@ describe("useSessionStore", () => {
     expect(layoutStore.currentLayoutId).toBe(layoutB.id);
     expect(session.loadedLayoutId).toBe(layoutB.id);
   });
+
+  it("clean mode survives a toJSON -> fromJSON round-trip via persisted state", async () => {
+    const { layout, p1 } = await seedWorkspace();
+    // Persist a dockviewState (carrying the panel id) so loadLayout takes the
+    // fromJSON branch and the fake re-creates p1; flag p1 headerless.
+    await layoutRepo.update(layout.id, {
+      dockviewState: { grid: { restored: true }, panels: { [p1.id]: {} } },
+    });
+    await panelStateRepo.update(p1.id, { state: { headerless: true } });
+
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+
+    expect(api.fromJSON).toHaveBeenCalledWith({
+      grid: { restored: true },
+      panels: { [p1.id]: {} },
+    });
+
+    const fake = api as unknown as {
+      getPanel: (id: string) => { api: { group: { header: { hidden: boolean } } } } | undefined;
+    };
+    expect(fake.getPanel(p1.id)!.api.group.header.hidden).toBe(true);
+    expect(session.dirty).toBe(false);
+  });
 });
