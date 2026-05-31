@@ -9,6 +9,8 @@ import {
   Minimize2,
   PanelTop,
   PanelTopClose,
+  PictureInPicture2,
+  PinOff,
   X,
 } from "@lucide/vue";
 import { onUnmounted, ref, watch, type Component } from "vue";
@@ -83,6 +85,23 @@ function maximizeItem(panel: IDockviewPanel): DockMenuItem {
 }
 
 /**
+ * Float / Dock-back item shared by both menus. On a grid pane it reads "Float
+ * window" (disabled off-grid, mirroring maximizeItem); on a floating pane it
+ * reads "Dock back". Group-location op, so it sits just before maximizeItem.
+ */
+function floatItem(panel: IDockviewPanel): DockMenuItem {
+  const loc = panel.api.location.type;
+  return loc === "floating"
+    ? { label: "Dock back", lucide: PinOff, command: () => void session.dockBack(panel.id) }
+    : {
+        label: "Float window",
+        lucide: PictureInPicture2,
+        disabled: loc !== "grid",
+        command: () => void session.floatPanel(panel.id),
+      };
+}
+
+/**
  * CLEAN pane menu (group.header.hidden === true). Show header / Maximize / -- /
  * Close - sharing the header-toggle-first, Maximize-then-Close anchors with
  * buildTabbedModel. No Split item by design: adding a neighbor is done from the
@@ -102,6 +121,7 @@ function buildCleanModel(panel: IDockviewPanel, totalPanels: number): DockMenuIt
       lucide: PanelTop,
       command: () => void session.toggleHeaderless(panel.id),
     },
+    floatItem(panel),
     maximizeItem(panel),
     { separator: true },
     {
@@ -143,6 +163,7 @@ function buildTabbedModel(
       disabled: closeOthers.disabled,
       command: () => void session.closeOthersInGroup(panel.id),
     },
+    floatItem(panel),
     maximizeItem(panel),
     { separator: true },
     {
