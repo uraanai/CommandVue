@@ -347,6 +347,38 @@ export const useSessionStore = defineStore("session", () => {
   }
 
   /**
+   * Maximize the right-clicked panel's group, or restore it if already
+   * maximized. Maximize is view-only state - dockview does NOT serialize it
+   * into toJSON, so this does NOT mark the session dirty (matching the
+   * restoring-guarded invariant style). Gated to grid-located groups: floating,
+   * pop-out, and edge groups have no maximize concept, so the action is a no-op
+   * there (Phase 2 ships no float/pop-out UI yet, but the gate is coded now).
+   * `panel.api.location` resolves to `panel.api.group.api.location` in
+   * dockview-core 6.6.1, so this gate is equivalent to checking
+   * `panel.api.group.api.location.type === 'grid'`. Returns whether a
+   * maximize/restore was performed.
+   */
+  async function toggleMaximize(panelId: Ulid): Promise<boolean> {
+    const api = dockviewApi.value;
+    if (!api) throw new Error("Dockview API not bound");
+    const panel = api.getPanel(panelId);
+    if (!panel) return false;
+    if (panel.api.location.type !== "grid") return false;
+
+    setRestoring(true);
+    try {
+      if (panel.api.isMaximized()) {
+        panel.api.exitMaximized();
+      } else {
+        panel.api.maximize();
+      }
+    } finally {
+      setRestoring(false);
+    }
+    return true;
+  }
+
+  /**
    * Split a clean pane: add a new panel of the CHOSEN `panelType` (picked by the
    * user from the Split picker) as a NEW clean neighbor to the right of the
    * source group. Creates a fresh headerless panel-state record so the new pane
@@ -436,6 +468,7 @@ export const useSessionStore = defineStore("session", () => {
     toggleHeaderless,
     removePanelGuarded,
     closeOthersInGroup,
+    toggleMaximize,
     splitCleanNeighbor,
     discardChanges,
     switchWorkspace,

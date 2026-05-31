@@ -633,6 +633,58 @@ describe("useSessionStore", () => {
     expect((api as unknown as DockviewApi).panels.map((p) => p.id)).toEqual([p2.id]);
   });
 
+  it("toggleMaximize maximizes a grid group, then restores it on second call", async () => {
+    const { layout, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+
+    const fake = api as unknown as {
+      getPanel: (id: string) => { api: { isMaximized: () => boolean } } | undefined;
+    };
+    expect(fake.getPanel(p2.id)!.api.isMaximized()).toBe(false);
+
+    const max = await session.toggleMaximize(p2.id);
+    expect(max).toBe(true);
+    expect(fake.getPanel(p2.id)!.api.isMaximized()).toBe(true);
+
+    const restored = await session.toggleMaximize(p2.id);
+    expect(restored).toBe(true);
+    expect(fake.getPanel(p2.id)!.api.isMaximized()).toBe(false);
+  });
+
+  it("toggleMaximize is a no-op (returns false) for an off-grid group", async () => {
+    const { layout, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+
+    const fake = api as unknown as {
+      getPanel: (
+        id: string,
+      ) => { api: { group: { locationType: string }; isMaximized: () => boolean } } | undefined;
+    };
+    // Simulate a floating group (Phase 2 has no float UI yet, but the gate
+    // must still hold).
+    fake.getPanel(p2.id)!.api.group.locationType = "floating";
+
+    const result = await session.toggleMaximize(p2.id);
+    expect(result).toBe(false);
+    expect(fake.getPanel(p2.id)!.api.isMaximized()).toBe(false);
+  });
+
+  it("toggleMaximize does not dirty the session (view-only state, not persisted)", async () => {
+    const { layout, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    await session.toggleMaximize(p2.id);
+    expect(session.dirty).toBe(false);
+  });
+
   it("clean mode survives a toJSON -> fromJSON round-trip via persisted state", async () => {
     const { layout, p1 } = await seedWorkspace();
     // Persist a dockviewState (carrying the panel id) so loadLayout takes the
