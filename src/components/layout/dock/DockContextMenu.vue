@@ -19,6 +19,7 @@ import ContextMenu from "@/components/ui/ContextMenu.vue";
 import { useSessionStore } from "@/stores/session";
 
 import { cleanPaneControls } from "./cleanPaneControls";
+import { floatPaneControl } from "./floatPaneControls";
 import { tabbedPaneControls } from "./tabbedPaneControls";
 
 /**
@@ -90,15 +91,14 @@ function maximizeItem(panel: IDockviewPanel): DockMenuItem {
  * reads "Dock back". Group-location op, so it sits just before maximizeItem.
  */
 function floatItem(panel: IDockviewPanel): DockMenuItem {
-  const loc = panel.api.location.type;
-  return loc === "floating"
-    ? { label: "Dock back", lucide: PinOff, command: () => void session.dockBack(panel.id) }
-    : {
-        label: "Float window",
-        lucide: PictureInPicture2,
-        disabled: loc !== "grid",
-        command: () => void session.floatPanel(panel.id),
-      };
+  const control = floatPaneControl({ location: panel.api.location.type });
+  return {
+    label: control.label,
+    lucide: control.icon === "PinOff" ? PinOff : PictureInPicture2,
+    disabled: control.disabled,
+    command: () =>
+      void (control.id === "dock-back" ? session.dockBack(panel.id) : session.floatPanel(panel.id)),
+  };
 }
 
 /**

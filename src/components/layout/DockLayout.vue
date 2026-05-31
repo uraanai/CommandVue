@@ -83,6 +83,7 @@ maybePromptUnload(session.getDockviewApi());
     <DockviewVue
       :theme="commandvueTheme"
       no-panels-overlay="emptyGroup"
+      floating-group-bounds="boundedWithinViewport"
       class="h-full w-full"
       @ready="onReady"
     />

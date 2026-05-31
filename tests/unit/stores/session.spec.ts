@@ -3,6 +3,8 @@ import type { DockviewApi } from "dockview-vue";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { __unregisterBuiltinPanelsForTests, registerBuiltinPanels } from "@/modules/panels/builtin";
+import { floatWasHeaderless } from "@/modules/panels/float";
+import { isHeaderless } from "@/modules/panels/headerless";
 import { layoutRepo } from "@/modules/storage/layoutRepo";
 import { panelStateRepo } from "@/modules/storage/panelStateRepo";
 import { workspaceRepo } from "@/modules/storage/workspaceRepo";
@@ -46,6 +48,11 @@ interface FakeGroup {
   /** Off-grid override for the maximize gate; defaults to "grid".
    *  Mirrors the real DockviewGroupLocation union (grid|floating|popout|edge). */
   locationType: "grid" | "floating" | "popout" | "edge";
+  /** Group-level api — only `location` + `moveTo` are modeled (float / dockBack). */
+  api: {
+    location: { type: "grid" | "floating" | "popout" | "edge" };
+    moveTo: (opts: { group?: FakeGroup; position?: unknown }) => void;
+  };
 }
 interface FakePanel {
   id: string;
@@ -72,6 +79,7 @@ interface FakeDockviewApi {
   clear: ReturnType<typeof vi.fn>;
   addGroup: () => FakeGroup;
   addPanel: ReturnType<typeof vi.fn>;
+  addFloatingGroup: ReturnType<typeof vi.fn>;
   removePanel: ReturnType<typeof vi.fn>;
   getPanel: (id: string) => FakePanel | undefined;
   getGroup: (id: string) => FakeGroup | undefined;
@@ -96,6 +104,22 @@ function makeFakeApi(): DockviewApi {
       panels: [],
       maximized: false,
       locationType: "grid",
+      api: {
+        // Self-reference is SAFE: bodies run only when invoked later.
+        get location() {
+          return { type: group.locationType };
+        },
+        // Mirror dockviewGroupPanelApi.moveTo: with no target group, create a new
+        // grid group and move THIS group's panels into it (the dockBack path).
+        moveTo: (opts) => {
+          const target = opts.group ?? makeGroup();
+          for (const p of [...group.panels]) {
+            detach(p);
+            p.api.group = target;
+            target.panels.push(p);
+          }
+        },
+      },
     };
     groups.push(group);
     return group;
@@ -167,6 +191,15 @@ function makeFakeApi(): DockviewApi {
     }),
     addGroup: () => makeGroup(),
     addPanel: vi.fn(addPanelImpl),
+    addFloatingGroup: vi.fn((item: FakePanel) => {
+      // Mirror dockview: move the panel into a NEW floating group. If it was the
+      // only panel in its grid group, detach drops that now-empty group.
+      detach(item);
+      const fg = makeGroup();
+      fg.locationType = "floating";
+      item.api.group = fg;
+      fg.panels.push(item);
+    }),
     removePanel: vi.fn((panel: FakePanel) => {
       const i = panels.indexOf(panel);
       if (i >= 0) panels.splice(i, 1);
@@ -691,6 +724,120 @@ describe("useSessionStore", () => {
     await session.loadLayout(layout.id);
     await session.toggleMaximize(p2.id);
     expect(session.dirty).toBe(false);
+  });
+
+  it("floatPanel floats a grid pane: location becomes floating, header shown, dirty", async () => {
+    const { layout, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    const fake = api as unknown as {
+      getPanel: (
+        id: string,
+      ) =>
+        | { api: { location: { type: string }; group: { header: { hidden: boolean } } } }
+        | undefined;
+    };
+
+    expect(fake.getPanel(p2.id)!.api.location.type).toBe("grid");
+    const floated = await session.floatPanel(p2.id);
+    expect(floated).toBe(true);
+    expect(fake.getPanel(p2.id)!.api.location.type).toBe("floating");
+    expect(fake.getPanel(p2.id)!.api.group.header.hidden).toBe(false);
+    expect(session.dirty).toBe(true);
+  });
+
+  it("floatPanel is a no-op (false) when the pane is not grid-located", async () => {
+    const { layout, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    await session.floatPanel(p2.id); // now floating
+    expect(await session.floatPanel(p2.id)).toBe(false);
+  });
+
+  it("dockBack is a no-op (false) when the pane is not floating", async () => {
+    const { layout, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    expect(await session.dockBack(p2.id)).toBe(false); // p2 is grid-docked
+  });
+
+  it("a clean pane floats with its header shown, and dock-back restores clean status", async () => {
+    const { layout, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    const pss = usePanelStateStore();
+    const fake = api as unknown as {
+      getPanel: (
+        id: string,
+      ) =>
+        | { api: { location: { type: string }; group: { header: { hidden: boolean } } } }
+        | undefined;
+    };
+
+    // Make p2 clean (header-less).
+    await session.toggleHeaderless(p2.id);
+    expect(isHeaderless(pss.getState(p2.id)?.state)).toBe(true);
+
+    // Float it: a float always shows a header; the clean flag is stripped but
+    // remembered via floatPrevHeaderless.
+    await session.floatPanel(p2.id);
+    expect(fake.getPanel(p2.id)!.api.location.type).toBe("floating");
+    expect(fake.getPanel(p2.id)!.api.group.header.hidden).toBe(false);
+    expect(isHeaderless(pss.getState(p2.id)?.state)).toBe(false);
+    expect(floatWasHeaderless(pss.getState(p2.id)?.state)).toBe(true);
+
+    // Dock back: clean status is restored and the remember-flag is cleared.
+    await session.dockBack(p2.id);
+    expect(fake.getPanel(p2.id)!.api.location.type).toBe("grid");
+    expect(fake.getPanel(p2.id)!.api.group.header.hidden).toBe(true);
+    expect(isHeaderless(pss.getState(p2.id)?.state)).toBe(true);
+    expect(floatWasHeaderless(pss.getState(p2.id)?.state)).toBe(false);
+  });
+
+  it("a tabbed (non-clean) pane floats and dock-back leaves it headered", async () => {
+    const { layout, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    const pss = usePanelStateStore();
+    const fake = api as unknown as {
+      getPanel: (
+        id: string,
+      ) =>
+        | { api: { location: { type: string }; group: { header: { hidden: boolean } } } }
+        | undefined;
+    };
+
+    await session.floatPanel(p2.id);
+    expect(floatWasHeaderless(pss.getState(p2.id)?.state)).toBe(false); // was not clean
+    await session.dockBack(p2.id);
+    expect(fake.getPanel(p2.id)!.api.location.type).toBe("grid");
+    expect(fake.getPanel(p2.id)!.api.group.header.hidden).toBe(false); // stays headered
+    expect(isHeaderless(pss.getState(p2.id)?.state)).toBe(false);
+  });
+
+  it("multiple floats cascade their initial position so they do not stack", async () => {
+    const { layout, p1, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    await session.floatPanel(p1.id);
+    await session.floatPanel(p2.id);
+    const calls = (api as unknown as { addFloatingGroup: { mock: { calls: unknown[][] } } })
+      .addFloatingGroup.mock.calls;
+    expect(calls).toHaveLength(2);
+    expect(calls[0]![1]).toMatchObject({ x: 120, y: 120, width: 520, height: 360 });
+    expect(calls[1]![1]).toMatchObject({ x: 148, y: 148 });
   });
 
   it("clean mode survives a toJSON -> fromJSON round-trip via persisted state", async () => {
