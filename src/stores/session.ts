@@ -312,13 +312,85 @@ export const useSessionStore = defineStore("session", () => {
   }
 
   /**
-   * Split a clean pane: add a new panel of the CHOSEN `panelType` (picked by the
-   * user from the Split picker) as a NEW clean neighbor to the right of the
-   * source group. Creates a fresh headerless panel-state record so the new pane
-   * round-trips. Returns the new panel id, or null when there is no loaded
-   * layout / source panel. Restoring-guarded around the mutation; marks the
-   * session dirty afterward so the new pane is savable (matches
-   * removePanelGuarded — splitting is a real user edit).
+   * Close every OTHER panel in the right-clicked panel's group, keeping the
+   * target. Iterates a stable snapshot of `group.panels` (removing while
+   * iterating the live array skips entries). Honors the empty-workspace guard:
+   * a removal that would drop the layout to zero panels is skipped. Returns
+   * `false` when nothing was eligible (group held only the target). Restoring-
+   * guarded around the structural mutations; marks dirty when it removed at
+   * least one panel (a real user edit, matching removePanelGuarded).
+   */
+  async function closeOthersInGroup(panelId: Ulid): Promise<boolean> {
+    const api = dockviewApi.value;
+    if (!api) throw new Error("Dockview API not bound");
+    const target = api.getPanel(panelId);
+    if (!target) return false;
+
+    const others = target.api.group.panels.filter((p) => p.id !== panelId);
+    if (others.length === 0) return false;
+
+    let removedAny = false;
+    setRestoring(true);
+    try {
+      for (const other of others) {
+        if (api.panels.length <= 1) break; // empty-workspace guard
+        const panel = api.getPanel(other.id);
+        if (!panel) continue;
+        api.removePanel(panel);
+        removedAny = true;
+      }
+    } finally {
+      setRestoring(false);
+    }
+    if (removedAny) markDirty();
+    return removedAny;
+  }
+
+  /**
+   * Maximize the right-clicked panel's group, or restore it if already
+   * maximized. Maximize is view-only state - dockview does NOT serialize it
+   * into toJSON, so this does NOT mark the session dirty (matching the
+   * restoring-guarded invariant style). Gated to grid-located groups: floating,
+   * pop-out, and edge groups have no maximize concept, so the action is a no-op
+   * there (Phase 2 ships no float/pop-out UI yet, but the gate is coded now).
+   * `panel.api.location` resolves to `panel.api.group.api.location` in
+   * dockview-core 6.6.1, so this gate is equivalent to checking
+   * `panel.api.group.api.location.type === 'grid'`. Returns whether a
+   * maximize/restore was performed.
+   */
+  async function toggleMaximize(panelId: Ulid): Promise<boolean> {
+    const api = dockviewApi.value;
+    if (!api) throw new Error("Dockview API not bound");
+    const panel = api.getPanel(panelId);
+    if (!panel) return false;
+    if (panel.api.location.type !== "grid") return false;
+
+    setRestoring(true);
+    try {
+      if (panel.api.isMaximized()) {
+        panel.api.exitMaximized();
+      } else {
+        panel.api.maximize();
+      }
+    } finally {
+      setRestoring(false);
+    }
+    return true;
+  }
+
+  /**
+   * Split a clean pane: add a new panel of the given `panelType` as a NEW clean
+   * neighbor to the right of the source group. Creates a fresh headerless
+   * panel-state record so the new pane round-trips. Returns the new panel id, or
+   * null when there is no loaded layout / source panel. Restoring-guarded around
+   * the mutation; marks the session dirty afterward so the new pane is savable
+   * (matches removePanelGuarded — splitting is a real user edit).
+   *
+   * Not currently wired to any UI: the dock context menu's Split item was removed
+   * (a per-type submenu does not scale to a large component catalog; adding a
+   * neighbor is done via the Add-Component menu + dockview drag-to-split). Kept
+   * as tested store API for downstream apps / a future "add component as split"
+   * flow to drive programmatically.
    */
   async function splitCleanNeighbor(
     sourcePanelId: Ulid,
@@ -400,6 +472,8 @@ export const useSessionStore = defineStore("session", () => {
     saveCurrentAsNewLayout,
     toggleHeaderless,
     removePanelGuarded,
+    closeOthersInGroup,
+    toggleMaximize,
     splitCleanNeighbor,
     discardChanges,
     switchWorkspace,

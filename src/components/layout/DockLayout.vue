@@ -14,7 +14,7 @@ import { onUnmounted, provide, ref, shallowRef } from "vue";
 import { useLayoutStore } from "@/stores/layout";
 import { useSessionStore } from "@/stores/session";
 
-import CleanPaneContextMenu from "./dock/CleanPaneContextMenu.vue";
+import DockContextMenu from "./dock/DockContextMenu.vue";
 import { resetLayoutKey } from "./keys";
 
 // Dock-root element for the clean-pane context menu (DockviewApi has no
@@ -86,6 +86,6 @@ maybePromptUnload(session.getDockviewApi());
       class="h-full w-full"
       @ready="onReady"
     />
-    <CleanPaneContextMenu :api="boundApi" :root="rootEl" />
+    <DockContextMenu :api="boundApi" :root="rootEl" />
   </div>
 </template>

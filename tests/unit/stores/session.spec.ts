@@ -42,6 +42,10 @@ interface FakeGroup {
   id: string;
   header: FakeHeader;
   panels: FakePanel[];
+  maximized: boolean;
+  /** Off-grid override for the maximize gate; defaults to "grid".
+   *  Mirrors the real DockviewGroupLocation union (grid|floating|popout|edge). */
+  locationType: "grid" | "floating" | "popout" | "edge";
 }
 interface FakePanel {
   id: string;
@@ -49,12 +53,16 @@ interface FakePanel {
   title?: string;
   api: {
     group: FakeGroup;
+    location: { type: "grid" | "floating" | "popout" | "edge" };
     moveTo: (opts: {
       group?: FakeGroup;
       position?: unknown;
       index?: number;
       skipSetActive?: boolean;
     }) => void;
+    maximize: () => void;
+    exitMaximized: () => void;
+    isMaximized: () => boolean;
   };
 }
 
@@ -70,6 +78,10 @@ interface FakeDockviewApi {
   toJSON: ReturnType<typeof vi.fn>;
   fromJSON: ReturnType<typeof vi.fn>;
   onDidLayoutChange: ReturnType<typeof vi.fn>;
+  maximizeGroup: ReturnType<typeof vi.fn>;
+  exitMaximizedGroup: ReturnType<typeof vi.fn>;
+  hasMaximizedGroup: ReturnType<typeof vi.fn>;
+  onDidMaximizedGroupChange: ReturnType<typeof vi.fn>;
 }
 
 function makeFakeApi(): DockviewApi {
@@ -82,6 +94,8 @@ function makeFakeApi(): DockviewApi {
       id: `g${++groupSeq}`,
       header: { hidden: false },
       panels: [],
+      maximized: false,
+      locationType: "grid",
     };
     groups.push(group);
     return group;
@@ -115,12 +129,27 @@ function makeFakeApi(): DockviewApi {
       title: p.title,
       api: {
         group,
+        // Self-reference is SAFE: the getter body runs only when invoked later,
+        // never during construction - identical to the existing `moveTo` pattern.
+        get location() {
+          return { type: panel.api.group.locationType };
+        },
         moveTo: (opts) => {
           detach(panel);
           const target = opts.group ?? makeGroup();
           panel.api.group = target;
           target.panels.push(panel);
         },
+        // Maximize is group-scoped in dockview; model it as a single-maximized
+        // invariant: maximizing this panel's group clears every other group's
+        // flag (mirrors real dockview - at most one maximized group).
+        maximize: () => {
+          for (const g of groups) g.maximized = g === panel.api.group;
+        },
+        exitMaximized: () => {
+          if (panel.api.group.maximized) panel.api.group.maximized = false;
+        },
+        isMaximized: () => panel.api.group.maximized,
       },
     };
     group.panels.push(panel);
@@ -148,6 +177,17 @@ function makeFakeApi(): DockviewApi {
         if (gi >= 0) groups.splice(gi, 1);
       }
     }),
+    // Container-level maximize surface - modeled for fidelity but NOT exercised
+    // by any session action (the production path uses panel.api.maximize()).
+    // Real DockviewApi.maximizeGroup takes an IDockviewPanel, not a group.
+    maximizeGroup: vi.fn((panel: FakePanel) => {
+      for (const g of groups) g.maximized = g === panel.api.group;
+    }),
+    exitMaximizedGroup: vi.fn(() => {
+      for (const g of groups) g.maximized = false;
+    }),
+    hasMaximizedGroup: vi.fn(() => groups.some((g) => g.maximized)),
+    onDidMaximizedGroupChange: vi.fn(() => ({ dispose: () => undefined })),
     getPanel: (id: string) => panels.find((p) => p.id === id),
     getGroup: (id: string) => groups.find((g) => g.id === id),
     toJSON: vi.fn(() => ({
@@ -527,6 +567,130 @@ describe("useSessionStore", () => {
 
     // Splitting is a real user edit — the session must be dirty so it's savable.
     expect(session.dirty).toBe(true);
+  });
+
+  it("closeOthersInGroup removes every other panel in the target's group, keeping the target", async () => {
+    const { layout, p1, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+
+    const fake = api as unknown as {
+      getPanel: (
+        id: string,
+      ) =>
+        | { api: { group: { panels: { id: string }[] }; moveTo: (o: { group?: unknown }) => void } }
+        | undefined;
+    };
+    // Force p1 and p2 into the SAME (tabbed) group, then add a third tab.
+    const targetGroup = fake.getPanel(p2.id)!.api.group;
+    fake.getPanel(p1.id)!.api.moveTo({ group: targetGroup as never });
+    const p3 = await panelStateRepo.create({ layoutId: layout.id, panelType: "maplibre" });
+    (api as unknown as DockviewApi).addPanel({
+      id: p3.id,
+      component: "maplibre",
+      title: "third",
+      position: { referenceGroup: targetGroup as never, direction: "within" },
+    });
+    expect(
+      fake
+        .getPanel(p2.id)!
+        .api.group.panels.map((p) => p.id)
+        .sort(),
+    ).toEqual([p1.id, p2.id, p3.id].sort());
+
+    const closed = await session.closeOthersInGroup(p2.id);
+    expect(closed).toBe(true);
+    // Only the target survives in that group; the layout still has it.
+    expect(fake.getPanel(p2.id)!.api.group.panels.map((p) => p.id)).toEqual([p2.id]);
+    expect((api as unknown as DockviewApi).getPanel(p1.id)).toBeUndefined();
+    expect((api as unknown as DockviewApi).getPanel(p3.id)).toBeUndefined();
+    expect(session.dirty).toBe(true);
+  });
+
+  it("closeOthersInGroup is a no-op (returns false) when the group has only the target", async () => {
+    const { layout, p1 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    // p1 (cesium) is clean and alone in its group after load.
+    const closed = await session.closeOthersInGroup(p1.id);
+    expect(closed).toBe(false);
+  });
+
+  it("closeOthersInGroup never empties the workspace (respects the guard)", async () => {
+    const { layout, p1, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+
+    const fake = api as unknown as {
+      getPanel: (
+        id: string,
+      ) =>
+        | { api: { group: { panels: { id: string }[] }; moveTo: (o: { group?: unknown }) => void } }
+        | undefined;
+    };
+    const targetGroup = fake.getPanel(p2.id)!.api.group;
+    fake.getPanel(p1.id)!.api.moveTo({ group: targetGroup as never });
+
+    await session.closeOthersInGroup(p2.id);
+    expect((api as unknown as DockviewApi).panels.map((p) => p.id)).toEqual([p2.id]);
+  });
+
+  it("toggleMaximize maximizes a grid group, then restores it on second call", async () => {
+    const { layout, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+
+    const fake = api as unknown as {
+      getPanel: (id: string) => { api: { isMaximized: () => boolean } } | undefined;
+    };
+    expect(fake.getPanel(p2.id)!.api.isMaximized()).toBe(false);
+
+    const max = await session.toggleMaximize(p2.id);
+    expect(max).toBe(true);
+    expect(fake.getPanel(p2.id)!.api.isMaximized()).toBe(true);
+
+    const restored = await session.toggleMaximize(p2.id);
+    expect(restored).toBe(true);
+    expect(fake.getPanel(p2.id)!.api.isMaximized()).toBe(false);
+  });
+
+  it("toggleMaximize is a no-op (returns false) for an off-grid group", async () => {
+    const { layout, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+
+    const fake = api as unknown as {
+      getPanel: (
+        id: string,
+      ) => { api: { group: { locationType: string }; isMaximized: () => boolean } } | undefined;
+    };
+    // Simulate a floating group (Phase 2 has no float UI yet, but the gate
+    // must still hold).
+    fake.getPanel(p2.id)!.api.group.locationType = "floating";
+
+    const result = await session.toggleMaximize(p2.id);
+    expect(result).toBe(false);
+    expect(fake.getPanel(p2.id)!.api.isMaximized()).toBe(false);
+  });
+
+  it("toggleMaximize does not dirty the session (view-only state, not persisted)", async () => {
+    const { layout, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    await session.toggleMaximize(p2.id);
+    expect(session.dirty).toBe(false);
   });
 
   it("clean mode survives a toJSON -> fromJSON round-trip via persisted state", async () => {

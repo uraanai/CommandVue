@@ -1,6 +1,6 @@
 /**
  * Pure decision-logic for the clean-pane controls. Kept separate from
- * `CleanPaneContextMenu.vue` so it can be unit-tested without mounting Vue or
+ * `DockContextMenu.vue` so it can be unit-tested without mounting Vue or
  * dockview (the component itself is Stage-1 Playwright-verified per the
  * CommandVue verification protocol).
  */
@@ -12,10 +12,10 @@ export interface CleanPaneControlInput {
 }
 
 export interface CleanPaneControl {
-  id: "toggle-header" | "split" | "close";
+  id: "toggle-header" | "close";
   label: string;
   /** Lucide component name (must exist in @lucide/vue@1.16). */
-  icon: "PanelTop" | "PanelTopClose" | "SquareSplitHorizontal" | "X";
+  icon: "PanelTop" | "PanelTopClose" | "X";
   disabled: boolean;
 }
 
@@ -25,12 +25,6 @@ export function cleanPaneControls(input: CleanPaneControlInput): CleanPaneContro
       id: "toggle-header",
       label: input.isHeaderless ? "Show header" : "Hide header",
       icon: input.isHeaderless ? "PanelTop" : "PanelTopClose",
-      disabled: false,
-    },
-    {
-      id: "split",
-      label: "Split",
-      icon: "SquareSplitHorizontal",
       disabled: false,
     },
     {

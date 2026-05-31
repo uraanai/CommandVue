@@ -24,6 +24,20 @@
   --dv-tabs-and-actions-container-font-size: 0.8125rem;
   --dv-tabs-container-scrollbar-color: var(--color-border);
 
+  /*
+   * Stacking context for dockview's transient overlays — the tab-overflow
+   * dropdown popover today; floating / pop-out group overlays in later Track B
+   * phases. Every BUILT-IN dockview theme class ships `--dv-overlay-z-index: 999`
+   * (see `dockview-core/dist/styles/dockview.css`); a hand-rolled theme class
+   * MUST define it too. Without it the overflow popover renders at `z-index:
+   * auto` and is painted *under* panel WebGL canvases (Cesium / MapLibre) —
+   * present in the DOM but unclickable, because the click lands on the canvas.
+   * The popover anchor is a sibling of the dock grid under `.dv-shell`, so 999
+   * lifts the whole popover above panel content. (Verified fix for the Phase 1
+   * review's "overflow dropdown not clickable" report.)
+   */
+  --dv-overlay-z-index: 999;
+
   --dv-activegroup-visiblepanel-tab-background-color: var(--color-surface);
   --dv-activegroup-hiddenpanel-tab-background-color: var(--color-surface-raised);
   --dv-inactivegroup-visiblepanel-tab-background-color: var(--color-surface);
