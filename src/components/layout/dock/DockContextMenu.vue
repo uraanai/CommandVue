@@ -33,10 +33,15 @@ import { tabbedPaneControls } from "./tabbedPaneControls";
  * `DockviewApi` itself has no `.element`) and open a PrimeVue `ContextMenu`
  * at the cursor with a model that depends on the right-clicked group's mode:
  *
+ * Both menus share ONE skeleton for cross-state consistency -
+ * [header toggle, secondary action, Maximize, separator, Close] - so the header
+ * toggle, Maximize, and Close never change position between right-clicks; only
+ * the single state-specific "secondary" item differs:
+ *
  *  - CLEAN group (`header.hidden === true`): Show header / Split / Maximize /
- *    Close - the Phase-1 clean-pane menu, now with Maximize.
- *  - TABBED group (`header.hidden === false`): Close / Close others /
- *    Hide header / Maximize. "Hide header" routes through the same
+ *    -- / Close - the Phase-1 clean-pane menu, now with Maximize.
+ *  - TABBED group (`header.hidden === false`): Hide header / Close others /
+ *    Maximize / -- / Close. "Hide header" routes through the same
  *    `session.toggleHeaderless`, completing the clean<->tabbed round-trip.
  *
  * The Maximize/Restore label is always read fresh from `panel.api.isMaximized()`
@@ -96,9 +101,11 @@ function maximizeItem(panel: IDockviewPanel): DockMenuItem {
 }
 
 /**
- * CLEAN pane menu (group.header.hidden === true). Phase-1 items + Maximize.
- * `totalPanels` drives the Close empty-workspace guard; the group is always
- * clean here, so Show-header is derived with `isHeaderless: true`.
+ * CLEAN pane menu (group.header.hidden === true). Phase-1 items + Maximize, in
+ * the shared skeleton [header toggle, secondary action, Maximize, --, Close]
+ * that buildTabbedModel also follows. `totalPanels` drives the Close
+ * empty-workspace guard; the group is always clean here, so Show-header is
+ * derived with `isHeaderless: true`.
  */
 function buildCleanModel(panel: IDockviewPanel, totalPanels: number): DockMenuItem[] {
   const controls = cleanPaneControls({ isHeaderless: true, totalPanels });
@@ -131,9 +138,10 @@ function buildCleanModel(panel: IDockviewPanel, totalPanels: number): DockMenuIt
 }
 
 /**
- * TABBED pane menu (group.header.hidden === false). Close / Close others /
- * Hide header / Maximize. `panelsInGroup` drives the Close-others guard;
- * `totalPanels` drives the Close empty-workspace guard.
+ * TABBED pane menu (group.header.hidden === false). Mirrors buildCleanModel's
+ * skeleton: Hide header / Close others / Maximize / -- / Close. `panelsInGroup`
+ * drives the Close-others guard; `totalPanels` drives the Close empty-workspace
+ * guard.
  */
 function buildTabbedModel(
   panel: IDockviewPanel,
@@ -149,10 +157,9 @@ function buildTabbedModel(
 
   return [
     {
-      label: close.label,
-      lucide: X,
-      disabled: close.disabled,
-      command: () => void session.removePanelGuarded(panel.id),
+      label: "Hide header",
+      lucide: PanelTopClose,
+      command: () => void session.toggleHeaderless(panel.id),
     },
     {
       label: closeOthers.label,
@@ -160,13 +167,14 @@ function buildTabbedModel(
       disabled: closeOthers.disabled,
       command: () => void session.closeOthersInGroup(panel.id),
     },
-    {
-      label: "Hide header",
-      lucide: PanelTopClose,
-      command: () => void session.toggleHeaderless(panel.id),
-    },
-    { separator: true },
     maximizeItem(panel),
+    { separator: true },
+    {
+      label: close.label,
+      lucide: X,
+      disabled: close.disabled,
+      command: () => void session.removePanelGuarded(panel.id),
+    },
   ];
 }
 
