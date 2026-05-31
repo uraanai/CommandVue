@@ -254,6 +254,40 @@ export const useSessionStore = defineStore("session", () => {
   }
 
   /**
+   * Flip a panel's group between clean (header-less) and tabbed. A clean pane
+   * holds exactly one panel, so when the group has >1 panel the active panel
+   * is first split into its own new group, THEN the header is hidden. The
+   * `headerless` flag is persisted to `PanelState.state` so it survives loads.
+   * Restoring-guarded — toggling never dirties the session.
+   */
+  async function toggleHeaderless(panelId: Ulid): Promise<void> {
+    const api = dockviewApi.value;
+    if (!api) throw new Error("Dockview API not bound");
+    const panel = api.getPanel(panelId);
+    if (!panel) return;
+
+    setRestoring(true);
+    try {
+      let group = panel.api.group;
+      const makingClean = !group.header.hidden;
+      if (makingClean && group.panels.length > 1) {
+        // A clean pane is single-panel — split this panel to its own group.
+        panel.api.moveTo({ group: api.addGroup(), skipSetActive: true });
+        group = panel.api.group;
+      }
+      group.header.hidden = makingClean;
+
+      const panelStateStore = usePanelStateStore();
+      const existing = panelStateStore.getState(panelId);
+      await panelStateStore.updateState(panelId, {
+        state: withHeaderless(existing?.state, makingClean),
+      });
+    } finally {
+      setRestoring(false);
+    }
+  }
+
+  /**
    * Throw away in-memory edits and re-load the persisted layout state.
    */
   async function discardChanges(): Promise<void> {
@@ -295,6 +329,7 @@ export const useSessionStore = defineStore("session", () => {
     backfillCleanMainPane,
     updateCurrentLayout,
     saveCurrentAsNewLayout,
+    toggleHeaderless,
     discardChanges,
     switchWorkspace,
   };

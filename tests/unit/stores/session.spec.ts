@@ -385,6 +385,66 @@ describe("useSessionStore", () => {
     expect(session.dirty).toBe(false);
   });
 
+  it("toggleHeaderless flips a single-panel group's header and persists the flag", async () => {
+    const { layout, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+
+    const fake = api as unknown as {
+      getPanel: (
+        id: string,
+      ) => { api: { group: { header: { hidden: boolean }; panels: unknown[] } } } | undefined;
+    };
+    // p2 (maplibre) is tabbed after load.
+    expect(fake.getPanel(p2.id)!.api.group.header.hidden).toBe(false);
+
+    await session.toggleHeaderless(p2.id);
+    expect(fake.getPanel(p2.id)!.api.group.header.hidden).toBe(true);
+    const persisted = await panelStateRepo.getById(p2.id);
+    expect(persisted?.state).toMatchObject({ headerless: true });
+    expect(session.dirty).toBe(false);
+
+    // Toggling again reverts and clears the flag.
+    await session.toggleHeaderless(p2.id);
+    expect(fake.getPanel(p2.id)!.api.group.header.hidden).toBe(false);
+    const reverted = await panelStateRepo.getById(p2.id);
+    expect("headerless" in (reverted?.state ?? {})).toBe(false);
+  });
+
+  it("toggleHeaderless moves a panel out of a multi-panel group before hiding the header", async () => {
+    const { layout, p1, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+
+    const fake = api as unknown as {
+      getPanel: (
+        id: string,
+      ) =>
+        | {
+            api: {
+              group: { id: string; header: { hidden: boolean }; panels: { id: string }[] };
+              moveTo: (o: unknown) => void;
+            };
+          }
+        | undefined;
+    };
+    // Force p1 and p2 into the SAME group to simulate a >1-panel group.
+    const targetGroup = fake.getPanel(p2.id)!.api.group;
+    fake.getPanel(p1.id)!.api.moveTo({ group: targetGroup });
+    expect(fake.getPanel(p1.id)!.api.group.panels.length).toBeGreaterThan(1);
+
+    await session.toggleHeaderless(p1.id);
+    // p1 now lives alone in a clean group.
+    expect(fake.getPanel(p1.id)!.api.group.panels.map((p) => p.id)).toEqual([p1.id]);
+    expect(fake.getPanel(p1.id)!.api.group.header.hidden).toBe(true);
+    // p2 untouched.
+    expect(fake.getPanel(p2.id)!.api.group.header.hidden).toBe(false);
+  });
+
   it("switchWorkspace updates pointers and loads the other workspace's default layout", async () => {
     const { ws: wsA, layout: layoutA } = await seedWorkspace();
     const wsB = await workspaceRepo.create({ name: "WS-B" });
