@@ -2,7 +2,7 @@
 import type { DockviewApi, IDockviewPanel } from "dockview-vue";
 import type { MenuItem } from "primevue/menuitem";
 
-import { PanelTop, PanelTopClose, SquareSplitHorizontal, X } from "@lucide/vue";
+import { EllipsisVertical, PanelTop, PanelTopClose, SquareSplitHorizontal, X } from "@lucide/vue";
 import { computed, onUnmounted, ref, shallowRef, watch, type Component } from "vue";
 
 import IconButton from "@/components/ui/IconButton.vue";
@@ -248,7 +248,7 @@ function iconFor(name: string): Component {
   <Teleport to="body">
     <div
       v-if="visible"
-      class="border-border bg-surface-raised pointer-events-auto fixed z-40 flex items-center gap-0.5 rounded-md border p-1 shadow-xl"
+      class="group/cpo border-border bg-surface-raised pointer-events-auto fixed z-40 flex items-center gap-0.5 rounded-md border p-1 shadow-xl"
       :style="overlayStyle"
       data-testid="clean-pane-overlay"
       @pointerenter="onOverlayPointerEnter"
@@ -256,17 +256,40 @@ function iconFor(name: string): Component {
       @mousedown.stop
       @click.stop
     >
-      <IconButton
-        v-for="c in controls"
-        :key="c.id"
-        :label="c.label"
-        :disabled="c.disabled"
-        size="sm"
-        :data-control="c.id"
-        @mousedown.stop
-        @click.stop="runControl(c.id, $event)"
+      <!-- Expandable controls: collapsed at rest, revealed on hover of the
+           overlay (`group/cpo`). Grows inward (to the LEFT of the trigger,
+           which sits at the corner) so it never runs off-screen. CSS-only
+           reveal — `max-w` + `opacity` transition, independent of the JS
+           show/hide grace machinery below. -->
+      <div
+        class="flex max-w-0 items-center gap-0.5 overflow-hidden opacity-0 transition-all duration-150 ease-out group-hover/cpo:max-w-[200px] group-hover/cpo:opacity-100"
       >
-        <component :is="iconFor(c.icon)" />
+        <IconButton
+          v-for="c in controls"
+          :key="c.id"
+          :label="c.label"
+          :disabled="c.disabled"
+          size="sm"
+          :data-control="c.id"
+          @mousedown.stop
+          @click.stop="runControl(c.id, $event)"
+        >
+          <component :is="iconFor(c.icon)" />
+        </IconButton>
+      </div>
+
+      <!-- Single resting trigger: the only thing shown until hovered. Subtle at
+           rest, full opacity on hover. Always visible so the hover target never
+           disappears as the controls expand. -->
+      <IconButton
+        label="Pane controls"
+        size="sm"
+        class="opacity-60 transition-opacity duration-150 group-hover/cpo:opacity-100 hover:opacity-100"
+        data-testid="clean-pane-trigger"
+        @mousedown.stop
+        @click.stop
+      >
+        <EllipsisVertical />
       </IconButton>
     </div>
   </Teleport>
