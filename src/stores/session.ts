@@ -312,6 +312,41 @@ export const useSessionStore = defineStore("session", () => {
   }
 
   /**
+   * Close every OTHER panel in the right-clicked panel's group, keeping the
+   * target. Iterates a stable snapshot of `group.panels` (removing while
+   * iterating the live array skips entries). Honors the empty-workspace guard:
+   * a removal that would drop the layout to zero panels is skipped. Returns
+   * `false` when nothing was eligible (group held only the target). Restoring-
+   * guarded around the structural mutations; marks dirty when it removed at
+   * least one panel (a real user edit, matching removePanelGuarded).
+   */
+  async function closeOthersInGroup(panelId: Ulid): Promise<boolean> {
+    const api = dockviewApi.value;
+    if (!api) throw new Error("Dockview API not bound");
+    const target = api.getPanel(panelId);
+    if (!target) return false;
+
+    const others = target.api.group.panels.filter((p) => p.id !== panelId);
+    if (others.length === 0) return false;
+
+    let removedAny = false;
+    setRestoring(true);
+    try {
+      for (const other of others) {
+        if (api.panels.length <= 1) break; // empty-workspace guard
+        const panel = api.getPanel(other.id);
+        if (!panel) continue;
+        api.removePanel(panel);
+        removedAny = true;
+      }
+    } finally {
+      setRestoring(false);
+    }
+    if (removedAny) markDirty();
+    return removedAny;
+  }
+
+  /**
    * Split a clean pane: add a new panel of the CHOSEN `panelType` (picked by the
    * user from the Split picker) as a NEW clean neighbor to the right of the
    * source group. Creates a fresh headerless panel-state record so the new pane
@@ -400,6 +435,7 @@ export const useSessionStore = defineStore("session", () => {
     saveCurrentAsNewLayout,
     toggleHeaderless,
     removePanelGuarded,
+    closeOthersInGroup,
     splitCleanNeighbor,
     discardChanges,
     switchWorkspace,
