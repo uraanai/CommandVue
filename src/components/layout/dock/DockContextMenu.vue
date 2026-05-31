@@ -143,7 +143,6 @@ function buildTabbedModel(
   const controls = tabbedPaneControls({
     totalPanels,
     panelsInGroup,
-    isMaximized: panel.api.isMaximized(),
   });
   const close = controls.find((c) => c.id === "close")!;
   const closeOthers = controls.find((c) => c.id === "close-others")!;

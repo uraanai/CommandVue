@@ -1,23 +1,27 @@
 /**
  * Pure decision-logic for the tabbed-pane context menu. Mirrors
- * `cleanPaneControls.ts` -- kept separate from `DockContextMenu.vue` so it can
+ * `cleanPaneControls.ts` — kept separate from `DockContextMenu.vue` so it can
  * be unit-tested without mounting Vue or dockview (the component itself is
  * Stage-1 Playwright-verified per the CommandVue verification protocol).
+ *
+ * Maximize/Restore is intentionally NOT modeled here: it needs the live
+ * `panel.api.location.type` (for off-grid disabling), which this pure module
+ * has no access to, so the component owns it via a shared `maximizeItem`
+ * helper — exactly as the clean-pane menu does. This module owns only the
+ * items whose label/enabled state is computable from panel counts alone.
  */
 export interface TabbedPaneControlInput {
   /** Total panels in the whole layout (drives the empty-workspace guard). */
   totalPanels: number;
   /** Panels in the right-clicked panel's group (drives "Close others"). */
   panelsInGroup: number;
-  /** Whether the right-clicked panel's group is currently maximized. */
-  isMaximized: boolean;
 }
 
 export interface TabbedPaneControl {
-  id: "close" | "close-others" | "hide-header" | "maximize";
+  id: "close" | "close-others" | "hide-header";
   label: string;
   /** Lucide component name (must exist in @lucide/vue@1.16). */
-  icon: "X" | "Columns2" | "PanelTopClose" | "Maximize2" | "Minimize2";
+  icon: "X" | "Columns2" | "PanelTopClose";
   disabled: boolean;
 }
 
@@ -39,12 +43,6 @@ export function tabbedPaneControls(input: TabbedPaneControlInput): TabbedPaneCon
       id: "hide-header",
       label: "Hide header",
       icon: "PanelTopClose",
-      disabled: false,
-    },
-    {
-      id: "maximize",
-      label: input.isMaximized ? "Restore" : "Maximize",
-      icon: input.isMaximized ? "Minimize2" : "Maximize2",
       disabled: false,
     },
   ];
