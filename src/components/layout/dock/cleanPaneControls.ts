@@ -1,6 +1,6 @@
 /**
- * Pure decision-logic for the clean-pane hover overlay. Kept separate from
- * `CleanPaneOverlay.vue` so it can be unit-tested without mounting Vue or
+ * Pure decision-logic for the clean-pane controls. Kept separate from
+ * `CleanPaneContextMenu.vue` so it can be unit-tested without mounting Vue or
  * dockview (the component itself is Stage-1 Playwright-verified per the
  * CommandVue verification protocol).
  */

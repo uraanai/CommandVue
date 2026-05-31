@@ -14,12 +14,12 @@ import { onUnmounted, provide, ref, shallowRef } from "vue";
 import { useLayoutStore } from "@/stores/layout";
 import { useSessionStore } from "@/stores/session";
 
-import CleanPaneOverlay from "./dock/CleanPaneOverlay.vue";
+import CleanPaneContextMenu from "./dock/CleanPaneContextMenu.vue";
 import { resetLayoutKey } from "./keys";
 
-// Dock-root element for the clean-pane hover overlay (DockviewApi has no
-// `.element`), plus a reactive handle on the bound API so the overlay re-binds
-// its pointer listeners once dockview is ready.
+// Dock-root element for the clean-pane context menu (DockviewApi has no
+// `.element`), plus a reactive handle on the bound API so the menu re-binds
+// its `contextmenu` listener once dockview is ready.
 const rootEl = ref<HTMLElement | null>(null);
 const boundApi = shallowRef<DockviewApi | null>(null);
 
@@ -86,6 +86,6 @@ maybePromptUnload(session.getDockviewApi());
       class="h-full w-full"
       @ready="onReady"
     />
-    <CleanPaneOverlay :api="boundApi" :root="rootEl" />
+    <CleanPaneContextMenu :api="boundApi" :root="rootEl" />
   </div>
 </template>
