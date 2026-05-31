@@ -21,6 +21,7 @@ export const BUILTIN_PANELS: readonly PanelDefinition[] = [
     description: "Cesium-powered 3D globe with terrain and imagery layers.",
     icon: "globe",
     category: "maps",
+    mainPane: true,
     component: () => import("@/components/panels/CesiumPanel.vue"),
   },
   {

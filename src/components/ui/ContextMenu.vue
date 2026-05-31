@@ -47,9 +47,10 @@ defineExpose({ show, hide });
 
 const baseTheme: Record<string, PtSlot> = {
   root: {
-    class: "border-border bg-surface-raised z-50 min-w-[220px] rounded-md border py-1 shadow-xl",
+    class:
+      "border-border bg-surface-raised z-50 min-w-[220px] rounded-md border py-1 shadow-xl outline-none",
   },
-  rootList: { class: "flex flex-col" },
+  rootList: { class: "flex flex-col outline-none" },
   item: { class: "relative" },
   itemContent: { class: "hover:bg-surface-sunken cursor-pointer transition-colors" },
   itemLink: {
@@ -60,7 +61,8 @@ const baseTheme: Record<string, PtSlot> = {
   },
   itemIcon: { class: "text-muted size-3.5" },
   submenu: {
-    class: "border-border bg-surface-raised z-50 min-w-[220px] rounded-md border py-1 shadow-xl",
+    class:
+      "border-border bg-surface-raised z-50 min-w-[220px] rounded-md border py-1 shadow-xl outline-none",
   },
   submenuIcon: { class: "text-muted ml-auto size-3" },
   separator: { class: "border-border my-1 border-t" },

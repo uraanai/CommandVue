@@ -1,11 +1,13 @@
-import type { Layout, PanelState, Ulid } from "@/types/workspace";
-import type { DockviewApi } from "dockview-vue";
+import type { Layout, PanelState, PanelType, Ulid } from "@/types/workspace";
+import type { DockviewApi, DockviewGroupPanel, IDockviewPanel } from "dockview-vue";
 
 import { defineStore } from "pinia";
 import { ref, shallowRef } from "vue";
 
+import { isHeaderless, withHeaderless } from "@/modules/panels/headerless";
 import { MISSING_PANEL_TYPE } from "@/modules/panels/missing";
 import { panelRegistry } from "@/modules/panels/registry";
+import { UNASSIGNED_PANEL_TYPE } from "@/modules/panels/unassigned";
 import { layoutRepo } from "@/modules/storage/layoutRepo";
 import { panelStateRepo } from "@/modules/storage/panelStateRepo";
 
@@ -34,6 +36,7 @@ const dockviewApi = shallowRef<DockviewApi | null>(null);
 export const useSessionStore = defineStore("session", () => {
   const loadedLayoutId = ref<null | Ulid>(null);
   const dirty = ref(false);
+  const restoring = ref(false);
 
   function getDockviewApi(): DockviewApi | null {
     return dockviewApi.value;
@@ -48,11 +51,22 @@ export const useSessionStore = defineStore("session", () => {
   }
 
   function markDirty(): void {
+    if (restoring.value) return;
     dirty.value = true;
   }
 
   function clearDirty(): void {
     dirty.value = false;
+  }
+
+  /**
+   * Toggle the restoring guard. While true, `markDirty` is a no-op so that
+   * invariant application (header-less re-apply, backfill) and clean-pane
+   * toggles never false-dirty the session. The single mutation path for the
+   * guard — every internal caller uses this, never `restoring.value = …`.
+   */
+  function setRestoring(value: boolean): void {
+    restoring.value = value;
   }
 
   /**
@@ -83,8 +97,52 @@ export const useSessionStore = defineStore("session", () => {
       rebuildFromPanelStates(api, panelStates);
     }
 
+    await backfillCleanMainPane();
+    applyHeaderlessGroups(api);
+
     loadedLayoutId.value = layoutId;
     dirty.value = false;
+  }
+
+  /**
+   * Re-apply clean (header-less) mode after a load. `header.hidden` is NOT
+   * serialized by dockview's `toJSON()`, so for every panel whose persisted
+   * `PanelState.state` is headerless we set its group's header hidden. Safe
+   * no-op when nothing is flagged. Restoring-guarded so it never dirties.
+   */
+  function applyHeaderlessGroups(api: DockviewApi): void {
+    setRestoring(true);
+    try {
+      const panelStateStore = usePanelStateStore();
+      for (const ps of panelStateStore.listForLayout()) {
+        if (!isHeaderless(ps.state)) continue;
+        const panel = api.getPanel(ps.id);
+        const group = panel?.api.group;
+        if (group) group.header.hidden = true;
+      }
+    } finally {
+      setRestoring(false);
+    }
+  }
+
+  /**
+   * Single idempotent backfill point for legacy/seeded layouts: if NO
+   * panel-state is headerless and a `mainPane`-typed panel exists, persist
+   * `headerless: true` on it (cache + repo in sync via the panelState store)
+   * so it survives into the next `fromJSON` path. No-op once any panel is
+   * clean. This is the ONLY backfill site — never in seed.ts.
+   */
+  async function backfillCleanMainPane(): Promise<void> {
+    const panelStateStore = usePanelStateStore();
+    const states = panelStateStore.listForLayout();
+    if (states.some((ps) => isHeaderless(ps.state))) return;
+    const mainType = panelRegistry.mainPanelType();
+    if (!mainType) return;
+    const target = states.find((ps) => ps.panelType === mainType);
+    if (!target) return;
+    await panelStateStore.updateState(target.id, {
+      state: withHeaderless(target.state, true),
+    });
   }
 
   /**
@@ -196,6 +254,109 @@ export const useSessionStore = defineStore("session", () => {
   }
 
   /**
+   * Flip a panel's group between clean (header-less) and tabbed. A clean pane
+   * holds exactly one panel, so when the group has >1 panel the active panel
+   * is first split into its own new group, THEN the header is hidden. The
+   * `headerless` flag is persisted to `PanelState.state` so it survives loads.
+   * Restoring-guarded — toggling never dirties the session.
+   */
+  async function toggleHeaderless(panelId: Ulid): Promise<void> {
+    const api = dockviewApi.value;
+    if (!api) throw new Error("Dockview API not bound");
+    const panel = api.getPanel(panelId);
+    if (!panel) return;
+
+    setRestoring(true);
+    try {
+      let group = panel.api.group;
+      const makingClean = !group.header.hidden;
+      if (makingClean && group.panels.length > 1) {
+        // A clean pane is single-panel — split this panel to its own group.
+        panel.api.moveTo({ group: api.addGroup(), skipSetActive: true });
+        group = panel.api.group;
+      }
+      group.header.hidden = makingClean;
+
+      const panelStateStore = usePanelStateStore();
+      const existing = panelStateStore.getState(panelId);
+      await panelStateStore.updateState(panelId, {
+        state: withHeaderless(existing?.state, makingClean),
+      });
+    } finally {
+      setRestoring(false);
+    }
+  }
+
+  /**
+   * Remove a panel, but REFUSE (return false, no throw) if doing so would
+   * leave the layout with zero panels — the empty-workspace guard (spec §12).
+   * Returning a boolean lets the UI close control skip the last pane without
+   * an uncaught error in the click handler. Restoring-guarded around the
+   * structural mutation; marks dirty afterward so the user can persist it.
+   */
+  async function removePanelGuarded(panelId: Ulid): Promise<boolean> {
+    const api = dockviewApi.value;
+    if (!api) throw new Error("Dockview API not bound");
+    if (api.panels.length <= 1) return false;
+    const panel = api.getPanel(panelId);
+    if (!panel) return false;
+
+    setRestoring(true);
+    try {
+      api.removePanel(panel);
+    } finally {
+      setRestoring(false);
+    }
+    markDirty();
+    return true;
+  }
+
+  /**
+   * Split a clean pane: add a new panel of the CHOSEN `panelType` (picked by the
+   * user from the Split picker) as a NEW clean neighbor to the right of the
+   * source group. Creates a fresh headerless panel-state record so the new pane
+   * round-trips. Returns the new panel id, or null when there is no loaded
+   * layout / source panel. Restoring-guarded around the mutation; marks the
+   * session dirty afterward so the new pane is savable (matches
+   * removePanelGuarded — splitting is a real user edit).
+   */
+  async function splitCleanNeighbor(
+    sourcePanelId: Ulid,
+    panelType: PanelType,
+  ): Promise<Ulid | null> {
+    const api = dockviewApi.value;
+    if (!api) throw new Error("Dockview API not bound");
+    if (!loadedLayoutId.value) return null;
+    const source = api.getPanel(sourcePanelId);
+    if (!source) return null;
+
+    const panelStateStore = usePanelStateStore();
+    setRestoring(true);
+    let newId: Ulid;
+    try {
+      const created = await panelStateStore.createPanel({
+        layoutId: loadedLayoutId.value,
+        panelType,
+        assignmentState: "assigned",
+        state: withHeaderless({}, true),
+      });
+      const def = panelRegistry.get(panelType);
+      const added = api.addPanel({
+        id: created.id,
+        component: panelType,
+        title: def?.title ?? panelType,
+        position: { referenceGroup: source.api.group, direction: "right" },
+      });
+      added.api.group.header.hidden = true;
+      newId = created.id;
+    } finally {
+      setRestoring(false);
+    }
+    markDirty();
+    return newId;
+  }
+
+  /**
    * Throw away in-memory edits and re-load the persisted layout state.
    */
   async function discardChanges(): Promise<void> {
@@ -225,38 +386,84 @@ export const useSessionStore = defineStore("session", () => {
   return {
     loadedLayoutId,
     dirty,
+    restoring,
     getDockviewApi,
     bindDockview,
     unbindDockview,
     markDirty,
     clearDirty,
+    setRestoring,
     loadLayout,
+    applyHeaderlessGroups,
+    backfillCleanMainPane,
     updateCurrentLayout,
     saveCurrentAsNewLayout,
+    toggleHeaderless,
+    removePanelGuarded,
+    splitCleanNeighbor,
     discardChanges,
     switchWorkspace,
   };
 });
 
+/**
+ * Resolve a panel-state to its dockview `component` string + display title.
+ * Module-scope: uses only module-level imports, no store-ref closure access.
+ */
+function resolvePanelComponent(ps: PanelState): { component: string; title: string } {
+  if (!ps.panelType) return { component: UNASSIGNED_PANEL_TYPE, title: "Empty" };
+  const def = panelRegistry.get(ps.panelType);
+  if (def) return { component: ps.panelType, title: def.title };
+  // Unregistered panel type — render the missing-panel placeholder so the
+  // user can reassign or remove without losing the panel-state id.
+  return { component: MISSING_PANEL_TYPE, title: "Missing" };
+}
+
+/**
+ * Rebuild the dock from panel-state records. The `mainPane`-typed panel
+ * (e.g. cesium) is added FIRST as its own group; the first remaining panel
+ * docks to its `dockHint` side (default `'right'`) as a side group; the rest
+ * stack `'within'` that side group as tabs. `dockHint` is read from
+ * `PanelState.state` per panel.
+ *
+ * Module-scope (matching the current file): no closure over store refs.
+ */
 function rebuildFromPanelStates(api: DockviewApi, panelStates: PanelState[]): void {
-  for (const ps of panelStates) {
-    let component: string;
-    let title: string;
-    if (!ps.panelType) {
-      component = "__unassigned__";
-      title = "Empty";
-    } else if (panelRegistry.get(ps.panelType)) {
-      component = ps.panelType;
-      title = panelRegistry.get(ps.panelType)!.title;
-    } else {
-      // Unregistered panel type — render the missing-panel placeholder so
-      // the user can reassign or remove without losing the panel-state id
-      // (preserves preset references and dock position).
-      component = MISSING_PANEL_TYPE;
-      title = "Missing";
+  const mainType = panelRegistry.mainPanelType();
+  const mainIndex = mainType ? panelStates.findIndex((ps) => ps.panelType === mainType) : -1;
+  const ordered =
+    mainIndex >= 0
+      ? [panelStates[mainIndex]!, ...panelStates.filter((_, i) => i !== mainIndex)]
+      : [...panelStates];
+
+  let mainPanel: IDockviewPanel | undefined;
+  let sideGroup: DockviewGroupPanel | undefined;
+
+  ordered.forEach((ps, i) => {
+    const { component, title } = resolvePanelComponent(ps);
+    if (i === 0) {
+      mainPanel = api.addPanel({ id: ps.id, component, title });
+      return;
     }
-    api.addPanel({ id: ps.id, component, title });
-  }
+    const dockHint =
+      (ps.state.dockHint as "left" | "right" | "above" | "below" | undefined) ?? "right";
+    if (!sideGroup) {
+      const created = api.addPanel({
+        id: ps.id,
+        component,
+        title,
+        position: { referenceGroup: mainPanel!.api.group, direction: dockHint },
+      });
+      sideGroup = created.api.group;
+    } else {
+      api.addPanel({
+        id: ps.id,
+        component,
+        title,
+        position: { referenceGroup: sideGroup, direction: "within" },
+      });
+    }
+  });
 }
 
 /** Test-only — clear the module-scope DockviewApi so specs can rebind. */
