@@ -34,6 +34,7 @@ const dockviewApi = shallowRef<DockviewApi | null>(null);
 export const useSessionStore = defineStore("session", () => {
   const loadedLayoutId = ref<null | Ulid>(null);
   const dirty = ref(false);
+  const restoring = ref(false);
 
   function getDockviewApi(): DockviewApi | null {
     return dockviewApi.value;
@@ -48,11 +49,22 @@ export const useSessionStore = defineStore("session", () => {
   }
 
   function markDirty(): void {
+    if (restoring.value) return;
     dirty.value = true;
   }
 
   function clearDirty(): void {
     dirty.value = false;
+  }
+
+  /**
+   * Toggle the restoring guard. While true, `markDirty` is a no-op so that
+   * invariant application (header-less re-apply, backfill) and clean-pane
+   * toggles never false-dirty the session. The single mutation path for the
+   * guard — every internal caller uses this, never `restoring.value = …`.
+   */
+  function setRestoring(value: boolean): void {
+    restoring.value = value;
   }
 
   /**
@@ -225,11 +237,13 @@ export const useSessionStore = defineStore("session", () => {
   return {
     loadedLayoutId,
     dirty,
+    restoring,
     getDockviewApi,
     bindDockview,
     unbindDockview,
     markDirty,
     clearDirty,
+    setRestoring,
     loadLayout,
     updateCurrentLayout,
     saveCurrentAsNewLayout,
