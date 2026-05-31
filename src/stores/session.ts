@@ -1,4 +1,4 @@
-import type { Layout, PanelState, Ulid } from "@/types/workspace";
+import type { Layout, PanelState, PanelType, Ulid } from "@/types/workspace";
 import type { DockviewApi, DockviewGroupPanel, IDockviewPanel } from "dockview-vue";
 
 import { defineStore } from "pinia";
@@ -312,6 +312,51 @@ export const useSessionStore = defineStore("session", () => {
   }
 
   /**
+   * Split a clean pane: add a new panel of the CHOSEN `panelType` (picked by the
+   * user from the Split picker) as a NEW clean neighbor to the right of the
+   * source group. Creates a fresh headerless panel-state record so the new pane
+   * round-trips. Returns the new panel id, or null when there is no loaded
+   * layout / source panel. Restoring-guarded around the mutation; marks the
+   * session dirty afterward so the new pane is savable (matches
+   * removePanelGuarded — splitting is a real user edit).
+   */
+  async function splitCleanNeighbor(
+    sourcePanelId: Ulid,
+    panelType: PanelType,
+  ): Promise<Ulid | null> {
+    const api = dockviewApi.value;
+    if (!api) throw new Error("Dockview API not bound");
+    if (!loadedLayoutId.value) return null;
+    const source = api.getPanel(sourcePanelId);
+    if (!source) return null;
+
+    const panelStateStore = usePanelStateStore();
+    setRestoring(true);
+    let newId: Ulid;
+    try {
+      const created = await panelStateStore.createPanel({
+        layoutId: loadedLayoutId.value,
+        panelType,
+        assignmentState: "assigned",
+        state: withHeaderless({}, true),
+      });
+      const def = panelRegistry.get(panelType);
+      const added = api.addPanel({
+        id: created.id,
+        component: panelType,
+        title: def?.title ?? panelType,
+        position: { referenceGroup: source.api.group, direction: "right" },
+      });
+      added.api.group.header.hidden = true;
+      newId = created.id;
+    } finally {
+      setRestoring(false);
+    }
+    markDirty();
+    return newId;
+  }
+
+  /**
    * Throw away in-memory edits and re-load the persisted layout state.
    */
   async function discardChanges(): Promise<void> {
@@ -355,6 +400,7 @@ export const useSessionStore = defineStore("session", () => {
     saveCurrentAsNewLayout,
     toggleHeaderless,
     removePanelGuarded,
+    splitCleanNeighbor,
     discardChanges,
     switchWorkspace,
   };

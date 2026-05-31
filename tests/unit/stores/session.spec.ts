@@ -495,6 +495,40 @@ describe("useSessionStore", () => {
     expect(session.loadedLayoutId).toBe(layoutB.id);
   });
 
+  it("splitCleanNeighbor adds the chosen panel type as a new clean neighbor", async () => {
+    const { layout, p1 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+
+    const fake = api as unknown as {
+      getPanel: (
+        id: string,
+      ) => { component: string; api: { group: { header: { hidden: boolean } } } } | undefined;
+    };
+    const sourceGroup = fake.getPanel(p1.id)!.api.group;
+    const before = (api as unknown as DockviewApi).panels.length;
+
+    // p1 (cesium) is clean after load (backfill); split it, choosing maplibre.
+    const newId = await session.splitCleanNeighbor(p1.id, "maplibre");
+    expect(newId).toBeTruthy();
+    expect((api as unknown as DockviewApi).panels.length).toBe(before + 1);
+
+    const created = fake.getPanel(newId!)!;
+    expect(created.component).toBe("maplibre");
+    expect(created.api.group.header.hidden).toBe(true); // new pane is clean
+    expect(created.api.group).not.toBe(sourceGroup); // different group
+    expect(sourceGroup.header.hidden).toBe(true); // source (cesium) was clean and stays clean
+
+    const persisted = await panelStateRepo.getById(newId!);
+    expect(persisted?.panelType).toBe("maplibre");
+    expect(persisted?.state).toEqual({ headerless: true });
+
+    // Splitting is a real user edit — the session must be dirty so it's savable.
+    expect(session.dirty).toBe(true);
+  });
+
   it("clean mode survives a toJSON -> fromJSON round-trip via persisted state", async () => {
     const { layout, p1 } = await seedWorkspace();
     // Persist a dockviewState (carrying the panel id) so loadLayout takes the

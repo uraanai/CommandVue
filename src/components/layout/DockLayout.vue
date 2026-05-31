@@ -9,12 +9,19 @@ import {
   type DockviewReadyEvent,
   type DockviewTheme,
 } from "dockview-vue";
-import { onUnmounted, provide } from "vue";
+import { onUnmounted, provide, ref, shallowRef } from "vue";
 
 import { useLayoutStore } from "@/stores/layout";
 import { useSessionStore } from "@/stores/session";
 
+import CleanPaneOverlay from "./dock/CleanPaneOverlay.vue";
 import { resetLayoutKey } from "./keys";
+
+// Dock-root element for the clean-pane hover overlay (DockviewApi has no
+// `.element`), plus a reactive handle on the bound API so the overlay re-binds
+// its pointer listeners once dockview is ready.
+const rootEl = ref<HTMLElement | null>(null);
+const boundApi = shallowRef<DockviewApi | null>(null);
 
 // Panel components are registered globally in `main.ts` via `app.component()`
 // because dockview-vue 6 dropped the v4 `:components` prop and instead resolves
@@ -25,6 +32,7 @@ const layoutStore = useLayoutStore();
 
 async function onReady(event: DockviewReadyEvent) {
   session.bindDockview(event.api);
+  boundApi.value = event.api;
 
   const target = layoutStore.currentLayoutId;
   if (target) {
@@ -71,5 +79,13 @@ maybePromptUnload(session.getDockviewApi());
 </script>
 
 <template>
-  <DockviewVue :theme="commandvueTheme" class="h-full w-full" @ready="onReady" />
+  <div ref="rootEl" class="relative h-full w-full">
+    <DockviewVue
+      :theme="commandvueTheme"
+      no-panels-overlay="emptyGroup"
+      class="h-full w-full"
+      @ready="onReady"
+    />
+    <CleanPaneOverlay :api="boundApi" :root="rootEl" />
+  </div>
 </template>
