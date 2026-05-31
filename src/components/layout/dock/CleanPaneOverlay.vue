@@ -6,6 +6,7 @@ import { PanelTop, PanelTopClose, SquareSplitHorizontal, X } from "@lucide/vue";
 import { computed, onUnmounted, ref, shallowRef, watch, type Component } from "vue";
 
 import IconButton from "@/components/ui/IconButton.vue";
+import { MISSING_PANEL_TYPE } from "@/modules/panels/missing";
 import { panelRegistry } from "@/modules/panels/registry";
 import { UNASSIGNED_PANEL_TYPE } from "@/modules/panels/unassigned";
 import { useSessionStore } from "@/stores/session";
@@ -99,14 +100,19 @@ const controls = computed(() => {
 
 /**
  * Registered panel types eligible as a split target — the synthetic
- * `__unassigned__` namespace and the components-browser shell are filtered out
- * (splitting into either would be nonsensical), mirroring MenuBar's
- * Add-Component picker.
+ * `__unassigned__` and `missing` placeholder types and the components-browser
+ * shell are filtered out (splitting into any of them would be nonsensical),
+ * mirroring MenuBar's Add-Component picker.
  */
 const panelChoices = computed(() =>
   panelRegistry
     .list()
-    .filter((d) => d.id !== UNASSIGNED_PANEL_TYPE && d.id !== "components-browser"),
+    .filter(
+      (d) =>
+        d.id !== UNASSIGNED_PANEL_TYPE &&
+        d.id !== MISSING_PANEL_TYPE &&
+        d.id !== "components-browser",
+    ),
 );
 
 /**
