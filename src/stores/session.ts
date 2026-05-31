@@ -4,6 +4,7 @@ import type { DockviewApi } from "dockview-vue";
 import { defineStore } from "pinia";
 import { ref, shallowRef } from "vue";
 
+import { isHeaderless } from "@/modules/panels/headerless";
 import { MISSING_PANEL_TYPE } from "@/modules/panels/missing";
 import { panelRegistry } from "@/modules/panels/registry";
 import { layoutRepo } from "@/modules/storage/layoutRepo";
@@ -95,8 +96,31 @@ export const useSessionStore = defineStore("session", () => {
       rebuildFromPanelStates(api, panelStates);
     }
 
+    applyHeaderlessGroups(api);
+
     loadedLayoutId.value = layoutId;
     dirty.value = false;
+  }
+
+  /**
+   * Re-apply clean (header-less) mode after a load. `header.hidden` is NOT
+   * serialized by dockview's `toJSON()`, so for every panel whose persisted
+   * `PanelState.state` is headerless we set its group's header hidden. Safe
+   * no-op when nothing is flagged. Restoring-guarded so it never dirties.
+   */
+  function applyHeaderlessGroups(api: DockviewApi): void {
+    setRestoring(true);
+    try {
+      const panelStateStore = usePanelStateStore();
+      for (const ps of panelStateStore.listForLayout()) {
+        if (!isHeaderless(ps.state)) continue;
+        const panel = api.getPanel(ps.id);
+        const group = panel?.api.group;
+        if (group) group.header.hidden = true;
+      }
+    } finally {
+      setRestoring(false);
+    }
   }
 
   /**
@@ -245,6 +269,7 @@ export const useSessionStore = defineStore("session", () => {
     clearDirty,
     setRestoring,
     loadLayout,
+    applyHeaderlessGroups,
     updateCurrentLayout,
     saveCurrentAsNewLayout,
     discardChanges,

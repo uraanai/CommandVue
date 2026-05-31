@@ -320,6 +320,26 @@ describe("useSessionStore", () => {
     expect(panelStateStore.loadedLayoutId).toBe(created.id);
   });
 
+  it("applyHeaderlessGroups hides the header for panels flagged headerless and is restoring-guarded", async () => {
+    const { layout, p1, p2 } = await seedWorkspace();
+    // Flag p1 (cesium) headerless in its persisted state.
+    await panelStateRepo.update(p1.id, { state: { headerless: true } });
+
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+
+    const fake = api as unknown as {
+      getPanel: (id: string) => { api: { group: { header: { hidden: boolean } } } } | undefined;
+    };
+    expect(fake.getPanel(p1.id)!.api.group.header.hidden).toBe(true);
+    expect(fake.getPanel(p2.id)!.api.group.header.hidden).toBe(false);
+
+    // Applying invariants must not leave the session dirty.
+    expect(session.dirty).toBe(false);
+  });
+
   it("switchWorkspace updates pointers and loads the other workspace's default layout", async () => {
     const { ws: wsA, layout: layoutA } = await seedWorkspace();
     const wsB = await workspaceRepo.create({ name: "WS-B" });
