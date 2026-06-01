@@ -1,7 +1,7 @@
 # Track B Phase 4 — Group header actions (Close All · Float Maximize · Minimize‑to‑tray)
 
-> Status: **4a (Close All) shipped — #109.** **4b (Float Maximize) in progress —
-> this PR.** 4c (Minimize‑to‑tray) is next, its own PR.
+> Status: **4a (Close All) shipped — #109. 4b (Float Maximize) shipped — #110.**
+> **4c (Minimize‑to‑tray) in progress — this PR** (completes Phase 4).
 > Supersedes/realizes the Phase 4 notes in
 > [`track-b-dockview-windowing.md`](./track-b-dockview-windowing.md) (Decision
 > **D6**, §6.2) and the roadmap "Tab‑group header actions" task. Builds on Phase
@@ -192,6 +192,45 @@ phase's decision) — in‑memory, cleared on `loadLayout`.
   the session `restoring` flag gates `markDirty` around capture/restore (it
   exists — `setRestoring`).
 
+### As shipped (4c — this PR)
+
+- **Decisive simplification:** removing a panel/group from dockview does NOT delete
+  its `PanelState` record (no removal→delete watcher exists). So minimize =
+  capture the group's structure + `api.removePanel` each panel; restore = re‑add
+  **by original id**, and every re‑mounted panel re‑runs its own restore hook +
+  preset cascade from the intact record. No manual per‑panel state re‑drive needed.
+- **Store/session split:** `stores/minimized.ts` holds only the serializable
+  `MinimizedEntry[]` (CLAUDE.md rule 4); the dockview work lives in two session
+  actions — `minimizeGroup(panelId): MinimizedEntry | null` (capture + remove) and
+  `restoreMinimized(entry): boolean` (re‑add). The two stores reference each other
+  lazily inside actions.
+- **Group‑level, multi‑panel:** captures every panel in tab order + the active id;
+  restore opens the first panel beside a best‑effort anchor (a surviving panel,
+  default `right`; fresh group if gone) and stacks the rest `within`. A clean
+  single pane re‑hides its header; a float re‑floats at its captured box (alpha
+  re‑applied). The bar shows the active title + a `+N` tab count.
+- **Dirty‑neutral (important):** dockview fires `onDidLayoutChange` via
+  `queueMicrotask` (an `AsapEvent`), so it lands AFTER the sync `setRestoring`
+  guard resets and would dirty a clean layout. Minimize/restore capture `wasDirty`
+  and, only when the layout was clean, re‑`clearDirty()` on a microtask queued
+  after dockview's (FIFO) — so an ephemeral minimize never makes the layout
+  savable, while a real pre‑existing dirty flag is preserved. (Verified at runtime.)
+- **Tray:** `MinimizedDock.vue` overlay in `AppShell`'s `<main>` (made `relative`),
+  `pointer-events-none absolute bottom-0 left-0 z-30`; each `MinimizedBar.vue` is
+  `pointer-events-auto`. Empty ⇒ renders nothing. `clear()` from `loadLayout`.
+- **Known v1 limitation:** explicitly Saving the layout WHILE a group is minimized
+  serializes the dock without it (the panel‑state record persists but is orphaned).
+  Since minimize is now dirty‑neutral, a clean layout isn't nudged to save, and a
+  reload restores the minimized groups to the dock from the (unchanged) layout.
+- **Verified (Stage 1, Playwright):** Minimize buttons on grid (Close All ·
+  Minimize) + float (eye · minimize · maximize · close); minimize a float → bar →
+  restore (Cesium WebGL survives the re‑mount); minimize a 5‑tab group → "Briefing
+  +4" bar → restore all tabs; bottom‑left placement above the status bar; minimize
+  is dirty‑neutral (clean stays clean, real dirty preserved); reload clears the
+  tray and restores the group. Unit: `minimizeGroup`/`restoreMinimized`
+  (single + multi‑panel + float round‑trip, ephemeral, unknown‑id null, the store
+  round‑trip, `loadLayout` clears the tray).
+
 ---
 
 ## 5. Files
@@ -211,6 +250,9 @@ phase's decision) — in‑memory, cleared on `loadLayout`.
   `applyFloatMaximize` + `loadLayout` wiring + `floatPanel` clear) ·
   `CommandVueHeaderActions.vue` (float Maximize/Restore + Close) · tests
   (`session.spec.ts`, `float.spec.ts`) · this spec · roadmap.
-- **4c:** `stores/minimized.ts` · `MinimizedDock.vue` + `MinimizedBar.vue` ·
-  `AppShell.vue` (mount) · `CommandVueHeaderActions.vue` (Minimize) ·
-  `session.ts` (`loadLayout` clear) · tests.
+- **4c (this PR):** `stores/minimized.ts` (store + `MinimizedEntry`/`CapturedPanel`) ·
+  `components/layout/MinimizedDock.vue` + `MinimizedBar.vue` · `AppShell.vue`
+  (mount, `<main>` relative) · `CommandVueHeaderActions.vue` (Minimize on both
+  branches) · `session.ts` (`minimizeGroup` + `restoreMinimized` + `componentFor`
+  - `loadLayout` clear + the deferred‑dirty fix) · `session.spec.ts` (7 tests) ·
+    this spec · roadmap.

@@ -1,6 +1,7 @@
 import type { Layout, PanelState, PanelType, Ulid } from "@/types/workspace";
 import type { DockviewApi, DockviewGroupPanel, IDockviewPanel } from "dockview-vue";
 
+import { nanoid } from "nanoid";
 import { defineStore } from "pinia";
 import { ref, shallowRef } from "vue";
 
@@ -23,6 +24,7 @@ import { layoutRepo } from "@/modules/storage/layoutRepo";
 import { panelStateRepo } from "@/modules/storage/panelStateRepo";
 
 import { useLayoutStore } from "./layout";
+import { type CapturedPanel, type MinimizedEntry, useMinimizedStore } from "./minimized";
 import { usePanelStateStore } from "./panelState";
 import { useThemeStore } from "./theme";
 import { useWorkspaceStore } from "./workspace";
@@ -123,6 +125,7 @@ export const useSessionStore = defineStore("session", () => {
     applyHeaderlessGroups(api);
     applyFloatAlphas(api);
     applyFloatMaximize(api);
+    useMinimizedStore().clear(); // ephemeral tray: a load/switch empties it (D6)
 
     loadedLayoutId.value = layoutId;
     dirty.value = false;
@@ -673,6 +676,163 @@ export const useSessionStore = defineStore("session", () => {
     return getFloatMaximizedFromState(usePanelStateStore().getState(panelId)?.state);
   }
 
+  /** Resolve a captured panel to its dockview component + title (Phase 4c). */
+  function componentFor(captured: CapturedPanel): { component: string; title: string } {
+    if (!captured.panelType) {
+      return { component: UNASSIGNED_PANEL_TYPE, title: captured.title || "Empty" };
+    }
+    const def = panelRegistry.get(captured.panelType);
+    return def
+      ? { component: captured.panelType, title: captured.title || def.title }
+      : { component: MISSING_PANEL_TYPE, title: captured.title || "Missing" };
+  }
+
+  /**
+   * Minimize the GROUP containing `panelId` into the tray (Track B Phase 4c).
+   * Captures every panel's id/type/title + a `structuredClone` of its
+   * `PanelState.state` and `appliedPresetIds` (so restore round-trips per-panel
+   * state), the group location, a floating box (if floating), and a best-effort
+   * grid re-dock anchor — THEN removes the group's panels via `api.removePanel`.
+   * The PanelState RECORDS survive the removal (no removal→delete path exists), so
+   * restore re-adds each panel by its original id and each re-mounted panel
+   * re-runs its own restore hook + preset cascade. Restoring-guarded; EPHEMERAL —
+   * does NOT markDirty (a minimize alone must not make the layout savable). Returns
+   * the entry (fresh nanoid id), or null when there's nothing to minimize.
+   */
+  function minimizeGroup(panelId: Ulid): MinimizedEntry | null {
+    const api = dockviewApi.value;
+    if (!api) return null;
+    const panel = api.getPanel(panelId);
+    if (!panel) return null;
+    const group = panel.api.group;
+    const location = group.api.location.type;
+    if (location !== "grid" && location !== "floating") return null; // popout/edge: skip
+
+    const panelStateStore = usePanelStateStore();
+    const members = [...group.panels];
+    if (members.length === 0) return null;
+    const panels: CapturedPanel[] = members.map((m) => {
+      const ps = panelStateStore.getState(m.id);
+      return {
+        id: m.id,
+        panelType: ps?.panelType ?? null,
+        title: m.title ?? "",
+        state: structuredClone(ps?.state ?? {}),
+        appliedPresetIds: [...(ps?.appliedPresetIds ?? [])],
+      };
+    });
+    const activePanelId = group.activePanel?.id ?? members[0]!.id;
+    const activeType = panelStateStore.getState(activePanelId)?.panelType ?? null;
+    const def = activeType ? panelRegistry.get(activeType) : undefined;
+    const floatBox =
+      location === "floating" ? findFloatingGroup(api, panel)?.overlay.toJSON() : undefined;
+    // Best-effort grid re-dock anchor: a panel in ANOTHER group (it survives this
+    // removal), so restore can dock the group beside it; default side 'right'.
+    const referencePanelId = api.panels.find((p) => p.api.group !== group)?.id;
+
+    const entry: MinimizedEntry = {
+      id: nanoid(),
+      location,
+      floatBox,
+      originAnchor: { referencePanelId, direction: "right" },
+      panels,
+      activePanelId,
+      panelType: activeType,
+      title: api.getPanel(activePanelId)?.title ?? def?.title ?? "Window",
+      icon: def?.icon ?? "Square",
+    };
+
+    const wasDirty = dirty.value;
+    setRestoring(true);
+    try {
+      for (const m of members) {
+        const p = api.getPanel(m.id);
+        if (p) api.removePanel(p);
+      }
+    } finally {
+      setRestoring(false);
+    }
+    // dockview fires `onDidLayoutChange` via `queueMicrotask` AFTER this sync
+    // block, so the (sync-scoped) restoring guard can't suppress its `markDirty`.
+    // Minimize is ephemeral view state — re-clear dirty on a microtask queued
+    // after dockview's (FIFO order), but ONLY if the layout was already clean, so
+    // a real pre-existing dirty flag is preserved.
+    if (!wasDirty) void Promise.resolve().then(() => clearDirty());
+    return entry;
+  }
+
+  /**
+   * Restore a minimized group back into the dock (Track B Phase 4c). Re-adds each
+   * captured panel BY ITS ORIGINAL ID — the PanelState records survived minimize,
+   * so each re-mounted panel re-runs its own restore hook + preset cascade from the
+   * intact record. The first panel opens a new group beside the captured anchor
+   * (best-effort; a fresh group if the anchor is gone), the rest stack as tabs. A
+   * floating group is re-floated at its captured box (alpha re-applied); a clean
+   * single pane gets its header re-hidden. Restoring-guarded; ephemeral — no
+   * markDirty. Returns false only when the API is unbound / the entry is empty.
+   */
+  function restoreMinimized(entry: MinimizedEntry): boolean {
+    const api = dockviewApi.value;
+    if (!api) return false;
+    const [first, ...rest] = entry.panels;
+    if (!first) return false;
+
+    const wasDirty = dirty.value;
+    setRestoring(true);
+    try {
+      const refPanel = entry.originAnchor.referencePanelId
+        ? api.getPanel(entry.originAnchor.referencePanelId)
+        : undefined;
+      const firstComp = componentFor(first);
+      const added = api.addPanel({
+        id: first.id,
+        component: firstComp.component,
+        title: firstComp.title,
+        ...(refPanel
+          ? {
+              position: {
+                referenceGroup: refPanel.api.group,
+                direction: entry.originAnchor.direction,
+              },
+            }
+          : {}),
+      });
+      for (const m of rest) {
+        const comp = componentFor(m);
+        api.addPanel({
+          id: m.id,
+          component: comp.component,
+          title: comp.title,
+          position: { referenceGroup: added.api.group, direction: "within" },
+        });
+      }
+
+      if (entry.location === "floating") {
+        const box = entry.floatBox;
+        api.addFloatingGroup(
+          added,
+          box
+            ? { width: box.width, height: box.height, x: box.left ?? 120, y: box.top ?? 120 }
+            : { width: 520, height: 360, x: 120, y: 120 },
+        );
+        added.api.group.header.hidden = false; // a float always keeps its header
+        if (box) findFloatingGroup(api, added)?.position(box); // exact anchor fidelity
+        const alpha = getFloatAlphaFromState(first.state);
+        if (alpha < 1) added.api.group.element.style.setProperty("--cv-float-alpha", String(alpha));
+      } else if (entry.panels.length === 1 && isHeaderless(first.state)) {
+        added.api.group.header.hidden = true; // restore a clean single pane
+      }
+
+      api.getPanel(entry.activePanelId)?.api.setActive();
+    } finally {
+      setRestoring(false);
+    }
+    // Same deferred-dirty handling as minimizeGroup: dockview's microtask
+    // `onDidLayoutChange` would dirty a clean layout after the sync guard resets.
+    if (!wasDirty) void Promise.resolve().then(() => clearDirty());
+    return true;
+  }
+
   /**
    * Re-apply float maximize after a load: a maximized float is serialized at its
    * FILLED box (`toJSON().floatingGroups[].position`), so it reloads maximized —
@@ -807,6 +967,8 @@ export const useSessionStore = defineStore("session", () => {
     getFloatAlpha,
     toggleFloatMaximize,
     getFloatMaximized,
+    minimizeGroup,
+    restoreMinimized,
     splitCleanNeighbor,
     discardChanges,
     switchWorkspace,

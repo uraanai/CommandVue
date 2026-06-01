@@ -6,6 +6,7 @@ import ChromeBar from "@/components/chrome/ChromeBar.vue";
 import EditModeOverlay from "@/components/chrome/EditModeOverlay.vue";
 import ConfirmDialog from "@/components/dialogs/ConfirmDialog.vue";
 import SaveLayoutAsDialog from "@/components/dialogs/SaveLayoutAsDialog.vue";
+import MinimizedDock from "@/components/layout/MinimizedDock.vue";
 import { useKeyboardShortcuts } from "@/composables/useKeyboardShortcuts";
 import { useTheme } from "@/composables/useTheme";
 import { newId } from "@/modules/storage/ids";
@@ -109,8 +110,9 @@ useKeyboardShortcuts({
   <div class="bg-surface text-foreground relative flex h-screen w-screen flex-col overflow-hidden">
     <EditModeOverlay />
     <ChromeBar position="top" />
-    <main class="min-h-0 flex-1">
+    <main class="relative min-h-0 flex-1">
       <RouterView />
+      <MinimizedDock />
     </main>
     <ChromeBar v-if="chrome.statusBarVisible" position="status" />
     <CommandPalette />

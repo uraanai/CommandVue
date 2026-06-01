@@ -9,6 +9,7 @@ import { layoutRepo } from "@/modules/storage/layoutRepo";
 import { panelStateRepo } from "@/modules/storage/panelStateRepo";
 import { workspaceRepo } from "@/modules/storage/workspaceRepo";
 import { useLayoutStore } from "@/stores/layout";
+import { useMinimizedStore } from "@/stores/minimized";
 import { usePanelStateStore } from "@/stores/panelState";
 import { __unbindDockviewForTests, useSessionStore } from "@/stores/session";
 import { useWorkspaceStore } from "@/stores/workspace";
@@ -45,6 +46,9 @@ interface FakeGroup {
   header: FakeHeader;
   panels: FakePanel[];
   maximized: boolean;
+  /** Active-tab id; `activePanel` resolves it (falls back to the first panel). */
+  activeId?: string;
+  readonly activePanel: FakePanel | undefined;
   /** Off-grid override for the maximize gate; defaults to "grid".
    *  Mirrors the real DockviewGroupLocation union (grid|floating|popout|edge). */
   locationType: "grid" | "floating" | "popout" | "edge";
@@ -72,6 +76,7 @@ interface FakePanel {
     maximize: () => void;
     exitMaximized: () => void;
     isMaximized: () => boolean;
+    setActive: () => void;
   };
 }
 
@@ -135,6 +140,10 @@ function makeFakeApi(): DockviewApi {
       header: { hidden: false },
       panels: [],
       maximized: false,
+      activeId: undefined,
+      get activePanel() {
+        return group.panels.find((p) => p.id === group.activeId) ?? group.panels[0];
+      },
       locationType: "grid",
       element: { style: { setProperty: vi.fn() } },
       api: {
@@ -208,6 +217,9 @@ function makeFakeApi(): DockviewApi {
           if (panel.api.group.maximized) panel.api.group.maximized = false;
         },
         isMaximized: () => panel.api.group.maximized,
+        setActive: () => {
+          panel.api.group.activeId = panel.id;
+        },
       },
     };
     group.panels.push(panel);
@@ -1148,6 +1160,131 @@ describe("useSessionStore", () => {
 
     await session.floatPanel(p2.id); // and a fresh float also starts un-maximized
     expect(session.getFloatMaximized(p2.id)).toBe(false);
+  });
+
+  it("minimizeGroup captures a grid group and removes it; restoreMinimized re-adds it", async () => {
+    const { layout, p1, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+
+    const entry = session.minimizeGroup(p2.id);
+    expect(entry).not.toBeNull();
+    expect(entry!.location).toBe("grid");
+    expect(entry!.panels.map((c) => c.id)).toEqual([p2.id]);
+    // p2's group is gone; p1 survives.
+    expect((api as unknown as DockviewApi).getPanel(p2.id)).toBeUndefined();
+    expect((api as unknown as DockviewApi).getPanel(p1.id)).toBeDefined();
+
+    expect(session.restoreMinimized(entry!)).toBe(true);
+    expect((api as unknown as DockviewApi).getPanel(p2.id)).toBeDefined();
+  });
+
+  it("the minimized store round-trips a group: minimize -> entry -> restore -> back", async () => {
+    const { layout, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const minimized = useMinimizedStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+
+    minimized.minimizeGroup(p2.id);
+    expect(minimized.entries.length).toBe(1);
+    expect((api as unknown as DockviewApi).getPanel(p2.id)).toBeUndefined();
+
+    minimized.restore(minimized.entries[0]!.id);
+    expect(minimized.entries.length).toBe(0);
+    expect((api as unknown as DockviewApi).getPanel(p2.id)).toBeDefined();
+  });
+
+  it("minimizeGroup is ephemeral — does not mark the layout dirty", async () => {
+    const { layout, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    session.clearDirty();
+    session.minimizeGroup(p2.id);
+    expect(session.dirty).toBe(false);
+  });
+
+  it("minimizeGroup captures every panel of a multi-panel group and restoreMinimized re-adds all", async () => {
+    const { layout, p1, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+
+    const fake = api as unknown as {
+      getPanel: (
+        id: string,
+      ) => { api: { group: FakeGroup; moveTo: (o: { group?: unknown }) => void } } | undefined;
+    };
+    const targetGroup = fake.getPanel(p2.id)!.api.group;
+    fake.getPanel(p1.id)!.api.moveTo({ group: targetGroup as never });
+    const p3 = await panelStateRepo.create({ layoutId: layout.id, panelType: "maplibre" });
+    (api as unknown as DockviewApi).addPanel({
+      id: p3.id,
+      component: "maplibre",
+      title: "third",
+      position: { referenceGroup: targetGroup as never, direction: "within" },
+    });
+
+    const entry = session.minimizeGroup(p2.id);
+    expect(entry!.panels.map((c) => c.id).sort()).toEqual([p1.id, p2.id, p3.id].sort());
+    expect((api as unknown as DockviewApi).panels.length).toBe(0); // whole layout minimized
+
+    session.restoreMinimized(entry!);
+    expect((api as unknown as DockviewApi).panels.map((p) => p.id).sort()).toEqual(
+      [p1.id, p2.id, p3.id].sort(),
+    );
+  });
+
+  it("minimizeGroup captures a floating group's box and restoreMinimized re-floats it", async () => {
+    const { layout, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    await session.floatPanel(p2.id);
+
+    const entry = session.minimizeGroup(p2.id);
+    expect(entry!.location).toBe("floating");
+    expect(entry!.floatBox).toMatchObject({ width: 520, height: 360 });
+    expect((api as unknown as DockviewApi).getPanel(p2.id)).toBeUndefined();
+
+    session.restoreMinimized(entry!);
+    const restored = (
+      api as unknown as {
+        getPanel: (id: string) => { api: { location: { type: string } } } | undefined;
+      }
+    ).getPanel(p2.id);
+    expect(restored).toBeDefined();
+    expect(restored!.api.location.type).toBe("floating");
+  });
+
+  it("minimizeGroup returns null for an unknown panel", async () => {
+    const { layout } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    expect(session.minimizeGroup("does-not-exist" as never)).toBeNull();
+  });
+
+  it("loadLayout clears the minimized tray (ephemeral)", async () => {
+    const { layout, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const minimized = useMinimizedStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    minimized.minimizeGroup(p2.id);
+    expect(minimized.entries.length).toBe(1);
+
+    await session.loadLayout(layout.id); // reload empties the tray
+    expect(minimized.entries.length).toBe(0);
   });
 
   it("clean mode survives a toJSON -> fromJSON round-trip via persisted state", async () => {

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { Eye, EyeOff, Maximize2, Minimize2, X } from "@lucide/vue";
+import { Eye, EyeOff, Maximize2, Minimize2, Minus, X } from "@lucide/vue";
 import { computed, ref, watch } from "vue";
 
 import IconButton from "@/components/ui/IconButton.vue";
+import { useMinimizedStore } from "@/stores/minimized";
 import { useSessionStore } from "@/stores/session";
 import Slider from "@/volt/Slider.vue";
 
@@ -18,16 +19,16 @@ import { panelsThatWillClose } from "./groupCloseControls";
  * so the dockview header-actions props arrive on `props.params`.
  *
  * It renders DIFFERENT controls per group location (Track B):
- *  - **floating** (Phase 3b/4b): an **eye icon** that toggles a compact
+ *  - **floating** (Phase 3b/4b/4c): an **eye icon** that toggles a compact
  *    background-opacity **slider** (0 = fully see-through over the map, 100 =
- *    solid glass; `session.setFloatAlpha`), plus **Maximize/Restore** (fill the
- *    dock ⇄ prior box; `session.toggleFloatMaximize`) and **Close**
- *    (`session.removePanelGuarded`). (Minimize-to-tray joins the row in 4c.)
- *  - **grid / tabbed** (Phase 4a): a **Close All** button (the plain close `X`,
+ *    solid glass; `session.setFloatAlpha`), **Minimize** (to the tray;
+ *    `minimized.minimizeGroup`), **Maximize/Restore** (fill the dock ⇄ prior box;
+ *    `session.toggleFloatMaximize`), and **Close** (`session.removePanelGuarded`).
+ *  - **grid / tabbed** (Phase 4a/4c): a **Close All** button (the plain close `X`,
  *    a touch larger than the per-tab close) that closes every panel in the group
  *    at once (`session.closeAllInGroup`, empty-workspace-guarded) AFTER a
- *    group-scoped confirm (`GroupCloseConfirm`). The group-level complement to
- *    the per-tab close. (Minimize-to-tray joins this branch in Phase 4c.)
+ *    group-scoped confirm (`GroupCloseConfirm`), and a **Minimize** button that
+ *    collapses the whole group to the bottom-left tray (`minimized.minimizeGroup`).
  *
  * `@pointerdown.stop` / `@mousedown.stop` keep a click/drag of these controls
  * from also dragging the group (the header doubles as the move handle).
@@ -45,6 +46,7 @@ interface HeaderActionsParams {
 }
 const props = defineProps<{ params?: HeaderActionsParams }>();
 const session = useSessionStore();
+const minimized = useMinimizedStore();
 
 // `api.location` on the full props; `location` on the updateLocation fast-path.
 const isFloating = computed(
@@ -87,6 +89,12 @@ function toggleMaximize() {
 }
 function closeWindow() {
   if (panelId.value) void session.removePanelGuarded(panelId.value);
+}
+
+// Minimize the whole group to the bottom-left tray (Phase 4c). Same action from
+// the grid branch (beside Close All) and the float branch (beside maximize/close).
+function minimizeGroup() {
+  if (panelId.value) void minimized.minimizeGroup(panelId.value);
 }
 
 // Close All flows through a group-scoped confirm (GroupCloseConfirm) rather than
@@ -137,6 +145,9 @@ function cancelCloseAll() {
     >
       <component :is="open ? EyeOff : Eye" />
     </IconButton>
+    <IconButton label="Minimize window" size="sm" @click="minimizeGroup">
+      <Minus />
+    </IconButton>
     <IconButton
       :label="isMax ? 'Restore window' : 'Maximize window'"
       size="sm"
@@ -162,6 +173,9 @@ function cancelCloseAll() {
       @click="requestCloseAll"
     >
       <X />
+    </IconButton>
+    <IconButton label="Minimize group" size="sm" @click="minimizeGroup">
+      <Minus />
     </IconButton>
     <GroupCloseConfirm
       :open="confirmOpen"
