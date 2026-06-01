@@ -32,6 +32,36 @@ export function withFloatPrevHeaderless(
 }
 
 /**
+ * The panel id of a SURVIVING group-mate, captured when this pane was floated
+ * (Track B). `dockBack` resolves it to re-join the ORIGINAL tab group instead of
+ * spawning a fresh right-edge group. Stored per-panel (like `floatAlpha`) and it
+ * survives reload — panel ids are stable (group ids are not), so it resolves to
+ * wherever the group-mate now lives (best-effort: after a reload + rearrangement
+ * that mate may sit in a different group, so dock-back lands beside it rather than
+ * in a guaranteed-identical original group). Undefined when the pane was its group's
+ * SOLE member (the origin group is destroyed by the float) or it floated via a
+ * native drag (no action hook); `dockBack` then falls back to a fresh group.
+ */
+export const FLOAT_ORIGIN_KEY = "floatOrigin" as const;
+
+/** Read the captured origin group-mate id, or undefined. */
+export function getFloatOrigin(state: Record<string, unknown> | undefined): string | undefined {
+  const v = state?.[FLOAT_ORIGIN_KEY];
+  return typeof v === "string" && v !== "" ? v : undefined;
+}
+
+/** Record (or clear, when `panelId` is undefined) the origin group-mate id. */
+export function withFloatOrigin(
+  state: Record<string, unknown> | undefined,
+  panelId: string | undefined,
+): Record<string, unknown> {
+  const next: Record<string, unknown> = { ...(state ?? {}) };
+  if (panelId) next[FLOAT_ORIGIN_KEY] = panelId;
+  else delete next[FLOAT_ORIGIN_KEY];
+  return next;
+}
+
+/**
  * Per-window see-through opacity (Track B Phase 3b). `floatAlpha` (0..1) is the
  * BACKGROUND alpha of a floating pane's glass — 1 = solid, 0 = fully transparent
  * (only the content shows; the map reads straight through). Applied at runtime as

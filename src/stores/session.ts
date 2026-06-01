@@ -10,9 +10,11 @@ import {
   floatWasHeaderless,
   getFloatAlpha as getFloatAlphaFromState,
   getFloatMaximized as getFloatMaximizedFromState,
+  getFloatOrigin as getFloatOriginFromState,
   getFloatPrevBox as getFloatPrevBoxFromState,
   withFloatAlpha,
   withFloatMaximized,
+  withFloatOrigin,
   withFloatPrevBox,
   withFloatPrevHeaderless,
 } from "@/modules/panels/float";
@@ -493,6 +495,10 @@ export const useSessionStore = defineStore("session", () => {
     try {
       const panelStateStore = usePanelStateStore();
       const wasHeaderless = isHeaderless(panelStateStore.getState(panelId)?.state);
+      // Capture a surviving group-mate BEFORE the move so `dockBack` can return
+      // this pane to its ORIGINAL tab group. Undefined when it's the sole pane
+      // (its group is destroyed by the float) → dockBack opens a fresh group.
+      const originSibling = panel.api.group.panels.find((p) => p.id !== panelId)?.id;
       const n = api.groups.filter((g) => g.api.location.type === "floating").length;
       api.addFloatingGroup(panel, { width: 520, height: 360, x: 120 + n * 28, y: 120 + n * 28 });
       panel.api.group.header.hidden = false; // a float always keeps a drag handle
@@ -506,15 +512,18 @@ export const useSessionStore = defineStore("session", () => {
       await panelStateStore.updateState(panelId, {
         // A fresh float is never maximized — clear any stale maximize state left
         // by a prior maximize → dock-back / reload-without-save.
-        state: withFloatPrevBox(
-          withFloatMaximized(
-            withFloatPrevHeaderless(
-              withHeaderless(panelStateStore.getState(panelId)?.state, false),
-              wasHeaderless,
+        state: withFloatOrigin(
+          withFloatPrevBox(
+            withFloatMaximized(
+              withFloatPrevHeaderless(
+                withHeaderless(panelStateStore.getState(panelId)?.state, false),
+                wasHeaderless,
+              ),
+              false,
             ),
-            false,
+            undefined,
           ),
-          undefined,
+          originSibling,
         ),
       });
     } finally {
@@ -525,12 +534,20 @@ export const useSessionStore = defineStore("session", () => {
   }
 
   /**
-   * Dock a floating pane back into the grid. `moveTo({ position: "right" })`
-   * with no target group creates a new right-edge GRID group and moves the panel
-   * into it (traced: dockviewGroupPanelApi.moveTo -> accessor.addGroup +
-   * moveGroupOrPanel). Floating-gated. Restores the pane's pre-float clean
-   * (header-less) status if it had one, clears the `floatPrevHeaderless` flag,
-   * and persists the result. Marks dirty (geometry changes toJSON).
+   * Dock a floating pane back into the grid. Prefers returning the pane to its
+   * ORIGINAL tab group — resolved via the surviving group-mate `floatPanel`
+   * captured (`floatOrigin`); `panel.api.moveTo({ group })` re-joins it as a tab.
+   * The origin only counts when it is a surviving, **headered** grid group: a CLEAN
+   * (header-hidden, single-pane) origin is skipped, since re-joining it would make
+   * an illegal 2-tab clean group with no tab strip. Falls back to
+   * `moveTo({ position: "right" })` — a fresh right-edge GRID group (traced:
+   * dockviewGroupPanelApi.moveTo -> accessor.addGroup + moveGroupOrPanel) — when the
+   * origin is gone/clean (the pane was its group's sole member, the group has since
+   * closed/floated/gone-clean, or it floated via native drag); only that fallback
+   * restores the pane's pre-float clean status. (Fallback is group-level, so docking
+   * one tab of a MULTI-tab float whose origin is gone brings the float's other tabs
+   * along — pre-existing behavior, and the common single-tab case is unaffected.)
+   * Floating-gated. Clears the maximize + origin flags. Marks dirty (toJSON changes).
    */
   async function dockBack(panelId: Ulid): Promise<boolean> {
     const api = dockviewApi.value;
@@ -540,21 +557,43 @@ export const useSessionStore = defineStore("session", () => {
     setRestoring(true);
     try {
       const panelStateStore = usePanelStateStore();
-      const restoreClean = floatWasHeaderless(panelStateStore.getState(panelId)?.state);
-      panel.api.group.api.moveTo({ position: "right" }); // new right-edge grid group
-      // `panel.api.group` is a live getter — it now resolves to that NEW grid group.
-      if (restoreClean) panel.api.group.header.hidden = true; // restore clean status
+      const state = panelStateStore.getState(panelId)?.state;
+      // Resolve the origin group via the captured group-mate; only a SURVIVING grid
+      // group counts (a floated/popped/closed mate falls back to a fresh group).
+      const originId = getFloatOriginFromState(state);
+      const originPanel = originId ? api.getPanel(originId) : undefined;
+      // Only a surviving, HEADERED grid group is a valid re-join target — re-joining
+      // a CLEAN (header-hidden) single pane would make an illegal 2-tab clean group.
+      const originGroup =
+        originPanel &&
+        originPanel.api.location.type === "grid" &&
+        !originPanel.api.group.header.hidden
+          ? originPanel.api.group
+          : undefined;
+      let dockedHeaderless: boolean;
+      if (originGroup) {
+        panel.api.moveTo({ group: originGroup }); // re-join the original tab group as a tab
+        dockedHeaderless = false; // a headered host group → the re-joined pane is a normal tab
+      } else {
+        const restoreClean = floatWasHeaderless(state);
+        panel.api.group.api.moveTo({ position: "right" }); // new right-edge grid group
+        // `panel.api.group` is a live getter — it now resolves to that NEW grid group.
+        if (restoreClean) panel.api.group.header.hidden = true; // restore clean status
+        dockedHeaderless = restoreClean;
+      }
       await panelStateStore.updateState(panelId, {
-        // Clear maximize state too: a docked pane has no float to maximize, so it
-        // must never carry a stale `floatMaximized`/`floatPrevBox` (symmetry with
-        // floatPanel's fresh-float clear).
-        state: withFloatPrevBox(
-          withFloatMaximized(
-            withFloatPrevHeaderless(
-              withHeaderless(panelStateStore.getState(panelId)?.state, restoreClean),
+        // Clear maximize + origin: a docked pane has no float to maximize and no
+        // origin to return to (symmetry with floatPanel's fresh-float clear).
+        state: withFloatOrigin(
+          withFloatPrevBox(
+            withFloatMaximized(
+              withFloatPrevHeaderless(
+                withHeaderless(panelStateStore.getState(panelId)?.state, dockedHeaderless),
+                false,
+              ),
               false,
             ),
-            false,
+            undefined,
           ),
           undefined,
         ),

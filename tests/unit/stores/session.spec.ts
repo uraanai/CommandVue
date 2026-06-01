@@ -994,6 +994,104 @@ describe("useSessionStore", () => {
     expect(isHeaderless(pss.getState(p2.id)?.state)).toBe(false);
   });
 
+  /** Cast helper: a panel's group (header/panels/locationType) + location + moveTo. */
+  type DockFake = {
+    getPanel: (
+      id: string,
+    ) =>
+      | {
+          api: {
+            group: FakeGroup;
+            location: { type: string };
+            moveTo: (o: { group?: unknown }) => void;
+          };
+        }
+      | undefined;
+  };
+
+  it("dockBack returns a floated tab to its ORIGINAL headered group when the origin survives", async () => {
+    const { layout, p1, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    const pss = usePanelStateStore();
+    const fake = api as unknown as DockFake;
+
+    // A HEADERED 2-tab group {p1, p2}. (cesium auto-cleans as the mainPane; un-clean it.)
+    await session.toggleHeaderless(p1.id);
+    const originGroup = fake.getPanel(p1.id)!.api.group;
+    expect(originGroup.header.hidden).toBe(false);
+    fake.getPanel(p2.id)!.api.moveTo({ group: originGroup as never });
+
+    await session.floatPanel(p2.id);
+    expect(fake.getPanel(p2.id)!.api.group.locationType).toBe("floating");
+
+    await session.dockBack(p2.id);
+    // p2 re-joins p1's ORIGINAL group (same object) as a normal tab.
+    const g1 = fake.getPanel(p1.id)!.api.group;
+    const g2 = fake.getPanel(p2.id)!.api.group;
+    expect(g2).toBe(g1);
+    expect(g1.panels.map((p) => p.id).sort()).toEqual([p1.id, p2.id].sort());
+    expect(isHeaderless(pss.getState(p2.id)?.state)).toBe(false); // a tab in a headered group
+  });
+
+  it("dockBack does NOT re-join a CLEAN origin group (no illegal 2-tab clean group) — falls back", async () => {
+    const { layout, p1, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    const fake = api as unknown as DockFake;
+
+    await session.toggleHeaderless(p1.id); // headered {p1}
+    const originGroup = fake.getPanel(p1.id)!.api.group;
+    fake.getPanel(p2.id)!.api.moveTo({ group: originGroup as never }); // {p1, p2}
+    await session.floatPanel(p2.id); // origin = p1; group back to {p1}
+    await session.toggleHeaderless(p1.id); // p1 is now CLEAN (single pane)
+    expect(fake.getPanel(p1.id)!.api.group.header.hidden).toBe(true);
+
+    await session.dockBack(p2.id);
+    // p2 must NOT join the clean origin; it docks to its OWN group, p1 stays single.
+    expect(fake.getPanel(p2.id)!.api.group).not.toBe(fake.getPanel(p1.id)!.api.group);
+    expect(fake.getPanel(p1.id)!.api.group.panels.map((p) => p.id)).toEqual([p1.id]);
+    expect(fake.getPanel(p2.id)!.api.location.type).toBe("grid");
+  });
+
+  it("dockBack opens a fresh group when the floated pane was its group's sole member", async () => {
+    const { layout, p1, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    const fake = api as unknown as DockFake;
+    // p2 is alone → floating destroys its origin group; dockBack can't re-join it.
+    await session.floatPanel(p2.id);
+    await session.dockBack(p2.id);
+    expect(fake.getPanel(p2.id)!.api.location.type).toBe("grid");
+    expect(fake.getPanel(p2.id)!.api.group).not.toBe(fake.getPanel(p1.id)!.api.group);
+  });
+
+  it("dockBack opens a fresh group when the origin group-mate is no longer a grid pane", async () => {
+    const { layout, p1, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    const fake = api as unknown as DockFake;
+
+    await session.toggleHeaderless(p1.id); // headered origin
+    const originGroup = fake.getPanel(p1.id)!.api.group;
+    fake.getPanel(p2.id)!.api.moveTo({ group: originGroup as never });
+    await session.floatPanel(p2.id); // captures origin = p1
+    await session.floatPanel(p1.id); // p1 now floats too → not a grid origin
+
+    await session.dockBack(p2.id);
+    expect(fake.getPanel(p1.id)!.api.location.type).toBe("floating"); // p1 untouched
+    expect(fake.getPanel(p2.id)!.api.location.type).toBe("grid");
+    expect(fake.getPanel(p2.id)!.api.group.panels.map((p) => p.id)).toEqual([p2.id]); // own new group
+  });
+
   it("multiple floats cascade their initial position so they do not stack", async () => {
     const { layout, p1, p2 } = await seedWorkspace();
     const session = useSessionStore();
