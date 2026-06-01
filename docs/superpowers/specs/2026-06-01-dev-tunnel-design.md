@@ -4,6 +4,7 @@
 **Author:** Claude (brainstormed interactively; Cloudflare Tunnel facts fetched via Context7 from the `cloudflared` and `node-cloudflared` libraries).
 **Scope:** A new package script, `pnpm dev:tunnel`, that starts the normal Vite dev server **and** a Cloudflare _quick_ tunnel pointed at it, then prints a public `https://<random>.trycloudflare.com` URL to the terminal so the running app can be opened from any device, anywhere — no Cloudflare account, no manual binary install.
 **Out of scope (deferred):** named/persistent tunnels (stable custom domain), tunnels for `pnpm preview` or the production build, Docker integration, CI usage, auth in front of the tunnel.
+**To remove this feature:** follow [`../plans/2026-06-01-dev-tunnel-removal.md`](../plans/2026-06-01-dev-tunnel-removal.md) — a self-contained, single-prompt removal guide covering every change this feature added.
 
 ---
 
