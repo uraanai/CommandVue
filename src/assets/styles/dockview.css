@@ -55,3 +55,16 @@
 
   --dv-icon-hover-background-color: var(--color-surface-sunken);
 }
+
+/*
+ * Closed-hand (grabbing) cursor while dragging a group by its header. dockview
+ * sets `cursor: grab` on the draggable void area of a group header and adds
+ * `.dv-dragged` to that element for the duration of a drag (dnd/backend.js); we
+ * switch it to the `grabbing` closed-hand for that active state (plus `:active`
+ * for the initial press). Applies to docked AND in-window floating group
+ * headers alike — both drag by the same `.dv-void-container.dv-draggable`.
+ */
+.dockview-theme-commandvue .dv-void-container.dv-draggable:active,
+.dockview-theme-commandvue .dv-void-container.dv-draggable.dv-dragged {
+  cursor: grabbing;
+}
