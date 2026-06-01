@@ -177,6 +177,12 @@ Noto
 mersenne
 predev
 prebuild
+cloudflared
+trycloudflare
+worktree
+worktrees
+winget
+backgrounded
 moveend
 zoomend
 rotateend
