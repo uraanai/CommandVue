@@ -382,10 +382,12 @@ export const useSessionStore = defineStore("session", () => {
    * complement to per-tab close (Track B Phase 4, the header "Close All" button).
    * Same mechanics as `closeOthersInGroup` minus the keep-the-target filter:
    * iterates a STABLE snapshot of `group.panels` (removing while iterating the
-   * live array skips entries) and honors the empty-workspace guard, so closing
-   * the only group leaves its last pane rather than emptying the layout. Returns
-   * `false` when nothing was removed. Restoring-guarded around the structural
-   * mutations; marks dirty when it removed at least one panel (a real user edit).
+   * live array skips entries) and honors the empty-workspace guard. The target is
+   * iterated LAST, so when this group is the whole layout the guard stops the
+   * final removal and the surviving pane is the one the user invoked Close All
+   * from (deterministic), not an arbitrary last-in-array member. Returns `false`
+   * when nothing was removed. Restoring-guarded around the structural mutations;
+   * marks dirty when it removed at least one panel (a real user edit).
    */
   async function closeAllInGroup(panelId: Ulid): Promise<boolean> {
     const api = dockviewApi.value;
@@ -393,13 +395,15 @@ export const useSessionStore = defineStore("session", () => {
     const target = api.getPanel(panelId);
     if (!target) return false;
 
-    const groupPanels = [...target.api.group.panels];
-    if (groupPanels.length === 0) return false;
+    // Target iterated LAST (see docstring). `getPanel` succeeded above, so the
+    // target is always a member of this snapshot — there is no empty-group case.
+    const others = target.api.group.panels.filter((p) => p.id !== panelId);
+    const ordered = [...others, target];
 
     let removedAny = false;
     setRestoring(true);
     try {
-      for (const member of groupPanels) {
+      for (const member of ordered) {
         if (api.panels.length <= 1) break; // empty-workspace guard
         const panel = api.getPanel(member.id);
         if (!panel) continue;

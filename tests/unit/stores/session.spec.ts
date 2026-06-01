@@ -727,8 +727,10 @@ describe("useSessionStore", () => {
 
     const closed = await session.closeAllInGroup(p2.id);
     expect(closed).toBe(true);
-    // Exactly one pane remains — the guard stopped the last removal.
-    expect((api as unknown as DockviewApi).panels.length).toBe(1);
+    // Exactly one pane remains — the guard stopped the last removal — and because
+    // the invoked pane is iterated last, the survivor is deterministically p2 (the
+    // pane Close All was invoked from), not an arbitrary group member.
+    expect((api as unknown as DockviewApi).panels.map((p) => p.id)).toEqual([p2.id]);
   });
 
   it("closeAllInGroup is a no-op (returns false) on a single-panel layout", async () => {
