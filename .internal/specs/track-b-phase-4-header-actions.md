@@ -54,11 +54,22 @@ grid group's header closes every panel in that group.
   whether anything was removed.
 - **Component** `CommandVueHeaderActions.vue`: adds `isGrid` (same dual‑read as
   `isFloating`, surviving the `updateLocation` fast‑path) and a `v-else-if="isGrid"`
-  branch with one `IconButton` (Lucide `SquareX`, distinct from the per‑tab `X`)
-  → `session.closeAllInGroup(panelId)`. `panelId` comes from the cached
-  `activePanel.id`; any member of the group resolves the whole group, so a
+  branch with one `IconButton` — the **plain close `X`** (Lucide `X`) sized to
+  **14px** so it reads like the dockview per‑tab close (11px) but a touch larger
+  (maintainer feedback: the boxed `SquareX` looked off). `panelId` comes from the
+  cached `activePanel.id`; any member of the group resolves the whole group, so a
   fast‑path‑stale‑but‑in‑group id is still correct. `@pointerdown.stop`/
   `@mousedown.stop` so clicking never starts a group drag.
+- **Group‑scoped confirm** `GroupCloseConfirm.vue`: Close All opens a confirm
+  centered **within the clicked group only** (not viewport‑wide, not on other
+  groups) — a documented library‑first exception, since PrimeVue `ConfirmDialog`
+  teleports to `<body>` and masks the whole screen. It `Teleport`s into the
+  group's own `.dv-groupview` (anchored via `closest`); `.dv-groupview` is
+  `position: static` but its parent `.dv-view` is `absolute` with identical
+  bounds, so `absolute inset-0` sizes exactly to the group. Mask uses the project
+  Dialog convention (`bg-brand-950/60`). Cancel / Escape / backdrop‑click dismiss;
+  "Close all" calls `session.closeAllInGroup`. The message pluralizes off the live
+  tab count.
 - **Registration:** `commandvue-header-actions` in `main.ts` + the
   `right-header-actions-component` attr in `DockLayout.vue` (renamed in lockstep).
 - **Why the button stays enabled on the last pane:** the guard makes the action a

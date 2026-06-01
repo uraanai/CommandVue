@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { Eye, EyeOff, SquareX } from "@lucide/vue";
+import { Eye, EyeOff, X } from "@lucide/vue";
 import { computed, ref, watch } from "vue";
 
 import IconButton from "@/components/ui/IconButton.vue";
 import { useSessionStore } from "@/stores/session";
 import Slider from "@/volt/Slider.vue";
+
+import GroupCloseConfirm from "./GroupCloseConfirm.vue";
 
 /**
  * Per-group header-actions control on `<DockviewVue>`'s right-actions slot
@@ -18,10 +20,11 @@ import Slider from "@/volt/Slider.vue";
  *  - **floating** (Phase 3b): an **eye icon** that toggles a compact background-
  *    opacity **slider** (0 = fully see-through over the map, 100 = solid glass),
  *    driving `session.setFloatAlpha`.
- *  - **grid / tabbed** (Phase 4a): a **Close All** button that closes every panel
- *    in the group at once (`session.closeAllInGroup`, empty-workspace-guarded) —
- *    the group-level complement to the per-tab close. (Minimize-to-tray joins
- *    this branch in Phase 4c.)
+ *  - **grid / tabbed** (Phase 4a): a **Close All** button (the plain close `X`,
+ *    a touch larger than the per-tab close) that closes every panel in the group
+ *    at once (`session.closeAllInGroup`, empty-workspace-guarded) AFTER a
+ *    group-scoped confirm (`GroupCloseConfirm`). The group-level complement to
+ *    the per-tab close. (Minimize-to-tray joins this branch in Phase 4c.)
  *
  * `@pointerdown.stop` / `@mousedown.stop` keep a click/drag of these controls
  * from also dragging the group (the header doubles as the move handle).
@@ -69,8 +72,27 @@ const pct = computed<number>({
 
 const open = ref(false);
 
-function closeAll() {
+// Close All flows through a group-scoped confirm (GroupCloseConfirm) rather than
+// closing immediately. `gridRootEl` anchors the Teleport to THIS group's
+// `.dv-groupview`; the live tab count drives the confirm message.
+const gridRootEl = ref<HTMLElement>();
+const confirmOpen = ref(false);
+const confirmTarget = ref<HTMLElement>();
+const confirmCount = ref(0);
+
+function requestCloseAll() {
+  const groupEl = gridRootEl.value?.closest<HTMLElement>(".dv-groupview") ?? undefined;
+  if (!groupEl || !panelId.value) return;
+  confirmTarget.value = groupEl;
+  confirmCount.value = groupEl.querySelectorAll(".dv-tab").length;
+  confirmOpen.value = true;
+}
+function confirmCloseAll() {
+  confirmOpen.value = false;
   if (panelId.value) void session.closeAllInGroup(panelId.value);
+}
+function cancelCloseAll() {
+  confirmOpen.value = false;
 }
 </script>
 
@@ -88,9 +110,27 @@ function closeAll() {
       <component :is="open ? EyeOff : Eye" />
     </IconButton>
   </div>
-  <div v-else-if="isGrid" class="flex items-center pr-1" @pointerdown.stop @mousedown.stop>
-    <IconButton label="Close all panels in group" size="sm" @click="closeAll">
-      <SquareX />
+  <div
+    v-else-if="isGrid"
+    ref="gridRootEl"
+    class="flex items-center pr-1"
+    @pointerdown.stop
+    @mousedown.stop
+  >
+    <IconButton
+      label="Close all panels in group"
+      size="sm"
+      class="[&_svg]:size-[14px]"
+      @click="requestCloseAll"
+    >
+      <X />
     </IconButton>
+    <GroupCloseConfirm
+      :open="confirmOpen"
+      :target="confirmTarget"
+      :count="confirmCount"
+      @confirm="confirmCloseAll"
+      @cancel="cancelCloseAll"
+    />
   </div>
 </template>
