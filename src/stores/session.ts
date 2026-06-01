@@ -4,6 +4,7 @@ import type { DockviewApi, DockviewGroupPanel, IDockviewPanel } from "dockview-v
 import { defineStore } from "pinia";
 import { ref, shallowRef } from "vue";
 
+import { floatWasHeaderless, withFloatPrevHeaderless } from "@/modules/panels/float";
 import { isHeaderless, withHeaderless } from "@/modules/panels/headerless";
 import { MISSING_PANEL_TYPE } from "@/modules/panels/missing";
 import { panelRegistry } from "@/modules/panels/registry";
@@ -379,6 +380,74 @@ export const useSessionStore = defineStore("session", () => {
   }
 
   /**
+   * Float a docked pane into an in-window draggable overlay (dockview-native
+   * `addFloatingGroup`; position/size persist via `toJSON`). Grid-gated.
+   * Multiple floats cascade so they don't stack. A float always keeps a header
+   * (its drag handle), so we clear `header.hidden` AND persist `headerless:false`
+   * — and remember the pre-float headerless flag (`floatPrevHeaderless`) so
+   * `dockBack` can restore a clean pane's clean status. Marks dirty (geometry +
+   * persisted state are both user-savable). Restoring-guarded so the
+   * `addFloatingGroup` churn never false-dirties mid-mutation.
+   */
+  async function floatPanel(panelId: Ulid): Promise<boolean> {
+    const api = dockviewApi.value;
+    if (!api) throw new Error("Dockview API not bound");
+    const panel = api.getPanel(panelId);
+    if (!panel || panel.api.location.type !== "grid") return false;
+    setRestoring(true);
+    try {
+      const panelStateStore = usePanelStateStore();
+      const wasHeaderless = isHeaderless(panelStateStore.getState(panelId)?.state);
+      const n = api.groups.filter((g) => g.api.location.type === "floating").length;
+      api.addFloatingGroup(panel, { width: 520, height: 360, x: 120 + n * 28, y: 120 + n * 28 });
+      panel.api.group.header.hidden = false; // a float always keeps a drag handle
+      await panelStateStore.updateState(panelId, {
+        state: withFloatPrevHeaderless(
+          withHeaderless(panelStateStore.getState(panelId)?.state, false),
+          wasHeaderless,
+        ),
+      });
+    } finally {
+      setRestoring(false);
+    }
+    markDirty();
+    return true;
+  }
+
+  /**
+   * Dock a floating pane back into the grid. `moveTo({ position: "right" })`
+   * with no target group creates a new right-edge GRID group and moves the panel
+   * into it (traced: dockviewGroupPanelApi.moveTo -> accessor.addGroup +
+   * moveGroupOrPanel). Floating-gated. Restores the pane's pre-float clean
+   * (header-less) status if it had one, clears the `floatPrevHeaderless` flag,
+   * and persists the result. Marks dirty (geometry changes toJSON).
+   */
+  async function dockBack(panelId: Ulid): Promise<boolean> {
+    const api = dockviewApi.value;
+    if (!api) throw new Error("Dockview API not bound");
+    const panel = api.getPanel(panelId);
+    if (!panel || panel.api.location.type !== "floating") return false;
+    setRestoring(true);
+    try {
+      const panelStateStore = usePanelStateStore();
+      const restoreClean = floatWasHeaderless(panelStateStore.getState(panelId)?.state);
+      panel.api.group.api.moveTo({ position: "right" }); // new right-edge grid group
+      // `panel.api.group` is a live getter — it now resolves to that NEW grid group.
+      if (restoreClean) panel.api.group.header.hidden = true; // restore clean status
+      await panelStateStore.updateState(panelId, {
+        state: withFloatPrevHeaderless(
+          withHeaderless(panelStateStore.getState(panelId)?.state, restoreClean),
+          false,
+        ),
+      });
+    } finally {
+      setRestoring(false);
+    }
+    markDirty();
+    return true;
+  }
+
+  /**
    * Split a clean pane: add a new panel of the given `panelType` as a NEW clean
    * neighbor to the right of the source group. Creates a fresh headerless
    * panel-state record so the new pane round-trips. Returns the new panel id, or
@@ -474,6 +543,8 @@ export const useSessionStore = defineStore("session", () => {
     removePanelGuarded,
     closeOthersInGroup,
     toggleMaximize,
+    floatPanel,
+    dockBack,
     splitCleanNeighbor,
     discardChanges,
     switchWorkspace,

@@ -50,5 +50,6 @@ firstrule
 browsable
 headerless
 Headerless
+headered
 groupview
 popout

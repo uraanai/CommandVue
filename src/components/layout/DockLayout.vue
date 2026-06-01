@@ -80,9 +80,20 @@ maybePromptUnload(session.getDockviewApi());
 
 <template>
   <div ref="rootEl" class="relative h-full w-full">
+    <!--
+      `floating-group-bounds="boundedWithinViewport"` clamps in-window floating
+      panels (Track B Phase 3) so they can't be dragged off-screen.
+
+      We deliberately do NOT set `default-renderer="always"`: Stage-1 runtime
+      testing confirmed a floated Cesium AND MapLibre panel keep their WebGL
+      context across the float + dock-back DOM move with dockview's DEFAULT
+      renderer. `always` would keep every hidden (inactive-tab) map panel
+      rendering for no benefit here — needless GPU/memory cost on a map-first app.
+    -->
     <DockviewVue
       :theme="commandvueTheme"
       no-panels-overlay="emptyGroup"
+      floating-group-bounds="boundedWithinViewport"
       class="h-full w-full"
       @ready="onReady"
     />
