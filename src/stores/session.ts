@@ -378,6 +378,42 @@ export const useSessionStore = defineStore("session", () => {
   }
 
   /**
+   * Close EVERY panel in the target panel's group in one action — the group-level
+   * complement to per-tab close (Track B Phase 4, the header "Close All" button).
+   * Same mechanics as `closeOthersInGroup` minus the keep-the-target filter:
+   * iterates a STABLE snapshot of `group.panels` (removing while iterating the
+   * live array skips entries) and honors the empty-workspace guard, so closing
+   * the only group leaves its last pane rather than emptying the layout. Returns
+   * `false` when nothing was removed. Restoring-guarded around the structural
+   * mutations; marks dirty when it removed at least one panel (a real user edit).
+   */
+  async function closeAllInGroup(panelId: Ulid): Promise<boolean> {
+    const api = dockviewApi.value;
+    if (!api) throw new Error("Dockview API not bound");
+    const target = api.getPanel(panelId);
+    if (!target) return false;
+
+    const groupPanels = [...target.api.group.panels];
+    if (groupPanels.length === 0) return false;
+
+    let removedAny = false;
+    setRestoring(true);
+    try {
+      for (const member of groupPanels) {
+        if (api.panels.length <= 1) break; // empty-workspace guard
+        const panel = api.getPanel(member.id);
+        if (!panel) continue;
+        api.removePanel(panel);
+        removedAny = true;
+      }
+    } finally {
+      setRestoring(false);
+    }
+    if (removedAny) markDirty();
+    return removedAny;
+  }
+
+  /**
    * Maximize the right-clicked panel's group, or restore it if already
    * maximized. Maximize is view-only state - dockview does NOT serialize it
    * into toJSON, so this does NOT mark the session dirty (matching the
@@ -612,6 +648,7 @@ export const useSessionStore = defineStore("session", () => {
     toggleHeaderless,
     removePanelGuarded,
     closeOthersInGroup,
+    closeAllInGroup,
     toggleMaximize,
     floatPanel,
     dockBack,

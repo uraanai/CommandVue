@@ -143,14 +143,15 @@ app.component(
   MISSING_PANEL_TYPE,
   defineAsyncComponent(() => import("@/components/panels/MissingPanelPlaceholder.vue")),
 );
-// Dockview right header-actions component — the floating-window opacity slider
-// (Track B Phase 3b). Registered globally + referenced by STRING on
+// Dockview per-group header-actions component — the floating-window opacity
+// eye/slider (Track B Phase 3b) AND the grid "Close All" button (Phase 4a),
+// branched by group location. Registered globally + referenced by STRING on
 // <DockviewVue> (dockview-vue's component-string resolution, same path as the
 // panels above); passing the component object directly trips its narrow
 // `VueComponent` prop type even though it renders fine.
 app.component(
-  "float-opacity-control",
-  defineAsyncComponent(() => import("@/components/layout/dock/FloatOpacityControl.vue")),
+  "commandvue-header-actions",
+  defineAsyncComponent(() => import("@/components/layout/dock/CommandVueHeaderActions.vue")),
 );
 /* eslint-enable vue/component-definition-name-casing */
 

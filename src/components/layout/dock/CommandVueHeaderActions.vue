@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Eye, EyeOff } from "@lucide/vue";
+import { Eye, EyeOff, SquareX } from "@lucide/vue";
 import { computed, ref, watch } from "vue";
 
 import IconButton from "@/components/ui/IconButton.vue";
@@ -7,20 +7,24 @@ import { useSessionStore } from "@/stores/session";
 import Slider from "@/volt/Slider.vue";
 
 /**
- * Right header-actions control for floating windows (Track B Phase 3b).
+ * Per-group header-actions control on `<DockviewVue>`'s right-actions slot
+ * (registered globally as `commandvue-header-actions`, referenced by STRING —
+ * dockview-vue's narrow `VueComponent` prop type rejects the object form). One
+ * instance renders in EVERY group's header right-actions area; dockview mounts
+ * it with a single `params` bag (same convention as panels — see `usePanelApi`),
+ * so the dockview header-actions props arrive on `props.params`.
  *
- * Registered as `right-header-actions-component` on `<DockviewVue>`, so dockview
- * renders it in every group's header right-actions area — but it shows ONLY for
- * floating groups. dockview-vue mounts actions components with a single `params`
- * bag (same convention as panels — see `usePanelApi`), so the dockview
- * header-actions props arrive on `props.params`.
+ * It renders DIFFERENT controls per group location (Track B):
+ *  - **floating** (Phase 3b): an **eye icon** that toggles a compact background-
+ *    opacity **slider** (0 = fully see-through over the map, 100 = solid glass),
+ *    driving `session.setFloatAlpha`.
+ *  - **grid / tabbed** (Phase 4a): a **Close All** button that closes every panel
+ *    in the group at once (`session.closeAllInGroup`, empty-workspace-guarded) —
+ *    the group-level complement to the per-tab close. (Minimize-to-tray joins
+ *    this branch in Phase 4c.)
  *
- * UI: an **eye icon** on the right of the float header. Clicking it toggles a
- * compact opacity **slider** (kept hidden by default so the header stays clean);
- * the slider drives `session.setFloatAlpha` (the float's background see-through:
- * 0 = fully transparent so only content shows over the map, 100 = solid glass).
- * `@pointerdown.stop` / `@mousedown.stop` keep a drag of the slider from also
- * dragging the float (the header doubles as the float's move handle).
+ * `@pointerdown.stop` / `@mousedown.stop` keep a click/drag of these controls
+ * from also dragging the group (the header doubles as the move handle).
  */
 interface HeaderActionsParams {
   api?: { location?: { type?: string } };
@@ -37,9 +41,15 @@ const isFloating = computed(
   () =>
     props.params?.api?.location?.type === "floating" || props.params?.location?.type === "floating",
 );
+const isGrid = computed(
+  () => props.params?.api?.location?.type === "grid" || props.params?.location?.type === "grid",
+);
 
 // `activePanel` is absent on the updateLocation fast-path, so cache the last
-// known id. A floating group is single-panel, so the cache never goes stale.
+// known id. A float is single-panel; for a tabbed grid group the active id is
+// always a member of the group, and the group-level action (Close All) operates
+// off any member's `.group`, so a fast-path-stale-but-in-group id is still
+// correct.
 const cachedPanelId = ref<string>();
 watch(
   () => props.params?.activePanel?.id,
@@ -58,6 +68,10 @@ const pct = computed<number>({
 });
 
 const open = ref(false);
+
+function closeAll() {
+  if (panelId.value) void session.closeAllInGroup(panelId.value);
+}
 </script>
 
 <template>
@@ -72,6 +86,11 @@ const open = ref(false);
       @click="open = !open"
     >
       <component :is="open ? EyeOff : Eye" />
+    </IconButton>
+  </div>
+  <div v-else-if="isGrid" class="flex items-center pr-1" @pointerdown.stop @mousedown.stop>
+    <IconButton label="Close all panels in group" size="sm" @click="closeAll">
+      <SquareX />
     </IconButton>
   </div>
 </template>
