@@ -94,6 +94,7 @@ maybePromptUnload(session.getDockviewApi());
       :theme="commandvueTheme"
       no-panels-overlay="emptyGroup"
       floating-group-bounds="boundedWithinViewport"
+      right-header-actions-component="float-opacity-control"
       class="h-full w-full"
       @ready="onReady"
     />
