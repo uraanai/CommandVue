@@ -12,10 +12,14 @@
 Per‑group **header‑action buttons**, rendered in dockview's per‑group
 right‑header‑actions slot, branched by the group's `location.type`:
 
-| Location        | Buttons (left→right)                                | Sub‑phase |
-| --------------- | --------------------------------------------------- | --------- |
-| `floating`      | eye/opacity (shipped 3b) · **Maximize** · **Close** | 4b        |
-| `grid` (tabbed) | **Close All** · **Minimize**                        | 4a · 4c   |
+| Location        | Buttons (left→right)                                       | Sub‑phase |
+| --------------- | ---------------------------------------------------------- | --------- |
+| `floating`      | eye/opacity (3b) · **Maximize** · **Minimize** · **Close** | 4b/4c¹    |
+| `grid` (tabbed) | **Minimize** · **Close All**                               | 4a/4c¹    |
+
+¹ Order revised post‑review (4c feedback round 2): a uniform **Close rightmost,
+Minimize immediately to its left** convention across both branches — see the "4c
+feedback round 2" note in §4. (Float opacity also became a GROUP property then.)
 
 `popout` / `edge` groups get neither (mirrors the existing maximize/float
 grid‑gating).
@@ -252,6 +256,31 @@ phase's decision) — in‑memory, cleared on `loadLayout`.
   the other 6 and adds a `within` bar; restore via the ⤢ button re‑joins the same
   group, clears the tray, stays `dirty=false`; Minimize group → "Empty +6" bar; the
   × discards it. Unit: +4 `minimizePanel` tests (12 minimize tests total; 415 all‑up).
+
+#### Feedback round 2 (header icon order + group opacity)
+
+- **Uniform icon order.** `CommandVueHeaderActions.vue` — **Close is always
+  rightmost, Minimize immediately to its left**, in BOTH branches: float =
+  `eye · maximize · minimize · close`; grid = `minimize · close`. (Supersedes the
+  table at the top of this doc.)
+- **Float opacity is a GROUP property.** Was stored per‑panel but applied to the
+  shared group element (`--cv-float-alpha`), so a multi‑tab float desynced on tab
+  switch (control snapped to 100% while the glass persisted). Now:
+  `setFloatAlpha` writes the same alpha to EVERY panel in the group (parallel) +
+  sets the var; a new `syncActiveFloatAlpha` (called by the header on float
+  active‑panel change) reads the applied var and adopts it onto the active tab
+  (a dragged‑in tab takes the group's look; a torn‑off lone float keeps its own
+  dim). It is dirty‑neutral with **no `restoring` guard** (so it can't swallow the
+  tab‑drag's own `markDirty`) but commits durably. `applyFloatAlphas` is now
+  group‑aware (one alpha per group, the active tab's) so a divergent group reloads
+  deterministically rather than last‑writer‑wins.
+- **Adversarial review:** 3 diverse‑lens reviewers (alpha‑correctness,
+  regressions, icon/UX) → approve(‑with‑fixes); the two IMPORTANT findings (sync
+  guard, applyFloatAlphas last‑writer‑wins) and the tear‑off minor are fixed above.
+- **Verified (Stage 1, Playwright):** grid order `minimize·close`, float order
+  `eye·maximize·minimize·close`; a 2‑tab float at 0.4 → both tabs read 40% and the
+  glass stays on tab switch (no 100% snap). Unit: +4 float‑alpha tests
+  (group‑wide write, drag‑in adopt, no‑op, tear‑off inherit).
 
 ---
 

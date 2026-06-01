@@ -18,17 +18,24 @@ import { panelsThatWillClose } from "./groupCloseControls";
  * it with a single `params` bag (same convention as panels — see `usePanelApi`),
  * so the dockview header-actions props arrive on `props.params`.
  *
- * It renders DIFFERENT controls per group location (Track B):
- *  - **floating** (Phase 3b/4b/4c): an **eye icon** that toggles a compact
- *    background-opacity **slider** (0 = fully see-through over the map, 100 =
- *    solid glass; `session.setFloatAlpha`), **Minimize** (to the tray;
- *    `minimized.minimizeGroup`), **Maximize/Restore** (fill the dock ⇄ prior box;
- *    `session.toggleFloatMaximize`), and **Close** (`session.removePanelGuarded`).
- *  - **grid / tabbed** (Phase 4a/4c): a **Close All** button (the plain close `X`,
+ * It renders DIFFERENT controls per group location (Track B). In BOTH, **Close is
+ * always rightmost and Minimize sits immediately to its left** (a uniform window
+ * convention across docked + floating groups):
+ *  - **floating** (Phase 3b/4b/4c) — `eye · maximize · minimize · close`: an
+ *    **eye icon** toggling a compact background-opacity **slider** (0 = fully
+ *    see-through over the map, 100 = solid glass; `session.setFloatAlpha`).
+ *    Opacity is a **group** property — one `--cv-float-alpha` on the shared group
+ *    element — so a multi-tab float dims uniformly and switching tabs keeps the
+ *    value (`syncActiveFloatAlpha` reconciles a dragged-in tab). Then
+ *    **Maximize/Restore** (fill the dock ⇄ prior box; `session.toggleFloatMaximize`),
+ *    **Minimize** (to the tray; `minimized.minimizeGroup`), and **Close**
+ *    (`session.removePanelGuarded`).
+ *  - **grid / tabbed** (Phase 4a/4c) — `minimize · close`: a **Minimize** button
+ *    that collapses the whole group to the bottom-left tray
+ *    (`minimized.minimizeGroup`), then a **Close All** button (the plain close `X`,
  *    a touch larger than the per-tab close) that closes every panel in the group
  *    at once (`session.closeAllInGroup`, empty-workspace-guarded) AFTER a
- *    group-scoped confirm (`GroupCloseConfirm`), and a **Minimize** button that
- *    collapses the whole group to the bottom-left tray (`minimized.minimizeGroup`).
+ *    group-scoped confirm (`GroupCloseConfirm`).
  *
  * `@pointerdown.stop` / `@mousedown.stop` keep a click/drag of these controls
  * from also dragging the group (the header doubles as the move handle).
@@ -67,6 +74,15 @@ watch(
   () => props.params?.activePanel?.id,
   (id) => {
     if (id) cachedPanelId.value = id;
+    // Float opacity is a GROUP property persisted per-panel, so reconcile the
+    // newly-active float tab with the group's actual glass (a tab dragged into a
+    // dimmed float would otherwise read its own value). Dirty-neutral no-op when
+    // already in sync or off a float. Reconciliation hooks the active-tab change
+    // (the dominant case — dockview activates a dropped tab); a drop that does NOT
+    // re-activate self-heals on the next tab switch. Relies on `applyFloatAlphas`
+    // (run synchronously in loadLayout) having set the var before this `immediate`
+    // watch fires at mount, so an active dimmed tab never reads an unset var.
+    if (id && isFloating.value) void session.syncActiveFloatAlpha(id);
   },
   { immediate: true },
 );
@@ -145,15 +161,15 @@ function cancelCloseAll() {
     >
       <component :is="open ? EyeOff : Eye" />
     </IconButton>
-    <IconButton label="Minimize window" size="sm" @click="minimizeGroup">
-      <Minus />
-    </IconButton>
     <IconButton
       :label="isMax ? 'Restore window' : 'Maximize window'"
       size="sm"
       @click="toggleMaximize"
     >
       <component :is="isMax ? Minimize2 : Maximize2" />
+    </IconButton>
+    <IconButton label="Minimize window" size="sm" @click="minimizeGroup">
+      <Minus />
     </IconButton>
     <IconButton label="Close window" size="sm" @click="closeWindow">
       <X />
@@ -166,6 +182,9 @@ function cancelCloseAll() {
     @pointerdown.stop
     @mousedown.stop
   >
+    <IconButton label="Minimize group" size="sm" @click="minimizeGroup">
+      <Minus />
+    </IconButton>
     <IconButton
       label="Close all panels in group"
       size="sm"
@@ -173,9 +192,6 @@ function cancelCloseAll() {
       @click="requestCloseAll"
     >
       <X />
-    </IconButton>
-    <IconButton label="Minimize group" size="sm" @click="minimizeGroup">
-      <Minus />
     </IconButton>
     <GroupCloseConfirm
       :open="confirmOpen"

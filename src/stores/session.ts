@@ -153,23 +153,28 @@ export const useSessionStore = defineStore("session", () => {
   }
 
   /**
-   * Re-apply per-window see-through opacity after a load. Like
-   * `applyHeaderlessGroups`, dockview does not persist the `--cv-float-alpha`
-   * CSS var, so for every panel whose persisted state carries a non-default
-   * `floatAlpha` we set the var on its group element. Safe no-op when nothing is
-   * dimmed; restoring-guarded so it never dirties. (The CSS only takes effect on
-   * a `.dv-groupview-floating` group, so the var stays inert until the pane
-   * floats — a dimmed-then-docked pane reloads correct and re-floats dimmed.)
+   * Re-apply see-through opacity after a load. Like `applyHeaderlessGroups`,
+   * dockview does not persist the `--cv-float-alpha` CSS var, so we set it from
+   * the persisted `floatAlpha`. Opacity is a GROUP property, so we apply ONE alpha
+   * per group — the ACTIVE tab's — rather than per panel: a group whose tabs hold
+   * divergent persisted values (e.g. a tab dragged in and saved before it was
+   * activated/reconciled) then reloads to a single, deterministic glass instead of
+   * a last-writer-wins race over the shared var. Iterating GROUPS (not panels) also
+   * sets the var BEFORE the header-actions component's `immediate` watcher reads it,
+   * so an active dimmed tab never observes an unset var. Safe no-op when nothing is
+   * dimmed; restoring-guarded so it never dirties. (The CSS only takes effect on a
+   * `.dv-groupview-floating` group, so the var stays inert on a docked group until
+   * it floats — where `floatPanel` re-applies it.)
    */
   function applyFloatAlphas(api: DockviewApi): void {
     setRestoring(true);
     try {
       const panelStateStore = usePanelStateStore();
-      for (const ps of panelStateStore.listForLayout()) {
-        const alpha = getFloatAlphaFromState(ps.state);
-        if (alpha >= 1) continue;
-        const group = api.getPanel(ps.id)?.api.group;
-        if (group) group.element.style.setProperty("--cv-float-alpha", String(alpha));
+      for (const group of api.groups) {
+        const rep = group.activePanel ?? group.panels[0];
+        if (!rep) continue;
+        const alpha = getFloatAlphaFromState(panelStateStore.getState(rep.id)?.state);
+        if (alpha < 1) group.element.style.setProperty("--cv-float-alpha", String(alpha));
       }
     } finally {
       setRestoring(false);
@@ -562,13 +567,19 @@ export const useSessionStore = defineStore("session", () => {
   }
 
   /**
-   * Set a floating pane's see-through opacity (the background alpha of its glass;
+   * Set a floating GROUP's see-through opacity (the background alpha of its glass;
    * 0 = fully transparent so only the content shows over the map, 1 = solid).
-   * Sets the `--cv-float-alpha` CSS var on the group element (the CSS only acts on
-   * floating groups) and persists `floatAlpha` to `PanelState.state` so it
-   * survives reload. Clamped to [0, 1]; marks dirty. No location gate — the var
-   * is inert on a docked group (CSS scoped to `.dv-groupview-floating`), and
-   * persisting now means a later re-float restores the dim. No-op for unknown id.
+   *
+   * Opacity is a GROUP property, not a per-window one: the glass `--cv-float-alpha`
+   * var lives on the ONE shared group element, so a multi-tab float renders every
+   * tab at the same alpha. We therefore set the var on the group element AND
+   * persist the same `floatAlpha` to EVERY panel in the group — so switching tabs
+   * reads a consistent value (a per-panel value would snap the opacity control
+   * back to the new tab's default while the group's glass stayed put). Persisting
+   * per-panel is how the alpha survives reload (re-applied by `applyFloatAlphas`).
+   * Clamped to [0, 1]; marks dirty once. No location gate — the var is inert on a
+   * docked group (CSS scoped to `.dv-groupview-floating`), and persisting now means
+   * a later re-float restores the dim. No-op for unknown id.
    */
   async function setFloatAlpha(panelId: Ulid, value: number): Promise<void> {
     const api = dockviewApi.value;
@@ -578,15 +589,67 @@ export const useSessionStore = defineStore("session", () => {
     const clamped = Math.min(1, Math.max(0, value));
     setRestoring(true);
     try {
-      panel.api.group.element.style.setProperty("--cv-float-alpha", String(clamped));
+      const group = panel.api.group;
+      group.element.style.setProperty("--cv-float-alpha", String(clamped));
       const panelStateStore = usePanelStateStore();
-      await panelStateStore.updateState(panelId, {
-        state: withFloatAlpha(panelStateStore.getState(panelId)?.state, clamped),
-      });
+      // Persist to every tab in the group (group-wide opacity), in PARALLEL so the
+      // guarded window doesn't widen with tab count. Reads snapshot synchronously at
+      // map-build time, before any await, so the writes don't race each other.
+      await Promise.all(
+        group.panels.map((p) =>
+          panelStateStore.updateState(p.id, {
+            state: withFloatAlpha(panelStateStore.getState(p.id)?.state, clamped),
+          }),
+        ),
+      );
     } finally {
       setRestoring(false);
     }
     markDirty();
+  }
+
+  /**
+   * Reconcile a float's now-active tab with the GROUP's shared opacity (called by
+   * the header on every float active-panel change). Float alpha is group-wide but
+   * persisted per-panel, so a tab DRAGGED into a float keeps its own value — which
+   * would desync the opacity control from the group's actual glass on activation.
+   *
+   * Reads the group's APPLIED alpha (the `--cv-float-alpha` var = the visible truth):
+   *  - var SET → the active tab adopts the group's value (a dragged-in tab takes the
+   *    group's look — dimmed OR solid).
+   *  - var UNSET on a LONE float (a tab torn off into its own new group) → push the
+   *    tab's OWN persisted dim onto the fresh var instead of snapping it to solid, so
+   *    a dimmed window keeps its dim when it forms a new group.
+   *  - var UNSET on a multi-tab group → reads as solid (1); a dragged-in tab adopts
+   *    solid.
+   *
+   * NO `restoring` guard: this writes only panel STATE (never dockview's `toJSON`, so
+   * it fires no `onDidLayoutChange`) and never calls `markDirty`, so it is dirty-neutral
+   * by construction. Guarding it would only risk swallowing a concurrent, legitimate
+   * `markDirty` — e.g. the very tab-drag that triggered this reconcile. The adopted
+   * value is committed DURABLY to panel state (it survives Discard), consistent with
+   * `setFloatAlpha`'s persistence model. No-op when in sync, unbound, or off a float.
+   */
+  async function syncActiveFloatAlpha(panelId: Ulid): Promise<void> {
+    const api = dockviewApi.value;
+    if (!api) return;
+    const panel = api.getPanel(panelId);
+    if (!panel || panel.api.location.type !== "floating") return;
+    const group = panel.api.group;
+    const panelStateStore = usePanelStateStore();
+    const current = getFloatAlphaFromState(panelStateStore.getState(panelId)?.state);
+    const applied = group.element.style.getPropertyValue("--cv-float-alpha").trim();
+    if (applied === "" && group.panels.length <= 1) {
+      // Lone float with no glass set (e.g. a torn-off tab): keep its own dim.
+      if (current < 1) group.element.style.setProperty("--cv-float-alpha", String(current));
+      return;
+    }
+    const parsed = applied === "" ? 1 : Number(applied);
+    const groupAlpha = Number.isFinite(parsed) ? Math.min(1, Math.max(0, parsed)) : 1;
+    if (Math.abs(current - groupAlpha) < 1e-6) return; // already in sync
+    await panelStateStore.updateState(panelId, {
+      state: withFloatAlpha(panelStateStore.getState(panelId)?.state, groupAlpha),
+    });
   }
 
   /** Current persisted float alpha for a panel (1 = solid when unset). */
@@ -1018,6 +1081,7 @@ export const useSessionStore = defineStore("session", () => {
     floatPanel,
     dockBack,
     setFloatAlpha,
+    syncActiveFloatAlpha,
     getFloatAlpha,
     toggleFloatMaximize,
     getFloatMaximized,

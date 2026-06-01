@@ -57,8 +57,11 @@ interface FakeGroup {
     location: { type: "grid" | "floating" | "popout" | "edge" };
     moveTo: (opts: { group?: FakeGroup; position?: unknown }) => void;
   };
-  /** Minimal DOM stub — only `element.style.setProperty` is used (float opacity var). */
-  element: { style: { setProperty: ReturnType<typeof vi.fn> } };
+  /** Minimal DOM stub — float opacity writes (`setProperty`, a spy) and reads
+   *  back (`getPropertyValue`) the `--cv-float-alpha` var. */
+  element: {
+    style: { setProperty: ReturnType<typeof vi.fn>; getPropertyValue: (k: string) => string };
+  };
 }
 interface FakePanel {
   id: string;
@@ -122,6 +125,20 @@ interface FakeDockviewApi {
   onDidMaximizedGroupChange: ReturnType<typeof vi.fn>;
 }
 
+/** A DOM `style` stub that records `setProperty` (a spy, so existing assertions on
+ *  `.mock.calls` keep working) AND serves the value back via `getPropertyValue` —
+ *  needed by `syncActiveFloatAlpha`, which reads the applied `--cv-float-alpha`. */
+function makeStyleStub(): {
+  setProperty: ReturnType<typeof vi.fn>;
+  getPropertyValue: (k: string) => string;
+} {
+  const props = new Map<string, string>();
+  const setProperty = vi.fn((k: string, v: string) => {
+    props.set(k, String(v));
+  });
+  return { setProperty, getPropertyValue: (k) => props.get(k) ?? "" };
+}
+
 function makeFakeApi(): DockviewApi {
   const panels: FakePanel[] = [];
   const groups: FakeGroup[] = [];
@@ -145,7 +162,7 @@ function makeFakeApi(): DockviewApi {
         return group.panels.find((p) => p.id === group.activeId) ?? group.panels[0];
       },
       locationType: "grid",
-      element: { style: { setProperty: vi.fn() } },
+      element: { style: makeStyleStub() },
       api: {
         // Self-reference is SAFE: bodies run only when invoked later.
         get location() {
@@ -1076,6 +1093,109 @@ describe("useSessionStore", () => {
     };
     const calls = fake.getPanel(p2.id)!.api.group.element.style.setProperty.mock.calls;
     expect(calls.some((c) => c[0] === "--cv-float-alpha" && c[1] === "0.4")).toBe(true);
+  });
+
+  it("setFloatAlpha is group-wide — every tab of a multi-tab float persists the same alpha", async () => {
+    const { layout, p1, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    await session.floatPanel(p2.id);
+
+    // Drag p1 into p2's float → a 2-tab float sharing ONE group element.
+    const fake = api as unknown as {
+      getPanel: (
+        id: string,
+      ) => { api: { group: FakeGroup; moveTo: (o: { group?: unknown }) => void } } | undefined;
+    };
+    fake.getPanel(p1.id)!.api.moveTo({ group: fake.getPanel(p2.id)!.api.group as never });
+
+    await session.setFloatAlpha(p2.id, 0.4);
+    // Both tabs read the same alpha — switching tabs no longer snaps back to 100%.
+    expect(session.getFloatAlpha(p2.id)).toBe(0.4);
+    expect(session.getFloatAlpha(p1.id)).toBe(0.4);
+  });
+
+  it("syncActiveFloatAlpha adopts the group's applied alpha onto a dragged-in tab", async () => {
+    const { layout, p1, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    await session.floatPanel(p2.id);
+    await session.setFloatAlpha(p2.id, 0.3); // group var = 0.3, p2 = 0.3
+
+    // p1 (still default 1) is dragged into the dimmed float, keeping its own value.
+    const fake = api as unknown as {
+      getPanel: (
+        id: string,
+      ) => { api: { group: FakeGroup; moveTo: (o: { group?: unknown }) => void } } | undefined;
+    };
+    fake.getPanel(p1.id)!.api.moveTo({ group: fake.getPanel(p2.id)!.api.group as never });
+    expect(session.getFloatAlpha(p1.id)).toBe(1); // stale pre-sync
+
+    session.clearDirty();
+    await session.syncActiveFloatAlpha(p1.id);
+    expect(session.getFloatAlpha(p1.id)).toBe(0.3); // adopted the group's glass
+    expect(session.dirty).toBe(false); // reconciliation is dirty-neutral
+  });
+
+  it("syncActiveFloatAlpha is a no-op off a float and when already in sync", async () => {
+    const { layout, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+
+    // Docked (grid) panel → not floating → no change, no throw.
+    session.clearDirty();
+    await session.syncActiveFloatAlpha(p2.id);
+    expect(session.getFloatAlpha(p2.id)).toBe(1);
+    expect(session.dirty).toBe(false);
+
+    // Floated at the default (var unset → group alpha 1) and already in sync → no write.
+    await session.floatPanel(p2.id);
+    session.clearDirty();
+    await session.syncActiveFloatAlpha(p2.id);
+    expect(session.dirty).toBe(false);
+  });
+
+  it("syncActiveFloatAlpha keeps a lone float's dim (tear-off) rather than snapping to solid", async () => {
+    const { layout, p2 } = await seedWorkspace();
+    await panelStateRepo.update(p2.id, { state: { floatAlpha: 0.3 } });
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    await session.floatPanel(p2.id); // a single dimmed float
+
+    // Simulate a fresh torn-off group whose shared var was never set.
+    const fake = api as unknown as {
+      getPanel: (id: string) =>
+        | {
+            api: {
+              group: {
+                element: {
+                  style: {
+                    setProperty: (k: string, v: string) => void;
+                    getPropertyValue: (k: string) => string;
+                  };
+                };
+              };
+            };
+          }
+        | undefined;
+    };
+    const grp = fake.getPanel(p2.id)!.api.group;
+    grp.element.style.setProperty("--cv-float-alpha", "");
+
+    session.clearDirty();
+    await session.syncActiveFloatAlpha(p2.id);
+    // The lone float re-applies its OWN dim; the panel keeps 0.3 (not reset to solid).
+    expect(grp.element.style.getPropertyValue("--cv-float-alpha")).toBe("0.3");
+    expect(session.getFloatAlpha(p2.id)).toBe(0.3);
+    expect(session.dirty).toBe(false); // dirty-neutral
   });
 
   it("toggleFloatMaximize fills a float to the dock size, then restores its prior box", async () => {
