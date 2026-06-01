@@ -143,6 +143,15 @@ app.component(
   MISSING_PANEL_TYPE,
   defineAsyncComponent(() => import("@/components/panels/MissingPanelPlaceholder.vue")),
 );
+// Dockview right header-actions component — the floating-window opacity slider
+// (Track B Phase 3b). Registered globally + referenced by STRING on
+// <DockviewVue> (dockview-vue's component-string resolution, same path as the
+// panels above); passing the component object directly trips its narrow
+// `VueComponent` prop type even though it renders fine.
+app.component(
+  "float-opacity-control",
+  defineAsyncComponent(() => import("@/components/layout/dock/FloatOpacityControl.vue")),
+);
 /* eslint-enable vue/component-definition-name-casing */
 
 app.mount("#app");

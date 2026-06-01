@@ -4,7 +4,12 @@ import type { DockviewApi, DockviewGroupPanel, IDockviewPanel } from "dockview-v
 import { defineStore } from "pinia";
 import { ref, shallowRef } from "vue";
 
-import { floatWasHeaderless, withFloatPrevHeaderless } from "@/modules/panels/float";
+import {
+  floatWasHeaderless,
+  getFloatAlpha as getFloatAlphaFromState,
+  withFloatAlpha,
+  withFloatPrevHeaderless,
+} from "@/modules/panels/float";
 import { isHeaderless, withHeaderless } from "@/modules/panels/headerless";
 import { MISSING_PANEL_TYPE } from "@/modules/panels/missing";
 import { panelRegistry } from "@/modules/panels/registry";
@@ -100,6 +105,7 @@ export const useSessionStore = defineStore("session", () => {
 
     await backfillCleanMainPane();
     applyHeaderlessGroups(api);
+    applyFloatAlphas(api);
 
     loadedLayoutId.value = layoutId;
     dirty.value = false;
@@ -120,6 +126,30 @@ export const useSessionStore = defineStore("session", () => {
         const panel = api.getPanel(ps.id);
         const group = panel?.api.group;
         if (group) group.header.hidden = true;
+      }
+    } finally {
+      setRestoring(false);
+    }
+  }
+
+  /**
+   * Re-apply per-window see-through opacity after a load. Like
+   * `applyHeaderlessGroups`, dockview does not persist the `--cv-float-alpha`
+   * CSS var, so for every panel whose persisted state carries a non-default
+   * `floatAlpha` we set the var on its group element. Safe no-op when nothing is
+   * dimmed; restoring-guarded so it never dirties. (The CSS only takes effect on
+   * a `.dv-groupview-floating` group, so the var stays inert until the pane
+   * floats — a dimmed-then-docked pane reloads correct and re-floats dimmed.)
+   */
+  function applyFloatAlphas(api: DockviewApi): void {
+    setRestoring(true);
+    try {
+      const panelStateStore = usePanelStateStore();
+      for (const ps of panelStateStore.listForLayout()) {
+        const alpha = getFloatAlphaFromState(ps.state);
+        if (alpha >= 1) continue;
+        const group = api.getPanel(ps.id)?.api.group;
+        if (group) group.element.style.setProperty("--cv-float-alpha", String(alpha));
       }
     } finally {
       setRestoring(false);
@@ -401,6 +431,13 @@ export const useSessionStore = defineStore("session", () => {
       const n = api.groups.filter((g) => g.api.location.type === "floating").length;
       api.addFloatingGroup(panel, { width: 520, height: 360, x: 120 + n * 28, y: 120 + n * 28 });
       panel.api.group.header.hidden = false; // a float always keeps a drag handle
+      // Re-apply any persisted opacity to the (possibly new) floating group element
+      // so re-floating a dimmed pane restores its glass immediately, not only on
+      // the next load (applyFloatAlphas).
+      const alpha = getFloatAlphaFromState(panelStateStore.getState(panelId)?.state);
+      if (alpha < 1) {
+        panel.api.group.element.style.setProperty("--cv-float-alpha", String(alpha));
+      }
       await panelStateStore.updateState(panelId, {
         state: withFloatPrevHeaderless(
           withHeaderless(panelStateStore.getState(panelId)?.state, false),
@@ -445,6 +482,39 @@ export const useSessionStore = defineStore("session", () => {
     }
     markDirty();
     return true;
+  }
+
+  /**
+   * Set a floating pane's see-through opacity (the background alpha of its glass;
+   * 0 = fully transparent so only the content shows over the map, 1 = solid).
+   * Sets the `--cv-float-alpha` CSS var on the group element (the CSS only acts on
+   * floating groups) and persists `floatAlpha` to `PanelState.state` so it
+   * survives reload. Clamped to [0, 1]; marks dirty. No location gate — the var
+   * is inert on a docked group (CSS scoped to `.dv-groupview-floating`), and
+   * persisting now means a later re-float restores the dim. No-op for unknown id.
+   */
+  async function setFloatAlpha(panelId: Ulid, value: number): Promise<void> {
+    const api = dockviewApi.value;
+    if (!api) throw new Error("Dockview API not bound");
+    const panel = api.getPanel(panelId);
+    if (!panel) return;
+    const clamped = Math.min(1, Math.max(0, value));
+    setRestoring(true);
+    try {
+      panel.api.group.element.style.setProperty("--cv-float-alpha", String(clamped));
+      const panelStateStore = usePanelStateStore();
+      await panelStateStore.updateState(panelId, {
+        state: withFloatAlpha(panelStateStore.getState(panelId)?.state, clamped),
+      });
+    } finally {
+      setRestoring(false);
+    }
+    markDirty();
+  }
+
+  /** Current persisted float alpha for a panel (1 = solid when unset). */
+  function getFloatAlpha(panelId: Ulid): number {
+    return getFloatAlphaFromState(usePanelStateStore().getState(panelId)?.state);
   }
 
   /**
@@ -545,6 +615,8 @@ export const useSessionStore = defineStore("session", () => {
     toggleMaximize,
     floatPanel,
     dockBack,
+    setFloatAlpha,
+    getFloatAlpha,
     splitCleanNeighbor,
     discardChanges,
     switchWorkspace,

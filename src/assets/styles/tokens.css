@@ -458,6 +458,15 @@
   --dockpanel-tab-border: var(--color-border-subtle);
   --dockpanel-padding: var(--space-panel-padding);
 
+  /* Floating window (Track B Phase 3) — the see-through "glass" tint of an
+     in-window floating pane. THEME-FOLLOWING so the float matches the rest of the
+     UI: a light tint in light mode (here), a dark tint in dark mode (overridden in
+     html[data-theme="dark"] below). A primitive, not a surface token, so it is
+     immune to the surface-token-transparent override applied inside floats. The
+     per-window alpha is the runtime var `--cv-float-alpha` (0..1), composed via
+     color-mix in dockview.css. */
+  --cv-float-tint: var(--color-slate-100);
+
   /* MenuBar */
   --menubar-bg: var(--color-surface-base);
   --menubar-fg: var(--color-text-primary);
@@ -504,6 +513,9 @@ html[data-theme="dark"] {
   --color-surface-base: var(--color-slate-900);
   --color-surface-raised: var(--color-slate-800);
   --color-surface-overlay: var(--color-slate-800);
+
+  /* Floating-window glass tint — dark in dark mode (light default lives in :root). */
+  --cv-float-tint: var(--color-slate-800);
   --color-surface-sunken: var(--color-slate-950);
 
   /* Border */
