@@ -170,8 +170,14 @@ phase's decision) — in‑memory, cleared on `loadLayout`.
 
 - **4a (this PR):** `session.ts` (`closeAllInGroup` + export) ·
   `CommandVueHeaderActions.vue` (renamed from `FloatOpacityControl.vue`, grid
-  branch) · `main.ts` (registration) · `DockLayout.vue` (prop) ·
-  `session.spec.ts` (tests) · this spec · roadmap.
+  branch, plain‑`X` icon, guard‑aware confirm count) ·
+  `GroupCloseConfirm.vue` (group‑scoped confirm; focus‑on‑open + restore;
+  `role="alertdialog"` without `aria-modal` since other groups stay interactive) ·
+  `groupCloseControls.ts` (`panelsThatWillClose` — guard‑aware count) ·
+  `modules/shortcuts/modalGate.ts` + `useKeyboardShortcuts.ts` (a modal‑capture
+  gate so the confirm's Escape can't also fire the global `tool.deactivate`) ·
+  `main.ts` (registration) · `DockLayout.vue` (prop) · tests (`session.spec.ts`,
+  `groupCloseControls.spec.ts`, `useKeyboardShortcuts.spec.ts`) · this spec · roadmap.
 - **4b:** `float.ts` (max keys) · `session.ts` (`toggleFloatMaximize` + re‑apply) ·
   `CommandVueHeaderActions.vue` (float Maximize/Close) · tests.
 - **4c:** `stores/minimized.ts` · `MinimizedDock.vue` + `MinimizedBar.vue` ·

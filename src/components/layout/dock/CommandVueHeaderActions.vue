@@ -7,6 +7,7 @@ import { useSessionStore } from "@/stores/session";
 import Slider from "@/volt/Slider.vue";
 
 import GroupCloseConfirm from "./GroupCloseConfirm.vue";
+import { panelsThatWillClose } from "./groupCloseControls";
 
 /**
  * Per-group header-actions control on `<DockviewVue>`'s right-actions slot
@@ -35,6 +36,10 @@ interface HeaderActionsParams {
   /** Present on dockview's `updateLocation` fast-path, which replaces `params`
    *  with just `{ location }` (stripping `api` / `activePanel`). */
   location?: { type?: string };
+  /** This group's panels (full props only) — the Close All count source. */
+  panels?: unknown[];
+  /** The whole-layout DockviewApi (full props only); `.panels` is every pane. */
+  containerApi?: { panels?: unknown[] };
 }
 const props = defineProps<{ params?: HeaderActionsParams }>();
 const session = useSessionStore();
@@ -74,7 +79,8 @@ const open = ref(false);
 
 // Close All flows through a group-scoped confirm (GroupCloseConfirm) rather than
 // closing immediately. `gridRootEl` anchors the Teleport to THIS group's
-// `.dv-groupview`; the live tab count drives the confirm message.
+// `.dv-groupview`; a guard-aware count (see `groupCloseControls`) drives the
+// confirm message.
 const gridRootEl = ref<HTMLElement>();
 const confirmOpen = ref(false);
 const confirmTarget = ref<HTMLElement>();
@@ -83,11 +89,21 @@ const confirmCount = ref(0);
 function requestCloseAll() {
   const groupEl = gridRootEl.value?.closest<HTMLElement>(".dv-groupview") ?? undefined;
   if (!groupEl || !panelId.value) return;
+  // Count what Close All will ACTUALLY remove. Prefer the dockview API (the same
+  // source `closeAllInGroup` iterates); fall back to the tab DOM only if absent.
+  const groupPanels = props.params?.panels?.length ?? groupEl.querySelectorAll(".dv-tab").length;
+  const total = props.params?.containerApi?.panels?.length ?? groupPanels;
+  const willClose = panelsThatWillClose(groupPanels, total);
+  if (willClose <= 0) return; // single-pane whole layout → Close All is a no-op
   confirmTarget.value = groupEl;
-  confirmCount.value = groupEl.querySelectorAll(".dv-tab").length;
+  confirmCount.value = willClose;
   confirmOpen.value = true;
 }
 function confirmCloseAll() {
+  // Hide the confirm BEFORE removing panels: `closeAllInGroup` mutates
+  // synchronously (no await before `api.removePanel`), so in the multi-group case
+  // the group — and this confirm's Teleport target — is torn down in the same
+  // tick; flipping `confirmOpen` first lets the overlay detach cleanly.
   confirmOpen.value = false;
   if (panelId.value) void session.closeAllInGroup(panelId.value);
 }

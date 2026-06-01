@@ -1,6 +1,7 @@
 import { useEventListener } from "@vueuse/core";
 
 import { SHORTCUTS, type ShortcutAction } from "@/modules/shortcuts/catalog";
+import { isModalCapturing } from "@/modules/shortcuts/modalGate";
 
 export interface UseKeyboardShortcutsOptions {
   /** Called whenever a registered key combo fires. */
@@ -38,6 +39,10 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
 }
 
 function shouldSkip(event: KeyboardEvent): boolean {
+  // A modal/confirm overlay owns the keyboard while open — its keys (Escape in
+  // particular) belong to it, not to global shortcuts like tool.deactivate.
+  if (isModalCapturing()) return true;
+
   const target = event.target as HTMLElement | null;
   if (!target) return false;
   const editable =
