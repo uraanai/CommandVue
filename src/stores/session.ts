@@ -431,6 +431,13 @@ export const useSessionStore = defineStore("session", () => {
       const n = api.groups.filter((g) => g.api.location.type === "floating").length;
       api.addFloatingGroup(panel, { width: 520, height: 360, x: 120 + n * 28, y: 120 + n * 28 });
       panel.api.group.header.hidden = false; // a float always keeps a drag handle
+      // Re-apply any persisted opacity to the (possibly new) floating group element
+      // so re-floating a dimmed pane restores its glass immediately, not only on
+      // the next load (applyFloatAlphas).
+      const alpha = getFloatAlphaFromState(panelStateStore.getState(panelId)?.state);
+      if (alpha < 1) {
+        panel.api.group.element.style.setProperty("--cv-float-alpha", String(alpha));
+      }
       await panelStateStore.updateState(panelId, {
         state: withFloatPrevHeaderless(
           withHeaderless(panelStateStore.getState(panelId)?.state, false),

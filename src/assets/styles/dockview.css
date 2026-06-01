@@ -107,7 +107,8 @@
 }
 /* Windows high-contrast / forced-colors: never see-through. */
 @media (forced-colors: active) {
-  .dockview-theme-commandvue .dv-groupview-floating {
+  .dockview-theme-commandvue .dv-groupview-floating,
+  .dockview-theme-commandvue .dv-groupview-floating .dv-tabs-and-actions-container {
     background-color: Canvas;
   }
 }

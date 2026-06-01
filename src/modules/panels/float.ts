@@ -3,8 +3,8 @@
  * `headerless.ts`). A floating window always shows a header (its drag handle),
  * so floating a CLEAN (header-less) pane strips the `headerless` flag —
  * `FLOAT_PREV_HEADERLESS_KEY` remembers the pre-float value so `dockBack` can
- * restore the pane's clean status. Phase 3b will add the float-opacity key
- * alongside this one.
+ * restore the pane's clean status. Phase 3b adds the float-opacity key
+ * (`FLOAT_ALPHA_KEY`) below.
  *
  * Float position/size is NOT stored here — dockview serializes that natively in
  * `toJSON().floatingGroups[].position`. This module owns only the bit of float

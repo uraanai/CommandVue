@@ -907,6 +907,28 @@ describe("useSessionStore", () => {
     expect(session.dirty).toBe(false); // re-apply is restoring-guarded
   });
 
+  it("re-floating a dimmed pane re-applies its opacity to the new group element", async () => {
+    const { layout, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    await session.floatPanel(p2.id);
+    await session.setFloatAlpha(p2.id, 0.4);
+    await session.dockBack(p2.id); // back to a grid group
+    await session.floatPanel(p2.id); // re-float -> NEW floating group
+
+    const fake = api as unknown as {
+      getPanel: (
+        id: string,
+      ) =>
+        | { api: { group: { element: { style: { setProperty: ReturnType<typeof vi.fn> } } } } }
+        | undefined;
+    };
+    const calls = fake.getPanel(p2.id)!.api.group.element.style.setProperty.mock.calls;
+    expect(calls.some((c) => c[0] === "--cv-float-alpha" && c[1] === "0.4")).toBe(true);
+  });
+
   it("clean mode survives a toJSON -> fromJSON round-trip via persisted state", async () => {
     const { layout, p1 } = await seedWorkspace();
     // Persist a dockviewState (carrying the panel id) so loadLayout takes the
