@@ -458,6 +458,13 @@
   --dockpanel-tab-border: var(--color-border-subtle);
   --dockpanel-padding: var(--space-panel-padding);
 
+  /* Floating window (Track B Phase 3) — fixed dark "tactical glass" tint used as
+     the see-through background of an in-window floating pane. Deliberately NOT
+     overridden in dark mode: the glass reads dark over any map in BOTH light and
+     dark themes (maintainer decision). The per-window alpha is the runtime var
+     `--cv-float-alpha` (0..1), composed via color-mix in dockview.css. */
+  --cv-float-tint: var(--color-slate-900);
+
   /* MenuBar */
   --menubar-bg: var(--color-surface-base);
   --menubar-fg: var(--color-text-primary);

@@ -68,3 +68,46 @@
 .dockview-theme-commandvue .dv-void-container.dv-draggable.dv-dragged {
   cursor: grabbing;
 }
+
+/*
+ * Floating-window see-through opacity (Track B Phase 3b). `--cv-float-alpha`
+ * (0..1) is set per floating group at runtime; this turns it into a translucent
+ * BACKGROUND via color-mix toward transparent — never element `opacity`, so the
+ * pane's content (text, controls) stays fully opaque while the background fades
+ * and whatever is behind the float (e.g. the map) shows through. Scoped to
+ * dockview's location-driven `.dv-groupview-floating` class so grid-docked panes
+ * are never affected. Tint is the fixed-dark `--cv-float-tint` (both themes).
+ */
+.dockview-theme-commandvue .dv-groupview-floating {
+  background-color: color-mix(
+    in oklch,
+    var(--cv-float-tint) calc(var(--cv-float-alpha, 1) * 100%),
+    transparent
+  );
+  /* The translucent group background above is the float's single "glass" layer.
+     Re-point the panel-facing SURFACE tokens to transparent INSIDE the float so a
+     panel's own `bg-surface*` shows that glass (and whatever is behind the float)
+     instead of an opaque fill — without stacking a second tint layer. Foreground
+     tokens (text / icon / border colors) are untouched, so content stays fully
+     legible. */
+  --color-surface: transparent;
+  --color-surface-base: transparent;
+  --color-surface-sunken: transparent;
+  --color-surface-raised: transparent;
+  --color-surface-overlay: transparent;
+}
+/* Header readability floor: never below 85% even when the body is at the alpha
+   floor, keeping the title + drag handle legible over bright imagery. */
+.dockview-theme-commandvue .dv-groupview-floating .dv-tabs-and-actions-container {
+  background-color: color-mix(
+    in oklch,
+    var(--cv-float-tint) calc(max(var(--cv-float-alpha, 1), 0.85) * 100%),
+    transparent
+  );
+}
+/* Windows high-contrast / forced-colors: never see-through. */
+@media (forced-colors: active) {
+  .dockview-theme-commandvue .dv-groupview-floating {
+    background-color: Canvas;
+  }
+}
