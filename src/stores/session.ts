@@ -676,6 +676,18 @@ export const useSessionStore = defineStore("session", () => {
     return getFloatMaximizedFromState(usePanelStateStore().getState(panelId)?.state);
   }
 
+  /** Snapshot one panel's id/type/title + a clone of its `PanelState.state`
+   *  (Phase 4c) — the serializable capture both minimize paths share. */
+  function capturePanel(m: { id: Ulid; title?: string }): CapturedPanel {
+    const ps = usePanelStateStore().getState(m.id);
+    return {
+      id: m.id,
+      panelType: ps?.panelType ?? null,
+      title: m.title ?? "",
+      state: structuredClone(ps?.state ?? {}),
+    };
+  }
+
   /** Resolve a captured panel to its dockview component + title (Phase 4c). */
   function componentFor(captured: CapturedPanel): { component: string; title: string } {
     if (!captured.panelType) {
@@ -711,15 +723,7 @@ export const useSessionStore = defineStore("session", () => {
     const panelStateStore = usePanelStateStore();
     const members = [...group.panels];
     if (members.length === 0) return null;
-    const panels: CapturedPanel[] = members.map((m) => {
-      const ps = panelStateStore.getState(m.id);
-      return {
-        id: m.id,
-        panelType: ps?.panelType ?? null,
-        title: m.title ?? "",
-        state: structuredClone(ps?.state ?? {}),
-      };
-    });
+    const panels: CapturedPanel[] = members.map((m) => capturePanel(m));
     const activePanelId = group.activePanel?.id ?? members[0]!.id;
     const activeType = panelStateStore.getState(activePanelId)?.panelType ?? null;
     const def = activeType ? panelRegistry.get(activeType) : undefined;
@@ -754,6 +758,49 @@ export const useSessionStore = defineStore("session", () => {
     // Minimize is ephemeral view state — re-clear dirty on a microtask queued
     // after dockview's (FIFO order), but ONLY if the layout was already clean, so
     // a real pre-existing dirty flag is preserved.
+    if (!wasDirty) void Promise.resolve().then(() => clearDirty());
+    return entry;
+  }
+
+  /**
+   * Minimize a SINGLE panel — one tab — into the tray (Track B Phase 4c). The rest
+   * of its group stays docked. When the panel is its group's SOLE member this is
+   * identical to a whole-group minimize, so it delegates to `minimizeGroup`.
+   * Otherwise it captures just this panel and anchors it `within` a surviving
+   * sibling, so `restoreMinimized` re-joins the SAME group wherever it then lives
+   * (grid OR float) — no float box needed. Removes only this panel via
+   * `api.removePanel`; restoring-guarded; ephemeral (no markDirty, same deferred
+   * clear as `minimizeGroup`). Returns the entry (fresh nanoid id), or null.
+   */
+  function minimizePanel(panelId: Ulid): MinimizedEntry | null {
+    const api = dockviewApi.value;
+    if (!api) return null;
+    const panel = api.getPanel(panelId);
+    if (!panel) return null;
+    const group = panel.api.group;
+    const location = group.api.location.type;
+    if (location !== "grid" && location !== "floating") return null; // popout/edge: skip
+    const sibling = group.panels.find((p) => p.id !== panelId);
+    if (!sibling) return minimizeGroup(panelId); // sole member → whole-group minimize
+
+    const captured = capturePanel(panel);
+    const def = captured.panelType ? panelRegistry.get(captured.panelType) : undefined;
+    const entry: MinimizedEntry = {
+      id: nanoid(),
+      location: "grid", // re-joins via the within-anchor — lands wherever the sibling is
+      originAnchor: { referencePanelId: sibling.id, direction: "within" },
+      panels: [captured],
+      activePanelId: panel.id,
+      title: panel.title ?? def?.title ?? "Window",
+    };
+
+    const wasDirty = dirty.value;
+    setRestoring(true);
+    try {
+      api.removePanel(panel);
+    } finally {
+      setRestoring(false);
+    }
     if (!wasDirty) void Promise.resolve().then(() => clearDirty());
     return entry;
   }
@@ -819,8 +866,15 @@ export const useSessionStore = defineStore("session", () => {
         if (box) findFloatingGroup(api, added)?.position(box); // exact anchor fidelity
         const alpha = getFloatAlphaFromState(first.state);
         if (alpha < 1) added.api.group.element.style.setProperty("--cv-float-alpha", String(alpha));
-      } else if (entry.panels.length === 1 && isHeaderless(first.state)) {
-        added.api.group.header.hidden = true; // restore a clean single pane
+      } else if (
+        entry.panels.length === 1 &&
+        entry.originAnchor.direction !== "within" &&
+        isHeaderless(first.state)
+      ) {
+        // Restore a clean single pane to its OWN new group. Skipped for a
+        // within-restore (a minimized tab re-joining a sibling's group), where
+        // hiding the header would hide it for the whole host group.
+        added.api.group.header.hidden = true;
       }
 
       api.getPanel(entry.activePanelId)?.api.setActive();
@@ -968,6 +1022,7 @@ export const useSessionStore = defineStore("session", () => {
     toggleFloatMaximize,
     getFloatMaximized,
     minimizeGroup,
+    minimizePanel,
     restoreMinimized,
     splitCleanNeighbor,
     discardChanges,

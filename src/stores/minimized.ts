@@ -28,9 +28,15 @@ export interface MinimizedEntry {
   location: "grid" | "floating";
   /** Floating groups only: the overlay box to re-float at on restore. */
   floatBox?: FloatBox;
-  /** Best-effort grid re-dock anchor (a surviving panel + side). */
-  originAnchor: { referencePanelId?: Ulid; direction: "left" | "right" | "above" | "below" };
-  /** Every panel in the group, in tab order. */
+  /** Best-effort re-dock anchor (a surviving panel + side). A single minimized
+   *  TAB uses `direction: "within"` to re-join its sibling's group on restore —
+   *  wherever that group then lives (grid or float). */
+  originAnchor: {
+    referencePanelId?: Ulid;
+    direction: "left" | "right" | "above" | "below" | "within";
+  };
+  /** Every panel captured for this entry, in tab order. A whole-group minimize
+   *  holds all the group's tabs; a single-tab minimize holds exactly one. */
   panels: CapturedPanel[];
   activePanelId: Ulid;
   /** Active panel's title — the bar label. (The bar uses a fixed glyph, not a
@@ -55,9 +61,17 @@ export interface MinimizedEntry {
 export const useMinimizedStore = defineStore("minimized", () => {
   const entries = ref<MinimizedEntry[]>([]);
 
-  /** Minimize the group containing `panelId` into the tray. */
+  /** Minimize the whole group containing `panelId` into the tray (all its tabs). */
   function minimizeGroup(panelId: Ulid): void {
     const entry = useSessionStore().minimizeGroup(panelId);
+    if (entry) entries.value.push(entry);
+  }
+
+  /** Minimize only the single panel `panelId` (one tab) into the tray; the rest of
+   *  its group stays docked. Falls back to a whole-group minimize when the panel is
+   *  its group's sole member. */
+  function minimizePanel(panelId: Ulid): void {
+    const entry = useSessionStore().minimizePanel(panelId);
     if (entry) entries.value.push(entry);
   }
 
@@ -84,5 +98,5 @@ export const useMinimizedStore = defineStore("minimized", () => {
     entries.value = [];
   }
 
-  return { entries, minimizeGroup, restore, discard, clear };
+  return { entries, minimizeGroup, minimizePanel, restore, discard, clear };
 });

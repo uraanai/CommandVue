@@ -1,29 +1,32 @@
 <script setup lang="ts">
 import type { MinimizedEntry } from "@/stores/minimized";
 
-import { PanelTop, X } from "@lucide/vue";
+import { Maximize2, PanelTop, X } from "@lucide/vue";
 import { computed } from "vue";
 
 import Button from "@/components/ui/Button.vue";
 import IconButton from "@/components/ui/IconButton.vue";
 
 /**
- * One minimized-window bar in the tray (Track B Phase 4c). The title region
- * restores the group; the trailing × discards it. A generic panel glyph is used
- * rather than the per-panel icon — the app has no Lucide-name → component
- * resolver, and importing the full icon pack is forbidden (CLAUDE.md). The `+N`
- * badge shows extra tabs when the minimized group held more than one panel.
+ * One minimized-window bar in the tray (Track B Phase 4c). Two restore
+ * affordances — the title region AND a trailing maximize (⤢) button — RESTORE
+ * the group/tab to where it was; the final × CLOSES it (drops the bar; its
+ * panels were already removed at minimize). A generic panel glyph is used rather
+ * than the per-panel icon — the app has no Lucide-name → component resolver, and
+ * importing the full icon pack is forbidden (CLAUDE.md). The `+N` badge shows
+ * extra tabs when the minimized group held more than one panel.
  */
 const props = defineProps<{ entry: MinimizedEntry }>();
 const emit = defineEmits<{ restore: []; discard: [] }>();
 
 const extraCount = computed(() => props.entry.panels.length - 1);
-// Explicit accessible name: the visible text is just the title (+N), which a
-// screen reader would announce without conveying the restore action.
+// Explicit accessible names: the visible text is just the title (+N), which a
+// screen reader would announce without conveying the restore / close action.
 const restoreLabel = computed(
   () =>
     `Restore ${props.entry.title}${extraCount.value > 0 ? ` and ${extraCount.value} more` : ""}`,
 );
+const closeLabel = computed(() => `Close ${props.entry.title}`);
 </script>
 
 <template>
@@ -44,12 +47,10 @@ const restoreLabel = computed(
         >+{{ extraCount }}</span
       >
     </Button>
-    <IconButton
-      label="Discard minimized window"
-      size="sm"
-      class="rounded-none"
-      @click="emit('discard')"
-    >
+    <IconButton :label="restoreLabel" size="sm" class="rounded-none" @click="emit('restore')">
+      <Maximize2 />
+    </IconButton>
+    <IconButton :label="closeLabel" size="sm" class="rounded-none" @click="emit('discard')">
       <X />
     </IconButton>
   </div>

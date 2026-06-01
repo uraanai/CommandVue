@@ -6,7 +6,9 @@ import {
   ChevronRight,
   Columns2,
   Maximize2,
+  Minimize,
   Minimize2,
+  Minus,
   PanelTop,
   PanelTopClose,
   PictureInPicture2,
@@ -16,6 +18,7 @@ import {
 import { onUnmounted, ref, watch, type Component } from "vue";
 
 import ContextMenu from "@/components/ui/ContextMenu.vue";
+import { useMinimizedStore } from "@/stores/minimized";
 import { useSessionStore } from "@/stores/session";
 
 import { cleanPaneControls } from "./cleanPaneControls";
@@ -60,6 +63,7 @@ import { tabbedPaneControls } from "./tabbedPaneControls";
  */
 const props = defineProps<{ api: DockviewApi | null; root: HTMLElement | null }>();
 const session = useSessionStore();
+const minimized = useMinimizedStore();
 
 /** Menu item shape with the Lucide component attached for the `#item` slot. */
 type DockMenuItem = MenuItem & { lucide?: Component };
@@ -115,6 +119,34 @@ function floatItem(panel: IDockviewPanel): DockMenuItem {
 }
 
 /**
+ * Minimize item(s) shared by both menus (Track B Phase 4c). For a multi-tab group
+ * it offers BOTH "Minimize tab" (just the active panel — re-joins its group on
+ * restore) and "Minimize group" (every tab → one tray bar); for a single-panel
+ * group the two coincide, so it offers one "Minimize". Each collapses to the
+ * bottom-left tray and works from a grid OR float source (popout/edge are skipped
+ * by the store actions). Sits between Maximize and the separator/Close.
+ */
+function minimizeItems(panel: IDockviewPanel, panelsInGroup: number): DockMenuItem[] {
+  if (panelsInGroup > 1) {
+    return [
+      {
+        label: "Minimize tab",
+        lucide: Minus,
+        command: () => void minimized.minimizePanel(panel.id),
+      },
+      {
+        label: "Minimize group",
+        lucide: Minimize,
+        command: () => void minimized.minimizeGroup(panel.id),
+      },
+    ];
+  }
+  return [
+    { label: "Minimize", lucide: Minus, command: () => void minimized.minimizeGroup(panel.id) },
+  ];
+}
+
+/**
  * CLEAN pane menu (group.header.hidden === true). Show header / Maximize / -- /
  * Close - sharing the header-toggle-first, Maximize-then-Close anchors with
  * buildTabbedModel. No Split item by design: adding a neighbor is done from the
@@ -136,6 +168,8 @@ function buildCleanModel(panel: IDockviewPanel, totalPanels: number): DockMenuIt
     },
     floatItem(panel),
     maximizeItem(panel),
+    // Clean pane is a single visible pane → one "Minimize" (whole group).
+    ...minimizeItems(panel, 1),
     { separator: true },
     {
       label: "Close",
@@ -178,6 +212,8 @@ function buildTabbedModel(
     },
     floatItem(panel),
     maximizeItem(panel),
+    // Multi-tab group → "Minimize tab" + "Minimize group"; single → one "Minimize".
+    ...minimizeItems(panel, panelsInGroup),
     { separator: true },
     {
       label: close.label,
