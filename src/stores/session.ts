@@ -718,7 +718,6 @@ export const useSessionStore = defineStore("session", () => {
         panelType: ps?.panelType ?? null,
         title: m.title ?? "",
         state: structuredClone(ps?.state ?? {}),
-        appliedPresetIds: [...(ps?.appliedPresetIds ?? [])],
       };
     });
     const activePanelId = group.activePanel?.id ?? members[0]!.id;
@@ -737,9 +736,7 @@ export const useSessionStore = defineStore("session", () => {
       originAnchor: { referencePanelId, direction: "right" },
       panels,
       activePanelId,
-      panelType: activeType,
       title: api.getPanel(activePanelId)?.title ?? def?.title ?? "Window",
-      icon: def?.icon ?? "Square",
     };
 
     const wasDirty = dirty.value;
@@ -809,8 +806,11 @@ export const useSessionStore = defineStore("session", () => {
 
       if (entry.location === "floating") {
         const box = entry.floatBox;
+        // Float the whole GROUP (not the single panel): `addFloatingGroup(panel)`
+        // would move only that panel into a new float, orphaning the rest in the
+        // grid — wrong for a multi-tab float (a user can drag tabs onto a float).
         api.addFloatingGroup(
-          added,
+          added.api.group,
           box
             ? { width: box.width, height: box.height, x: box.left ?? 120, y: box.top ?? 120 }
             : { width: 520, height: 360, x: 120, y: 120 },

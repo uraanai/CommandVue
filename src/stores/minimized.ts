@@ -11,9 +11,10 @@ export interface CapturedPanel {
   id: Ulid;
   panelType: PanelType | null;
   title: string;
-  /** `structuredClone` of the panel's `PanelState.state` at minimize time. */
+  /** `structuredClone` of the panel's `PanelState.state` at minimize time — read
+   *  on restore for `headerless` / `floatAlpha`. (Everything else round-trips off
+   *  the SURVIVING `PanelState` record, keyed by panel id, not this snapshot.) */
   state: Record<string, unknown>;
-  appliedPresetIds: Ulid[];
 }
 
 /**
@@ -32,10 +33,9 @@ export interface MinimizedEntry {
   /** Every panel in the group, in tab order. */
   panels: CapturedPanel[];
   activePanelId: Ulid;
-  /** Active panel's type (bar icon source) + title (bar label) + Lucide icon. */
-  panelType: PanelType | null;
+  /** Active panel's title — the bar label. (The bar uses a fixed glyph, not a
+   *  per-type icon — the app has no Lucide-name → component resolver.) */
   title: string;
-  icon: string;
 }
 
 /**
@@ -70,7 +70,11 @@ export const useMinimizedStore = defineStore("minimized", () => {
     }
   }
 
-  /** Discard a minimized group without restoring it (its panels stay removed). */
+  /**
+   * Discard a minimized group without restoring it — drop the bar; the panels
+   * were already removed from the dock at minimize time. (v1: their `PanelState`
+   * records persist and are reclaimed only by the layout/workspace delete cascade.)
+   */
   function discard(entryId: string): void {
     entries.value = entries.value.filter((e) => e.id !== entryId);
   }

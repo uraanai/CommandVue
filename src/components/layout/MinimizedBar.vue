@@ -18,6 +18,12 @@ const props = defineProps<{ entry: MinimizedEntry }>();
 const emit = defineEmits<{ restore: []; discard: [] }>();
 
 const extraCount = computed(() => props.entry.panels.length - 1);
+// Explicit accessible name: the visible text is just the title (+N), which a
+// screen reader would announce without conveying the restore action.
+const restoreLabel = computed(
+  () =>
+    `Restore ${props.entry.title}${extraCount.value > 0 ? ` and ${extraCount.value} more` : ""}`,
+);
 </script>
 
 <template>
@@ -28,12 +34,13 @@ const extraCount = computed(() => props.entry.panels.length - 1);
       variant="ghost"
       size="sm"
       class="rounded-none"
-      :title="`Restore ${entry.title}`"
+      :title="restoreLabel"
+      :aria-label="restoreLabel"
       @click="emit('restore')"
     >
       <PanelTop class="text-muted size-3.5 shrink-0" />
       <span class="max-w-[12rem] truncate">{{ entry.title }}</span>
-      <span v-if="extraCount > 0" class="text-muted text-[10px] tabular-nums"
+      <span v-if="extraCount > 0" class="text-muted ml-1 text-[10px] tabular-nums"
         >+{{ extraCount }}</span
       >
     </Button>

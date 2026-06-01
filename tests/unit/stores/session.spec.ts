@@ -240,14 +240,22 @@ function makeFakeApi(): DockviewApi {
     }),
     addGroup: () => makeGroup(),
     addPanel: vi.fn(addPanelImpl),
-    addFloatingGroup: vi.fn((item: FakePanel) => {
-      // Mirror dockview: move the panel into a NEW floating group. If it was the
-      // only panel in its grid group, detach drops that now-empty group.
-      detach(item);
-      const fg = makeGroup();
+    addFloatingGroup: vi.fn((item: FakePanel | FakeGroup) => {
+      // dockview accepts a PANEL (floatPanel — move the single panel into a NEW
+      // floating group) OR a GROUP (restoreMinimized — float the existing group in
+      // place, keeping all its tabs). A group has a `panels` array; a panel doesn't.
+      const fg: FakeGroup = Array.isArray((item as FakeGroup).panels)
+        ? (item as FakeGroup)
+        : (() => {
+            const panel = item as FakePanel;
+            // If the panel was the only one in its grid group, detach drops it.
+            detach(panel);
+            const g = makeGroup();
+            panel.api.group = g;
+            g.panels.push(panel);
+            return g;
+          })();
       fg.locationType = "floating";
-      item.api.group = fg;
-      fg.panels.push(item);
       // Register the internal floating-group handle (overlay + position) that
       // session.toggleFloatMaximize reaches via api.component.floatingGroups.
       const handle: FakeFloatingGroup = {
@@ -1262,6 +1270,37 @@ describe("useSessionStore", () => {
     ).getPanel(p2.id);
     expect(restored).toBeDefined();
     expect(restored!.api.location.type).toBe("floating");
+  });
+
+  it("minimizeGroup + restoreMinimized round-trips a MULTI-panel floating group", async () => {
+    const { layout, p1, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    await session.floatPanel(p2.id);
+
+    // Drag p1 into p2's floating group (a multi-tab float).
+    const fake = api as unknown as {
+      getPanel: (
+        id: string,
+      ) => { api: { group: FakeGroup; moveTo: (o: { group?: unknown }) => void } } | undefined;
+    };
+    const floatGroup = fake.getPanel(p2.id)!.api.group;
+    fake.getPanel(p1.id)!.api.moveTo({ group: floatGroup as never });
+    expect(floatGroup.panels.length).toBe(2);
+
+    const entry = session.minimizeGroup(p2.id);
+    expect(entry!.location).toBe("floating");
+    expect(entry!.panels.map((c) => c.id).sort()).toEqual([p1.id, p2.id].sort());
+
+    session.restoreMinimized(entry!);
+    // both panels restore into ONE floating group (not orphaned in a grid group).
+    const g1 = fake.getPanel(p1.id)!.api.group;
+    const g2 = fake.getPanel(p2.id)!.api.group;
+    expect(g1).toBe(g2);
+    expect(g1.locationType).toBe("floating");
+    expect(g1.panels.length).toBe(2);
   });
 
   it("minimizeGroup returns null for an unknown panel", async () => {
