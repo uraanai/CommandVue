@@ -243,7 +243,16 @@ function makeFakeApi(): DockviewApi {
         box: { top: 120, left: 120, width: 520, height: 360 },
         overlay: { toJSON: () => ({ ...handle.box }) },
         position: (b) => {
-          handle.box = { ...handle.box, ...b };
+          // Mirror dockview's Overlay re-anchoring: setting a corner clears its
+          // opposite (a {top} reposition drops a prior {bottom}, etc.), so toJSON
+          // reflects exactly one vertical + one horizontal anchor — letting tests
+          // exercise the realistic bottom/right-anchored (user-dragged) case.
+          const next: FakeBox = { ...handle.box, ...b };
+          if (b.top !== undefined) delete next.bottom;
+          if (b.bottom !== undefined) delete next.top;
+          if (b.left !== undefined) delete next.right;
+          if (b.right !== undefined) delete next.left;
+          handle.box = next;
         },
       };
       floatingGroups.push(handle);
@@ -1082,6 +1091,38 @@ describe("useSessionStore", () => {
     expect(fg.overlay.toJSON()).toMatchObject({ top: 120, left: 120, width: 520, height: 360 });
   });
 
+  it("toggleFloatMaximize restores an anchor-flipped (bottom/right) float to its dragged box", async () => {
+    const { layout, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    await session.floatPanel(p2.id);
+
+    const fg = (
+      api as unknown as {
+        component: {
+          floatingGroups: Array<{
+            overlay: { toJSON: () => Record<string, number> };
+            position: (b: Record<string, number>) => void;
+          }>;
+        };
+      }
+    ).component.floatingGroups[0]!;
+
+    // Simulate the user dragging the float to the bottom-right (the overlay anchor
+    // flips, dropping the top/left keys — like real dockview Overlay.toJSON).
+    fg.position({ bottom: 40, right: 60, width: 300, height: 200 });
+    expect("top" in fg.overlay.toJSON()).toBe(false);
+
+    // Maximize fills (top/left), then Restore returns to the bottom/right anchor.
+    await session.toggleFloatMaximize(p2.id);
+    expect(fg.overlay.toJSON()).toMatchObject({ top: 0, left: 0, width: 1000, height: 800 });
+    await session.toggleFloatMaximize(p2.id);
+    expect(fg.overlay.toJSON()).toMatchObject({ bottom: 40, right: 60, width: 300, height: 200 });
+    expect("top" in fg.overlay.toJSON()).toBe(false); // restored to bottom/right, no stale top
+  });
+
   it("toggleFloatMaximize is a no-op (false) on a non-floating pane", async () => {
     const { layout, p1 } = await seedWorkspace();
     const session = useSessionStore();
@@ -1092,7 +1133,7 @@ describe("useSessionStore", () => {
     expect(session.getFloatMaximized(p1.id)).toBe(false);
   });
 
-  it("floatPanel clears stale maximize state on a fresh float", async () => {
+  it("dockBack and floatPanel both clear maximize state (no stale flag survives)", async () => {
     const { layout, p2 } = await seedWorkspace();
     const session = useSessionStore();
     const api = makeFakeApi();
@@ -1102,8 +1143,10 @@ describe("useSessionStore", () => {
     await session.toggleFloatMaximize(p2.id);
     expect(session.getFloatMaximized(p2.id)).toBe(true);
 
-    await session.dockBack(p2.id); // the maximized flag persists (stale) on the docked pane
-    await session.floatPanel(p2.id); // re-float must reset it
+    await session.dockBack(p2.id); // dock-back clears the maximize state
+    expect(session.getFloatMaximized(p2.id)).toBe(false);
+
+    await session.floatPanel(p2.id); // and a fresh float also starts un-maximized
     expect(session.getFloatMaximized(p2.id)).toBe(false);
   });
 

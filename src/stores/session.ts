@@ -537,9 +537,18 @@ export const useSessionStore = defineStore("session", () => {
       // `panel.api.group` is a live getter — it now resolves to that NEW grid group.
       if (restoreClean) panel.api.group.header.hidden = true; // restore clean status
       await panelStateStore.updateState(panelId, {
-        state: withFloatPrevHeaderless(
-          withHeaderless(panelStateStore.getState(panelId)?.state, restoreClean),
-          false,
+        // Clear maximize state too: a docked pane has no float to maximize, so it
+        // must never carry a stale `floatMaximized`/`floatPrevBox` (symmetry with
+        // floatPanel's fresh-float clear).
+        state: withFloatPrevBox(
+          withFloatMaximized(
+            withFloatPrevHeaderless(
+              withHeaderless(panelStateStore.getState(panelId)?.state, restoreClean),
+              false,
+            ),
+            false,
+          ),
+          undefined,
         ),
       });
     } finally {
@@ -605,12 +614,19 @@ export const useSessionStore = defineStore("session", () => {
    * Maximize a floating window to fill the dock area, or restore it to its prior
    * box if already maximized (Track B Phase 4b). Custom because dockview's native
    * maximize is grid-only; here we snapshot the float's `overlay.toJSON()` box,
-   * `position()` it to the full `api.width`/`api.height` (exact because
-   * `floating-group-bounds="boundedWithinViewport"` disables overlay clamping),
-   * and persist `floatMaximized` + `floatPrevBox` so Restore — and reload —
-   * returns it exactly. Floating-gated; restoring-guarded (the position change
-   * mutates `toJSON().floatingGroups[].position` → would otherwise false-dirty);
-   * marks dirty once (it IS a savable change, like setFloatAlpha).
+   * `position()` it to the full `api.width`/`api.height`, and persist
+   * `floatMaximized` + `floatPrevBox` so Restore — and reload — returns it exactly.
+   *
+   * The fill is exact because `floating-group-bounds="boundedWithinViewport"`
+   * zeroes the overlay's min-in-viewport offset, so a fill to the container's exact
+   * width/height is not clamped inward. NB: `api.width`/`api.height` are the
+   * GRIDVIEW size; they equal the floating-overlay host only because CommandVue
+   * mounts no shell edge panels — a fork that adds them must revisit the source.
+   *
+   * Floating-gated; `position()` resizes in place (no DOM reparent, so WebGL
+   * survives). Restoring-guarded as defensive belt-and-suspenders (a programmatic
+   * `position()` does not actually fire `onDidLayoutChange`); the explicit
+   * `markDirty()` is what flags the savable change (like setFloatAlpha).
    */
   async function toggleFloatMaximize(panelId: Ulid): Promise<boolean> {
     const api = dockviewApi.value;
@@ -625,8 +641,16 @@ export const useSessionStore = defineStore("session", () => {
     setRestoring(true);
     try {
       if (getFloatMaximizedFromState(state)) {
-        const prev = getFloatPrevBoxFromState(state);
-        if (prev) fg.position(prev);
+        // Restore to the pre-maximize box; fall back to the float cascade default
+        // if the box is somehow missing (hand-edited state) so Restore ALWAYS
+        // un-maximizes the window rather than leaving it stuck full-size.
+        const prev = getFloatPrevBoxFromState(state) ?? {
+          top: 120,
+          left: 120,
+          width: 520,
+          height: 360,
+        };
+        fg.position(prev);
         await panelStateStore.updateState(panelId, {
           state: withFloatMaximized(withFloatPrevBox(state, undefined), false),
         });
@@ -656,8 +680,12 @@ export const useSessionStore = defineStore("session", () => {
    * CURRENT `api.width`/`api.height` so it still fills after a between-session
    * viewport resize. `floatPrevBox` (the pre-maximize box) is untouched.
    * Restoring-guarded so it never dirties; safe no-op when nothing is maximized.
-   * Skips entirely if the dock has no size yet (would otherwise fill to 0×0) —
-   * the float then stays at its serialized filled box, which is already correct.
+   * Skips entirely if the dock has no size yet (would otherwise fill to 0×0). The
+   * skip is fully correct for the common saved-while-maximized case (the float is
+   * already serialized at its filled box); the only gap is the rare
+   * maximize → no-save → reload-at-0×0 path, where the float reloads at its
+   * pre-maximize box with the flag still set until the user toggles (acceptable —
+   * dockview's `onReady` normally fires with the dock mounted and sized).
    */
   function applyFloatMaximize(api: DockviewApi): void {
     if (!(api.width > 0) || !(api.height > 0)) return;
