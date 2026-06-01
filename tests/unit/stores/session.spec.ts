@@ -53,6 +53,8 @@ interface FakeGroup {
     location: { type: "grid" | "floating" | "popout" | "edge" };
     moveTo: (opts: { group?: FakeGroup; position?: unknown }) => void;
   };
+  /** Minimal DOM stub — only `element.style.setProperty` is used (float opacity var). */
+  element: { style: { setProperty: ReturnType<typeof vi.fn> } };
 }
 interface FakePanel {
   id: string;
@@ -104,6 +106,7 @@ function makeFakeApi(): DockviewApi {
       panels: [],
       maximized: false,
       locationType: "grid",
+      element: { style: { setProperty: vi.fn() } },
       api: {
         // Self-reference is SAFE: bodies run only when invoked later.
         get location() {
@@ -854,6 +857,54 @@ describe("useSessionStore", () => {
     expect(calls).toHaveLength(2);
     expect(calls[0]![1]).toMatchObject({ x: 120 });
     expect(calls[1]![1]).toMatchObject({ x: 120 });
+  });
+
+  it("setFloatAlpha sets the --cv-float-alpha var on the group, persists, and clamps", async () => {
+    const { layout, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    await session.floatPanel(p2.id);
+
+    await session.setFloatAlpha(p2.id, 0.4);
+    expect(session.getFloatAlpha(p2.id)).toBe(0.4);
+    expect(session.dirty).toBe(true);
+    const fake = api as unknown as {
+      getPanel: (
+        id: string,
+      ) =>
+        | { api: { group: { element: { style: { setProperty: ReturnType<typeof vi.fn> } } } } }
+        | undefined;
+    };
+    const calls = fake.getPanel(p2.id)!.api.group.element.style.setProperty.mock.calls;
+    expect(calls.some((c) => c[0] === "--cv-float-alpha" && c[1] === "0.4")).toBe(true);
+
+    // Clamps out-of-range input to [0, 1].
+    await session.setFloatAlpha(p2.id, 1.5);
+    expect(session.getFloatAlpha(p2.id)).toBe(1);
+    await session.setFloatAlpha(p2.id, -0.2);
+    expect(session.getFloatAlpha(p2.id)).toBe(0);
+  });
+
+  it("loadLayout re-applies a persisted float alpha (applyFloatAlphas) and stays clean", async () => {
+    const { layout, p2 } = await seedWorkspace();
+    await panelStateRepo.update(p2.id, { state: { floatAlpha: 0.5 } });
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+
+    const fake = api as unknown as {
+      getPanel: (
+        id: string,
+      ) =>
+        | { api: { group: { element: { style: { setProperty: ReturnType<typeof vi.fn> } } } } }
+        | undefined;
+    };
+    const calls = fake.getPanel(p2.id)!.api.group.element.style.setProperty.mock.calls;
+    expect(calls.some((c) => c[0] === "--cv-float-alpha" && c[1] === "0.5")).toBe(true);
+    expect(session.dirty).toBe(false); // re-apply is restoring-guarded
   });
 
   it("clean mode survives a toJSON -> fromJSON round-trip via persisted state", async () => {
