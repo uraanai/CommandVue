@@ -132,7 +132,14 @@ choice over dockview's grid‑only maximize) and **Close** in the eye row.
   (corrects a between‑session viewport resize) but **skips when the dock isn't sized
   yet** (`api.width/height <= 0`) — the serialized box is the safe fallback, never 0×0.
 - **`floatPanel` clears stale maximize state** on every fresh float (a prior
-  maximize → dock‑back / reload‑without‑save could leave the flag set).
+  maximize → dock‑back / reload‑without‑save could leave the flag set); `dockBack`
+  clears it too (symmetry).
+- **Context‑menu parity:** the dock context menu's **Maximize/Restore** item now
+  drives the SAME custom action for floating groups (`toggleFloatMaximize`, label
+  from `getFloatMaximized`) — previously greyed (dockview maximize is grid‑only).
+  Grid groups keep dockview‑native maximize; pop‑out/edge stay disabled. The menu
+  and the header icon stay in sync (both read the persisted flag; the menu is
+  rebuilt fresh on each right‑click).
 - **Verified (Stage 1, Playwright):** float header row eye·maximize·close; maximize
   fills the dock exactly (929×915); restore returns to the exact prior box; icon/label
   flip; **Cesium WebGL survives** (`glLost: false`, canvas resized 520→929); Close
