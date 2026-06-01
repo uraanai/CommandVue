@@ -222,7 +222,12 @@ function makeFakeApi(): DockviewApi {
           detach(panel);
           const target = opts.group ?? makeGroup();
           panel.api.group = target;
-          target.panels.push(panel);
+          // Honor `index` (dockview re-inserts at that tab slot); clamp, else append.
+          const at =
+            typeof opts.index === "number"
+              ? Math.max(0, Math.min(opts.index, target.panels.length))
+              : target.panels.length;
+          target.panels.splice(at, 0, panel);
         },
         // Maximize is group-scoped in dockview; model it as a single-maximized
         // invariant: maximizing this panel's group clears every other group's
@@ -996,9 +1001,7 @@ describe("useSessionStore", () => {
 
   /** Cast helper: a panel's group (header/panels/locationType) + location + moveTo. */
   type DockFake = {
-    getPanel: (
-      id: string,
-    ) =>
+    getPanel: (id: string) =>
       | {
           api: {
             group: FakeGroup;
@@ -1034,6 +1037,33 @@ describe("useSessionStore", () => {
     expect(g2).toBe(g1);
     expect(g1.panels.map((p) => p.id).sort()).toEqual([p1.id, p2.id].sort());
     expect(isHeaderless(pss.getState(p2.id)?.state)).toBe(false); // a tab in a headered group
+  });
+
+  it("dockBack restores the floated tab to its ORIGINAL tab position, not the end", async () => {
+    const { layout, p1, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    const fake = api as unknown as DockFake;
+
+    // Headered group ordered [p1, p2, p3]; float the MIDDLE tab (p2, index 1).
+    await session.toggleHeaderless(p1.id);
+    const originGroup = fake.getPanel(p1.id)!.api.group;
+    fake.getPanel(p2.id)!.api.moveTo({ group: originGroup as never }); // [p1, p2]
+    const p3 = await panelStateRepo.create({ layoutId: layout.id, panelType: "maplibre" });
+    (api as unknown as DockviewApi).addPanel({
+      id: p3.id,
+      component: "maplibre",
+      title: "third",
+      position: { referenceGroup: originGroup as never, direction: "within" },
+    }); // [p1, p2, p3]
+    expect(originGroup.panels.map((p) => p.id)).toEqual([p1.id, p2.id, p3.id]);
+
+    await session.floatPanel(p2.id); // p2 was at index 1; group is now [p1, p3]
+    await session.dockBack(p2.id);
+    // p2 re-docks at index 1 (between p1 and p3), NOT appended to the end.
+    expect(fake.getPanel(p2.id)!.api.group.panels.map((p) => p.id)).toEqual([p1.id, p2.id, p3.id]);
   });
 
   it("dockBack does NOT re-join a CLEAN origin group (no illegal 2-tab clean group) — falls back", async () => {

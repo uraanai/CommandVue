@@ -495,10 +495,14 @@ export const useSessionStore = defineStore("session", () => {
     try {
       const panelStateStore = usePanelStateStore();
       const wasHeaderless = isHeaderless(panelStateStore.getState(panelId)?.state);
-      // Capture a surviving group-mate BEFORE the move so `dockBack` can return
-      // this pane to its ORIGINAL tab group. Undefined when it's the sole pane
-      // (its group is destroyed by the float) → dockBack opens a fresh group.
-      const originSibling = panel.api.group.panels.find((p) => p.id !== panelId)?.id;
+      // Capture a surviving group-mate + this pane's tab index BEFORE the move so
+      // `dockBack` can return it to its ORIGINAL tab group AND position. Undefined
+      // when it's the sole pane (its group is destroyed) → dockBack opens a fresh group.
+      const groupPanels = panel.api.group.panels;
+      const originMate = groupPanels.find((p) => p.id !== panelId)?.id;
+      const origin = originMate
+        ? { mate: originMate, index: groupPanels.findIndex((p) => p.id === panelId) }
+        : undefined;
       const n = api.groups.filter((g) => g.api.location.type === "floating").length;
       api.addFloatingGroup(panel, { width: 520, height: 360, x: 120 + n * 28, y: 120 + n * 28 });
       panel.api.group.header.hidden = false; // a float always keeps a drag handle
@@ -523,7 +527,7 @@ export const useSessionStore = defineStore("session", () => {
             ),
             undefined,
           ),
-          originSibling,
+          origin,
         ),
       });
     } finally {
@@ -560,8 +564,8 @@ export const useSessionStore = defineStore("session", () => {
       const state = panelStateStore.getState(panelId)?.state;
       // Resolve the origin group via the captured group-mate; only a SURVIVING grid
       // group counts (a floated/popped/closed mate falls back to a fresh group).
-      const originId = getFloatOriginFromState(state);
-      const originPanel = originId ? api.getPanel(originId) : undefined;
+      const origin = getFloatOriginFromState(state);
+      const originPanel = origin ? api.getPanel(origin.mate) : undefined;
       // Only a surviving, HEADERED grid group is a valid re-join target — re-joining
       // a CLEAN (header-hidden) single pane would make an illegal 2-tab clean group.
       const originGroup =
@@ -572,7 +576,8 @@ export const useSessionStore = defineStore("session", () => {
           : undefined;
       let dockedHeaderless: boolean;
       if (originGroup) {
-        panel.api.moveTo({ group: originGroup }); // re-join the original tab group as a tab
+        // Re-join at the ORIGINAL tab index (dockview clamps if the group shrank).
+        panel.api.moveTo({ group: originGroup, index: origin?.index });
         dockedHeaderless = false; // a headered host group → the re-joined pane is a normal tab
       } else {
         const restoreClean = floatWasHeaderless(state);

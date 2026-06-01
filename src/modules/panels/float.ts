@@ -32,31 +32,44 @@ export function withFloatPrevHeaderless(
 }
 
 /**
- * The panel id of a SURVIVING group-mate, captured when this pane was floated
- * (Track B). `dockBack` resolves it to re-join the ORIGINAL tab group instead of
- * spawning a fresh right-edge group. Stored per-panel (like `floatAlpha`) and it
- * survives reload — panel ids are stable (group ids are not), so it resolves to
- * wherever the group-mate now lives (best-effort: after a reload + rearrangement
- * that mate may sit in a different group, so dock-back lands beside it rather than
- * in a guaranteed-identical original group). Undefined when the pane was its group's
- * SOLE member (the origin group is destroyed by the float) or it floated via a
- * native drag (no action hook); `dockBack` then falls back to a fresh group.
+ * Where a floated pane came from (Track B), captured when it was floated so
+ * `dockBack` can return it to its ORIGINAL tab group AND tab position rather than
+ * spawning a fresh right-edge group:
+ *  - `mate` — a SURVIVING group-mate's panel id, which resolves the origin group.
+ *    Panel ids are stable (group ids are not), so it survives reload (best-effort:
+ *    after a reload + rearrangement that mate may sit elsewhere, so dock-back lands
+ *    beside it rather than in a guaranteed-identical group).
+ *  - `index` — the pane's tab index within that group at float time, so it re-docks
+ *    in place (dockview clamps to the group's current size).
+ * Undefined when the pane was its group's SOLE member (the origin group is destroyed
+ * by the float) or it floated via a native drag (no action hook); `dockBack` then
+ * falls back to a fresh group.
  */
 export const FLOAT_ORIGIN_KEY = "floatOrigin" as const;
 
-/** Read the captured origin group-mate id, or undefined. */
-export function getFloatOrigin(state: Record<string, unknown> | undefined): string | undefined {
-  const v = state?.[FLOAT_ORIGIN_KEY];
-  return typeof v === "string" && v !== "" ? v : undefined;
+export interface FloatOrigin {
+  mate: string;
+  index: number;
 }
 
-/** Record (or clear, when `panelId` is undefined) the origin group-mate id. */
+/** Read the captured float origin (`{ mate, index }`), or undefined. */
+export function getFloatOrigin(
+  state: Record<string, unknown> | undefined,
+): FloatOrigin | undefined {
+  const v = state?.[FLOAT_ORIGIN_KEY] as Partial<FloatOrigin> | undefined;
+  if (v && typeof v.mate === "string" && v.mate !== "" && typeof v.index === "number") {
+    return { mate: v.mate, index: v.index };
+  }
+  return undefined;
+}
+
+/** Record (or clear, when `origin` is undefined) the float origin. */
 export function withFloatOrigin(
   state: Record<string, unknown> | undefined,
-  panelId: string | undefined,
+  origin: FloatOrigin | undefined,
 ): Record<string, unknown> {
   const next: Record<string, unknown> = { ...(state ?? {}) };
-  if (panelId) next[FLOAT_ORIGIN_KEY] = panelId;
+  if (origin && origin.mate) next[FLOAT_ORIGIN_KEY] = { mate: origin.mate, index: origin.index };
   else delete next[FLOAT_ORIGIN_KEY];
   return next;
 }
