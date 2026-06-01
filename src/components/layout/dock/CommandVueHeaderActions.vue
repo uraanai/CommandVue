@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Eye, EyeOff, X } from "@lucide/vue";
+import { Eye, EyeOff, Maximize2, Minimize2, X } from "@lucide/vue";
 import { computed, ref, watch } from "vue";
 
 import IconButton from "@/components/ui/IconButton.vue";
@@ -18,9 +18,11 @@ import { panelsThatWillClose } from "./groupCloseControls";
  * so the dockview header-actions props arrive on `props.params`.
  *
  * It renders DIFFERENT controls per group location (Track B):
- *  - **floating** (Phase 3b): an **eye icon** that toggles a compact background-
- *    opacity **slider** (0 = fully see-through over the map, 100 = solid glass),
- *    driving `session.setFloatAlpha`.
+ *  - **floating** (Phase 3b/4b): an **eye icon** that toggles a compact
+ *    background-opacity **slider** (0 = fully see-through over the map, 100 =
+ *    solid glass; `session.setFloatAlpha`), plus **Maximize/Restore** (fill the
+ *    dock ⇄ prior box; `session.toggleFloatMaximize`) and **Close**
+ *    (`session.removePanelGuarded`). (Minimize-to-tray joins the row in 4c.)
  *  - **grid / tabbed** (Phase 4a): a **Close All** button (the plain close `X`,
  *    a touch larger than the per-tab close) that closes every panel in the group
  *    at once (`session.closeAllInGroup`, empty-workspace-guarded) AFTER a
@@ -77,6 +79,16 @@ const pct = computed<number>({
 
 const open = ref(false);
 
+// Float window controls (Phase 4b): Maximize ⇄ Restore + Close, in the eye row.
+// `isMax` reads the persisted flag so the icon/label flip survives reload.
+const isMax = computed(() => (panelId.value ? session.getFloatMaximized(panelId.value) : false));
+function toggleMaximize() {
+  if (panelId.value) void session.toggleFloatMaximize(panelId.value);
+}
+function closeWindow() {
+  if (panelId.value) void session.removePanelGuarded(panelId.value);
+}
+
 // Close All flows through a group-scoped confirm (GroupCloseConfirm) rather than
 // closing immediately. `gridRootEl` anchors the Teleport to THIS group's
 // `.dv-groupview`; a guard-aware count (see `groupCloseControls`) drives the
@@ -124,6 +136,16 @@ function cancelCloseAll() {
       @click="open = !open"
     >
       <component :is="open ? EyeOff : Eye" />
+    </IconButton>
+    <IconButton
+      :label="isMax ? 'Restore window' : 'Maximize window'"
+      size="sm"
+      @click="toggleMaximize"
+    >
+      <component :is="isMax ? Minimize2 : Maximize2" />
+    </IconButton>
+    <IconButton label="Close window" size="sm" @click="closeWindow">
+      <X />
     </IconButton>
   </div>
   <div

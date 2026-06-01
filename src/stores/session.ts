@@ -5,9 +5,14 @@ import { defineStore } from "pinia";
 import { ref, shallowRef } from "vue";
 
 import {
+  type FloatBox,
   floatWasHeaderless,
   getFloatAlpha as getFloatAlphaFromState,
+  getFloatMaximized as getFloatMaximizedFromState,
+  getFloatPrevBox as getFloatPrevBoxFromState,
   withFloatAlpha,
+  withFloatMaximized,
+  withFloatPrevBox,
   withFloatPrevHeaderless,
 } from "@/modules/panels/float";
 import { isHeaderless, withHeaderless } from "@/modules/panels/headerless";
@@ -38,6 +43,17 @@ import { useWorkspaceStore } from "./workspace";
  * paths into menu actions.
  */
 const dockviewApi = shallowRef<DockviewApi | null>(null);
+
+/**
+ * The internal dockview floating-group shape reached via an as-cast in
+ * `findFloatingGroup` (dockview-core 6.6.1 exposes no public per-float resize
+ * API). Only the members Track B Phase 4b uses are modeled.
+ */
+type FloatingGroupHandle = {
+  readonly group: unknown;
+  readonly overlay: { toJSON(): FloatBox };
+  position(box: Partial<FloatBox>): void;
+};
 
 export const useSessionStore = defineStore("session", () => {
   const loadedLayoutId = ref<null | Ulid>(null);
@@ -106,6 +122,7 @@ export const useSessionStore = defineStore("session", () => {
     await backfillCleanMainPane();
     applyHeaderlessGroups(api);
     applyFloatAlphas(api);
+    applyFloatMaximize(api);
 
     loadedLayoutId.value = layoutId;
     dirty.value = false;
@@ -479,9 +496,17 @@ export const useSessionStore = defineStore("session", () => {
         panel.api.group.element.style.setProperty("--cv-float-alpha", String(alpha));
       }
       await panelStateStore.updateState(panelId, {
-        state: withFloatPrevHeaderless(
-          withHeaderless(panelStateStore.getState(panelId)?.state, false),
-          wasHeaderless,
+        // A fresh float is never maximized — clear any stale maximize state left
+        // by a prior maximize → dock-back / reload-without-save.
+        state: withFloatPrevBox(
+          withFloatMaximized(
+            withFloatPrevHeaderless(
+              withHeaderless(panelStateStore.getState(panelId)?.state, false),
+              wasHeaderless,
+            ),
+            false,
+          ),
+          undefined,
         ),
       });
     } finally {
@@ -512,9 +537,18 @@ export const useSessionStore = defineStore("session", () => {
       // `panel.api.group` is a live getter — it now resolves to that NEW grid group.
       if (restoreClean) panel.api.group.header.hidden = true; // restore clean status
       await panelStateStore.updateState(panelId, {
-        state: withFloatPrevHeaderless(
-          withHeaderless(panelStateStore.getState(panelId)?.state, restoreClean),
-          false,
+        // Clear maximize state too: a docked pane has no float to maximize, so it
+        // must never carry a stale `floatMaximized`/`floatPrevBox` (symmetry with
+        // floatPanel's fresh-float clear).
+        state: withFloatPrevBox(
+          withFloatMaximized(
+            withFloatPrevHeaderless(
+              withHeaderless(panelStateStore.getState(panelId)?.state, restoreClean),
+              false,
+            ),
+            false,
+          ),
+          undefined,
         ),
       });
     } finally {
@@ -555,6 +589,119 @@ export const useSessionStore = defineStore("session", () => {
   /** Current persisted float alpha for a panel (1 = solid when unset). */
   function getFloatAlpha(panelId: Ulid): number {
     return getFloatAlphaFromState(usePanelStateStore().getState(panelId)?.state);
+  }
+
+  /**
+   * Locate the live floating-group panel for a panel via dockview's INTERNAL
+   * `floatingGroups` list. dockview-core 6.6.1 exposes NO public API to resize or
+   * reposition an existing floating group, so we reach the internal
+   * `DockviewComponent.floatingGroups` (each entry has `group`, `overlay.toJSON()`
+   * and `position(box)`) through an as-cast. This is the one brittle dockview
+   * coupling in Track B — re-verify against the d.ts on any dockview bump
+   * (CLAUDE.md library-gotcha rule). Returns undefined if not found.
+   */
+  function findFloatingGroup(
+    api: DockviewApi,
+    panel: IDockviewPanel,
+  ): FloatingGroupHandle | undefined {
+    const internal = api as unknown as {
+      component?: { floatingGroups?: FloatingGroupHandle[] };
+    };
+    return internal.component?.floatingGroups?.find((fg) => fg.group === panel.api.group);
+  }
+
+  /**
+   * Maximize a floating window to fill the dock area, or restore it to its prior
+   * box if already maximized (Track B Phase 4b). Custom because dockview's native
+   * maximize is grid-only; here we snapshot the float's `overlay.toJSON()` box,
+   * `position()` it to the full `api.width`/`api.height`, and persist
+   * `floatMaximized` + `floatPrevBox` so Restore — and reload — returns it exactly.
+   *
+   * The fill is exact because `floating-group-bounds="boundedWithinViewport"`
+   * zeroes the overlay's min-in-viewport offset, so a fill to the container's exact
+   * width/height is not clamped inward. NB: `api.width`/`api.height` are the
+   * GRIDVIEW size; they equal the floating-overlay host only because CommandVue
+   * mounts no shell edge panels — a fork that adds them must revisit the source.
+   *
+   * Floating-gated; `position()` resizes in place (no DOM reparent, so WebGL
+   * survives). Restoring-guarded as defensive belt-and-suspenders (a programmatic
+   * `position()` does not actually fire `onDidLayoutChange`); the explicit
+   * `markDirty()` is what flags the savable change (like setFloatAlpha).
+   */
+  async function toggleFloatMaximize(panelId: Ulid): Promise<boolean> {
+    const api = dockviewApi.value;
+    if (!api) throw new Error("Dockview API not bound");
+    const panel = api.getPanel(panelId);
+    if (!panel || panel.api.location.type !== "floating") return false;
+    const fg = findFloatingGroup(api, panel);
+    if (!fg) return false;
+
+    const panelStateStore = usePanelStateStore();
+    const state = panelStateStore.getState(panelId)?.state;
+    setRestoring(true);
+    try {
+      if (getFloatMaximizedFromState(state)) {
+        // Restore to the pre-maximize box; fall back to the float cascade default
+        // if the box is somehow missing (hand-edited state) so Restore ALWAYS
+        // un-maximizes the window rather than leaving it stuck full-size.
+        const prev = getFloatPrevBoxFromState(state) ?? {
+          top: 120,
+          left: 120,
+          width: 520,
+          height: 360,
+        };
+        fg.position(prev);
+        await panelStateStore.updateState(panelId, {
+          state: withFloatMaximized(withFloatPrevBox(state, undefined), false),
+        });
+      } else {
+        const prev = fg.overlay.toJSON();
+        fg.position({ top: 0, left: 0, width: api.width, height: api.height });
+        await panelStateStore.updateState(panelId, {
+          state: withFloatMaximized(withFloatPrevBox(state, prev), true),
+        });
+      }
+    } finally {
+      setRestoring(false);
+    }
+    markDirty();
+    return true;
+  }
+
+  /** Whether a panel's floating window is currently maximized. */
+  function getFloatMaximized(panelId: Ulid): boolean {
+    return getFloatMaximizedFromState(usePanelStateStore().getState(panelId)?.state);
+  }
+
+  /**
+   * Re-apply float maximize after a load: a maximized float is serialized at its
+   * FILLED box (`toJSON().floatingGroups[].position`), so it reloads maximized —
+   * but sized to the OLD dock area. Re-fill any `floatMaximized` float to the
+   * CURRENT `api.width`/`api.height` so it still fills after a between-session
+   * viewport resize. `floatPrevBox` (the pre-maximize box) is untouched.
+   * Restoring-guarded so it never dirties; safe no-op when nothing is maximized.
+   * Skips entirely if the dock has no size yet (would otherwise fill to 0×0). The
+   * skip is fully correct for the common saved-while-maximized case (the float is
+   * already serialized at its filled box); the only gap is the rare
+   * maximize → no-save → reload-at-0×0 path, where the float reloads at its
+   * pre-maximize box with the flag still set until the user toggles (acceptable —
+   * dockview's `onReady` normally fires with the dock mounted and sized).
+   */
+  function applyFloatMaximize(api: DockviewApi): void {
+    if (!(api.width > 0) || !(api.height > 0)) return;
+    setRestoring(true);
+    try {
+      const panelStateStore = usePanelStateStore();
+      for (const ps of panelStateStore.listForLayout()) {
+        if (!getFloatMaximizedFromState(ps.state)) continue;
+        const panel = api.getPanel(ps.id);
+        if (!panel || panel.api.location.type !== "floating") continue;
+        const fg = findFloatingGroup(api, panel);
+        if (fg) fg.position({ top: 0, left: 0, width: api.width, height: api.height });
+      }
+    } finally {
+      setRestoring(false);
+    }
   }
 
   /**
@@ -658,6 +805,8 @@ export const useSessionStore = defineStore("session", () => {
     dockBack,
     setFloatAlpha,
     getFloatAlpha,
+    toggleFloatMaximize,
+    getFloatMaximized,
     splitCleanNeighbor,
     discardChanges,
     switchWorkspace,

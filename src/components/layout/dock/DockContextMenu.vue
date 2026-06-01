@@ -69,18 +69,31 @@ const model = ref<DockMenuItem[]>([]);
 const disposers: Array<() => void> = [];
 
 /**
- * Maximize/Restore item shared by both menus. Label + icon flip on live state;
- * disabled off-grid so the affordance matches `session.toggleMaximize`'s
- * grid-only gate (floating / pop-out / edge groups have no maximize concept -
- * none ship in Phase 2, but the gate is coded now).
+ * Maximize/Restore item shared by both menus. Label + icon flip on the LIVE state,
+ * read fresh on each right-click (the menu model is rebuilt on open), so no
+ * subscription is needed:
+ *  - **grid** group → dockview's native group maximize (`session.toggleMaximize`,
+ *    state from `panel.api.isMaximized()`).
+ *  - **floating** group → the custom fill-the-dock ⇄ restore (Track B Phase 4b,
+ *    `session.toggleFloatMaximize`, state from `session.getFloatMaximized()`) — the
+ *    SAME action as the float header's maximize icon, so the two surfaces agree.
+ *  - **pop-out / edge** group → disabled (no maximize concept).
  */
 function maximizeItem(panel: IDockviewPanel): DockMenuItem {
+  const location = panel.api.location.type;
+  if (location === "floating") {
+    const maximized = session.getFloatMaximized(panel.id);
+    return {
+      label: maximized ? "Restore" : "Maximize",
+      lucide: maximized ? Minimize2 : Maximize2,
+      command: () => void session.toggleFloatMaximize(panel.id),
+    };
+  }
   const maximized = panel.api.isMaximized();
-  const onGrid = panel.api.location.type === "grid";
   return {
     label: maximized ? "Restore" : "Maximize",
     lucide: maximized ? Minimize2 : Maximize2,
-    disabled: !onGrid,
+    disabled: location !== "grid",
     command: () => void session.toggleMaximize(panel.id),
   };
 }

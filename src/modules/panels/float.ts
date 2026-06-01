@@ -59,3 +59,70 @@ export function withFloatAlpha(
   else next[FLOAT_ALPHA_KEY] = clamped;
   return next;
 }
+
+/**
+ * Float maximize ⇄ restore (Track B Phase 4b). A floating window can fill the
+ * dock area and toggle back to its prior size/position — a CUSTOM behavior, since
+ * dockview's native maximize is grid-only. `floatMaximized` (default false,
+ * omitted) records the toggle state; `floatPrevBox` remembers the pre-maximize
+ * box so Restore returns the float exactly where it was.
+ *
+ * `FloatBox` mirrors dockview-core's `AnchoredBox` (width/height + ONE corner
+ * anchor) — modeled locally because dockview-core does not export the type. It is
+ * obtained from a floating group's `overlay.toJSON()` and passed back to its
+ * `position()`.
+ */
+export type FloatBox = {
+  width: number;
+  height: number;
+  top?: number;
+  left?: number;
+  bottom?: number;
+  right?: number;
+};
+
+export const FLOAT_MAXIMIZED_KEY = "floatMaximized" as const;
+export const FLOAT_PREV_BOX_KEY = "floatPrevBox" as const;
+
+/** Whether the floating window is currently maximized (fills the dock area). */
+export function getFloatMaximized(state: Record<string, unknown> | undefined): boolean {
+  return state?.[FLOAT_MAXIMIZED_KEY] === true;
+}
+
+/** Record (true) or clear (false — the default, omitted) the maximized flag. */
+export function withFloatMaximized(
+  state: Record<string, unknown> | undefined,
+  value: boolean,
+): Record<string, unknown> {
+  const next: Record<string, unknown> = { ...(state ?? {}) };
+  if (value) next[FLOAT_MAXIMIZED_KEY] = true;
+  else delete next[FLOAT_MAXIMIZED_KEY];
+  return next;
+}
+
+/** The pre-maximize box to restore to, or undefined when not maximized. */
+export function getFloatPrevBox(state: Record<string, unknown> | undefined): FloatBox | undefined {
+  return isFloatBox(state?.[FLOAT_PREV_BOX_KEY])
+    ? (state[FLOAT_PREV_BOX_KEY] as FloatBox)
+    : undefined;
+}
+
+/** Store (or clear, when `box` is undefined) the pre-maximize box. */
+export function withFloatPrevBox(
+  state: Record<string, unknown> | undefined,
+  box: FloatBox | undefined,
+): Record<string, unknown> {
+  const next: Record<string, unknown> = { ...(state ?? {}) };
+  if (box) next[FLOAT_PREV_BOX_KEY] = box;
+  else delete next[FLOAT_PREV_BOX_KEY];
+  return next;
+}
+
+function isFloatBox(v: unknown): v is FloatBox {
+  return (
+    typeof v === "object" &&
+    v !== null &&
+    typeof (v as Record<string, unknown>).width === "number" &&
+    typeof (v as Record<string, unknown>).height === "number"
+  );
+}

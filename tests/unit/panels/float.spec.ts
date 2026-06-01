@@ -2,10 +2,16 @@ import { describe, expect, it } from "vitest";
 
 import {
   FLOAT_ALPHA_KEY,
+  FLOAT_MAXIMIZED_KEY,
+  FLOAT_PREV_BOX_KEY,
   FLOAT_PREV_HEADERLESS_KEY,
   floatWasHeaderless,
   getFloatAlpha,
+  getFloatMaximized,
+  getFloatPrevBox,
   withFloatAlpha,
+  withFloatMaximized,
+  withFloatPrevBox,
   withFloatPrevHeaderless,
 } from "@/modules/panels/float";
 
@@ -58,5 +64,48 @@ describe("float opacity state", () => {
     const next = withFloatAlpha(input, 0.5);
     expect(next).toEqual({ [FLOAT_PREV_HEADERLESS_KEY]: true, [FLOAT_ALPHA_KEY]: 0.5 });
     expect(input).toEqual({ [FLOAT_PREV_HEADERLESS_KEY]: true });
+  });
+});
+
+describe("float maximize state", () => {
+  const box = { top: 0, left: 0, width: 1000, height: 800 };
+
+  it("getFloatMaximized reads the flag (default false)", () => {
+    expect(getFloatMaximized(undefined)).toBe(false);
+    expect(getFloatMaximized({})).toBe(false);
+    expect(getFloatMaximized({ [FLOAT_MAXIMIZED_KEY]: true })).toBe(true);
+    expect(getFloatMaximized({ [FLOAT_MAXIMIZED_KEY]: false })).toBe(false);
+  });
+
+  it("withFloatMaximized sets the flag and omits it when false (default)", () => {
+    expect(withFloatMaximized({ other: 1 }, true)).toEqual({
+      other: 1,
+      [FLOAT_MAXIMIZED_KEY]: true,
+    });
+    expect(withFloatMaximized({ [FLOAT_MAXIMIZED_KEY]: true, other: 1 }, false)).toEqual({
+      other: 1,
+    });
+  });
+
+  it("getFloatPrevBox reads a valid box and rejects malformed values", () => {
+    expect(getFloatPrevBox(undefined)).toBeUndefined();
+    expect(getFloatPrevBox({ [FLOAT_PREV_BOX_KEY]: box })).toEqual(box);
+    // Missing width/height → not a box.
+    expect(getFloatPrevBox({ [FLOAT_PREV_BOX_KEY]: { top: 0, left: 0 } })).toBeUndefined();
+    expect(getFloatPrevBox({ [FLOAT_PREV_BOX_KEY]: "nope" })).toBeUndefined();
+  });
+
+  it("withFloatPrevBox stores a box and clears it when undefined", () => {
+    expect(withFloatPrevBox({}, box)).toEqual({ [FLOAT_PREV_BOX_KEY]: box });
+    expect(withFloatPrevBox({ [FLOAT_PREV_BOX_KEY]: box, other: 1 }, undefined)).toEqual({
+      other: 1,
+    });
+  });
+
+  it("does not mutate the input state", () => {
+    const input = { [FLOAT_MAXIMIZED_KEY]: true, [FLOAT_PREV_BOX_KEY]: box };
+    withFloatMaximized(input, false);
+    withFloatPrevBox(input, undefined);
+    expect(input).toEqual({ [FLOAT_MAXIMIZED_KEY]: true, [FLOAT_PREV_BOX_KEY]: box });
   });
 });

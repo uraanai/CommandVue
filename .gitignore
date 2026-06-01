@@ -169,7 +169,7 @@ temp/
 # They belong in .verification-screenshots/ (ignored above); ignore the names
 # used by verification runs so `git add -A` never sweeps them in.
 /slider-*.png
-/phase4a-*.png
+/phase4*.png
 
 # Claude Code session-local runtime — the scheduled-task lock + local settings.
 # Project-scoped config like .claude/CLAUDE.md or .claude/rules/ stays trackable.

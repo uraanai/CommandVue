@@ -1,7 +1,7 @@
 # Track B Phase 4 — Group header actions (Close All · Float Maximize · Minimize‑to‑tray)
 
-> Status: **4a (Close All) in progress — this PR.** 4b (Float Maximize) and 4c
-> (Minimize‑to‑tray) are sequenced after, each its own PR.
+> Status: **4a (Close All) shipped — #109.** **4b (Float Maximize) in progress —
+> this PR.** 4c (Minimize‑to‑tray) is next, its own PR.
 > Supersedes/realizes the Phase 4 notes in
 > [`track-b-dockview-windowing.md`](./track-b-dockview-windowing.md) (Decision
 > **D6**, §6.2) and the roadmap "Tab‑group header actions" task. Builds on Phase
@@ -119,6 +119,34 @@ choice over dockview's grid‑only maximize) and **Close** in the eye row.
   Stage‑1 runtime verification required:** exact fill, restore fidelity across all
   four anchors, WebGL survival, persistence across reload.
 
+### As shipped (4b — this PR)
+
+- **`float.ts`:** `FLOAT_MAXIMIZED_KEY` + `FLOAT_PREV_BOX_KEY` with `get/withFloatMaximized`,
+  `get/withFloatPrevBox` (default‑omitted, like the alpha/headerless keys) + a local
+  `FloatBox` type (dockview‑core does not export `AnchoredBox`).
+- **`session.ts`:** `findFloatingGroup` (the as‑cast shim → a module‑scope
+  `FloatingGroupHandle` type), `toggleFloatMaximize`, `getFloatMaximized`, and
+  `applyFloatMaximize` (wired into `loadLayout` next to `applyFloatAlphas`).
+- **`applyFloatMaximize` 0×0 guard:** a maximized float serializes its FILLED box,
+  so it reloads maximized; the hook re‑fills it to the CURRENT `api.width/height`
+  (corrects a between‑session viewport resize) but **skips when the dock isn't sized
+  yet** (`api.width/height <= 0`) — the serialized box is the safe fallback, never 0×0.
+- **`floatPanel` clears stale maximize state** on every fresh float (a prior
+  maximize → dock‑back / reload‑without‑save could leave the flag set); `dockBack`
+  clears it too (symmetry).
+- **Context‑menu parity:** the dock context menu's **Maximize/Restore** item now
+  drives the SAME custom action for floating groups (`toggleFloatMaximize`, label
+  from `getFloatMaximized`) — previously greyed (dockview maximize is grid‑only).
+  Grid groups keep dockview‑native maximize; pop‑out/edge stay disabled. The menu
+  and the header icon stay in sync (both read the persisted flag; the menu is
+  rebuilt fresh on each right‑click).
+- **Verified (Stage 1, Playwright):** float header row eye·maximize·close; maximize
+  fills the dock exactly (929×915); restore returns to the exact prior box; icon/label
+  flip; **Cesium WebGL survives** (`glLost: false`, canvas resized 520→929); Close
+  removes the floated pane; **maximize → save → reload loads maximized + Restore uses
+  the persisted prev box.** Unit: `toggleFloatMaximize` (fill/restore, grid no‑op,
+  floatPanel‑clears‑stale) + the `float.ts` maximize helpers.
+
 ---
 
 ## 4. Sub‑phase 4c — Minimize‑to‑tray (the custom piece, D6 / §6.2)
@@ -178,8 +206,11 @@ phase's decision) — in‑memory, cleared on `loadLayout`.
   gate so the confirm's Escape can't also fire the global `tool.deactivate`) ·
   `main.ts` (registration) · `DockLayout.vue` (prop) · tests (`session.spec.ts`,
   `groupCloseControls.spec.ts`, `useKeyboardShortcuts.spec.ts`) · this spec · roadmap.
-- **4b:** `float.ts` (max keys) · `session.ts` (`toggleFloatMaximize` + re‑apply) ·
-  `CommandVueHeaderActions.vue` (float Maximize/Close) · tests.
+- **4b (this PR):** `float.ts` (max keys + `FloatBox` + helpers) · `session.ts`
+  (`findFloatingGroup`, `toggleFloatMaximize`, `getFloatMaximized`,
+  `applyFloatMaximize` + `loadLayout` wiring + `floatPanel` clear) ·
+  `CommandVueHeaderActions.vue` (float Maximize/Restore + Close) · tests
+  (`session.spec.ts`, `float.spec.ts`) · this spec · roadmap.
 - **4c:** `stores/minimized.ts` · `MinimizedDock.vue` + `MinimizedBar.vue` ·
   `AppShell.vue` (mount) · `CommandVueHeaderActions.vue` (Minimize) ·
   `session.ts` (`loadLayout` clear) · tests.
