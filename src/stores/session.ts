@@ -378,6 +378,46 @@ export const useSessionStore = defineStore("session", () => {
   }
 
   /**
+   * Close EVERY panel in the target panel's group in one action — the group-level
+   * complement to per-tab close (Track B Phase 4, the header "Close All" button).
+   * Same mechanics as `closeOthersInGroup` minus the keep-the-target filter:
+   * iterates a STABLE snapshot of `group.panels` (removing while iterating the
+   * live array skips entries) and honors the empty-workspace guard. The target is
+   * iterated LAST, so when this group is the whole layout the guard stops the
+   * final removal and the surviving pane is the one the user invoked Close All
+   * from (deterministic), not an arbitrary last-in-array member. Returns `false`
+   * when nothing was removed. Restoring-guarded around the structural mutations;
+   * marks dirty when it removed at least one panel (a real user edit).
+   */
+  async function closeAllInGroup(panelId: Ulid): Promise<boolean> {
+    const api = dockviewApi.value;
+    if (!api) throw new Error("Dockview API not bound");
+    const target = api.getPanel(panelId);
+    if (!target) return false;
+
+    // Target iterated LAST (see docstring). `getPanel` succeeded above, so the
+    // target is always a member of this snapshot — there is no empty-group case.
+    const others = target.api.group.panels.filter((p) => p.id !== panelId);
+    const ordered = [...others, target];
+
+    let removedAny = false;
+    setRestoring(true);
+    try {
+      for (const member of ordered) {
+        if (api.panels.length <= 1) break; // empty-workspace guard
+        const panel = api.getPanel(member.id);
+        if (!panel) continue;
+        api.removePanel(panel);
+        removedAny = true;
+      }
+    } finally {
+      setRestoring(false);
+    }
+    if (removedAny) markDirty();
+    return removedAny;
+  }
+
+  /**
    * Maximize the right-clicked panel's group, or restore it if already
    * maximized. Maximize is view-only state - dockview does NOT serialize it
    * into toJSON, so this does NOT mark the session dirty (matching the
@@ -612,6 +652,7 @@ export const useSessionStore = defineStore("session", () => {
     toggleHeaderless,
     removePanelGuarded,
     closeOthersInGroup,
+    closeAllInGroup,
     toggleMaximize,
     floatPanel,
     dockBack,

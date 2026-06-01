@@ -677,6 +677,80 @@ describe("useSessionStore", () => {
     expect((api as unknown as DockviewApi).panels.map((p) => p.id)).toEqual([p2.id]);
   });
 
+  it("closeAllInGroup closes every panel in the group when panels exist elsewhere", async () => {
+    const { layout, p1, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+
+    const fake = api as unknown as {
+      getPanel: (id: string) => { api: { group: { panels: { id: string }[] } } } | undefined;
+    };
+    // p1 stays alone in its group; add a third tab into p2's group so the
+    // target group holds two panels (p2 + p3) and the layout holds three.
+    const targetGroup = fake.getPanel(p2.id)!.api.group;
+    const p3 = await panelStateRepo.create({ layoutId: layout.id, panelType: "maplibre" });
+    (api as unknown as DockviewApi).addPanel({
+      id: p3.id,
+      component: "maplibre",
+      title: "third",
+      position: { referenceGroup: targetGroup as never, direction: "within" },
+    });
+
+    const closed = await session.closeAllInGroup(p2.id);
+    expect(closed).toBe(true);
+    // Both members of the target group are gone; the unrelated p1 survives.
+    expect((api as unknown as DockviewApi).getPanel(p2.id)).toBeUndefined();
+    expect((api as unknown as DockviewApi).getPanel(p3.id)).toBeUndefined();
+    expect((api as unknown as DockviewApi).panels.map((p) => p.id)).toEqual([p1.id]);
+    expect(session.dirty).toBe(true);
+  });
+
+  it("closeAllInGroup never empties the workspace (leaves the last pane via the guard)", async () => {
+    const { layout, p1, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+
+    const fake = api as unknown as {
+      getPanel: (
+        id: string,
+      ) =>
+        | { api: { group: { panels: { id: string }[] }; moveTo: (o: { group?: unknown }) => void } }
+        | undefined;
+    };
+    // Force both panels into one group so that group IS the whole layout.
+    const targetGroup = fake.getPanel(p2.id)!.api.group;
+    fake.getPanel(p1.id)!.api.moveTo({ group: targetGroup as never });
+
+    const closed = await session.closeAllInGroup(p2.id);
+    expect(closed).toBe(true);
+    // Exactly one pane remains — the guard stopped the last removal — and because
+    // the invoked pane is iterated last, the survivor is deterministically p2 (the
+    // pane Close All was invoked from), not an arbitrary group member.
+    expect((api as unknown as DockviewApi).panels.map((p) => p.id)).toEqual([p2.id]);
+  });
+
+  it("closeAllInGroup is a no-op (returns false) on a single-panel layout", async () => {
+    const { layout, p1, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+
+    // Reduce the layout to a single pane, then Close All on it must no-op.
+    await session.removePanelGuarded(p2.id);
+    expect((api as unknown as DockviewApi).panels.map((p) => p.id)).toEqual([p1.id]);
+    session.clearDirty();
+
+    const closed = await session.closeAllInGroup(p1.id);
+    expect(closed).toBe(false);
+    expect((api as unknown as DockviewApi).panels.map((p) => p.id)).toEqual([p1.id]);
+    expect(session.dirty).toBe(false);
+  });
+
   it("toggleMaximize maximizes a grid group, then restores it on second call", async () => {
     const { layout, p2 } = await seedWorkspace();
     const session = useSessionStore();
