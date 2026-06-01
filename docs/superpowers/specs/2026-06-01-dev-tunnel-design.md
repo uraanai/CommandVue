@@ -15,7 +15,7 @@
 | Binary acquisition | **`cloudflared` npm devDep**    | Auto-downloads the platform-correct binary on first run (Windows incl.). No manual `winget`. Cross-platform, pnpm-friendly.            |
 | Command name       | **`pnpm dev:tunnel`**           | Mirrors existing `docs:dev` / `docker:up` convention. (`pnpm dev cloud` with a space would pass `cloud` as a Vite arg — wrong shape.)  |
 | Orchestration      | **Single Node orchestrator**    | Knows Vite's _actual_ resolved port; clean dedicated URL banner; injects `allowedHosts` inline so committed `vite.config.ts` is clean. |
-| Spec location      | **`.internal/specs/`**          | Per `CLAUDE.md` planning-doc convention (private, tracked).                                                                            |
+| Spec location      | **`docs/superpowers/specs/`**   | Synced docs tree so it lands on `main`; the `.internal/` tree is intentionally private/unsynced.                                       |
 | Branch / PR        | **`feat/dev-tunnel` → develop** | GitFlow. Built in an isolated external git worktree so the concurrently-running `feat/track-b-phase-3b-opacity` task is untouched.     |
 
 ## 2. Architecture
@@ -68,10 +68,10 @@ A single ESM orchestrator, `scripts/dev-tunnel.mjs` (style mirrors the existing 
 ## 6. Documentation-sync obligations (per `CLAUDE.md`)
 
 - **New pnpm script** → README Scripts table (§3). ✅ planned.
-- **New dependency (`cloudflared`, dev-only tooling)** → add to README's stack/tooling note. It is a dev convenience, **not** an architectural lock, so it is intentionally **not** added to the `Locked technology stack` table in `CLAUDE.md`. Flagged here for maintainer agreement.
+- **New dependency (`cloudflared`, dev-only tooling)** → mentioned in a short "Remote testing" subsection under the README Scripts table (maintainer-confirmed). It is a dev convenience, **not** an architectural lock, so it is intentionally **not** added to the `Locked technology stack` table in `CLAUDE.md`.
 - **CSpell** → add `cloudflared` / `trycloudflare` to `dictionaries/tech.txt`, never to `cspell.json`.
 
-## 7. Open questions for maintainer
+## 7. Resolved decisions
 
-1. README placement of the dev-dependency mention — a small "Remote testing" subsection under Scripts is proposed; confirm that's the right home vs. the Stack table.
-2. Any objection to leaving the `.internal/specs/` doc in the PR diff (already chosen "committed"), vs. squashing it out before opening the PR.
+1. **README placement** — confirmed: the `cloudflared` dev-dependency note goes in a short "Remote testing" subsection under the README Scripts table (not the locked-stack table).
+2. **Spec location** — confirmed: this spec lives in `docs/superpowers/specs/` (synced to `main`), not `.internal/` (private/unsynced).
