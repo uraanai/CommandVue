@@ -42,6 +42,8 @@
   "scripts": {
     "predev": "node scripts/copy-cesium-assets.mjs",
     "dev": "vite",
+    "predev:tunnel": "node scripts/copy-cesium-assets.mjs",
+    "dev:tunnel": "node scripts/dev-tunnel.mjs",
     "prebuild": "node scripts/copy-cesium-assets.mjs",
     "build": "run-p type-check \"build-only {@}\" --",
     "build-only": "vite build",
@@ -133,6 +135,7 @@
     "@vue/eslint-config-typescript": "^14.2.0",
     "@vue/test-utils": "^2.4.6",
     "@vue/tsconfig": "^0.9.1",
+    "cloudflared": "^0.7.1",
     "cspell": "^10.0.0",
     "eslint": "^10.4.0",
     "eslint-plugin-perfectionist": "^5.9.0",
