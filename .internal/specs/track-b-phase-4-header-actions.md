@@ -231,6 +231,28 @@ phase's decision) — in‑memory, cleared on `loadLayout`.
   (single + multi‑panel + float round‑trip, ephemeral, unknown‑id null, the store
   round‑trip, `loadLayout` clears the tray).
 
+#### Feedback round (post‑review on #111)
+
+- **Context‑menu minimize.** `DockContextMenu.vue` now offers Minimize from the
+  right‑click menu (grid + float), just after Maximize: a multi‑tab group shows
+  **Minimize tab** (`minimizePanel`) + **Minimize group** (`minimizeGroup`); a
+  single/clean pane shows one **Minimize**. The header buttons stay group‑level.
+- **Per‑tab minimize.** New `session.minimizePanel(panelId)` captures a SINGLE
+  tab and anchors it `direction: "within"` a surviving sibling, so
+  `restoreMinimized` re‑joins the **same group wherever it then lives** (grid OR
+  float) — no float box needed. It delegates to `minimizeGroup` when the tab is
+  its group's sole member. `originAnchor.direction` gained `"within"`, and the
+  clean‑pane header‑re‑hide in restore is skipped for a within‑restore (else it
+  would hide the host group's header). A shared `capturePanel()` backs both paths.
+- **Bar buttons.** `MinimizedBar.vue` now has two explicit buttons — **⤢ restore**
+  (`Maximize2`) and **× close** (label "Close `<title>`") — alongside the
+  still‑clickable title. Both the title and ⤢ restore; × discards.
+- **Verified (Stage 1, Playwright):** both menu shapes (clean → one Minimize;
+  multi‑tab → tab + group); Minimize tab on the active tab of a 7‑tab group keeps
+  the other 6 and adds a `within` bar; restore via the ⤢ button re‑joins the same
+  group, clears the tray, stays `dirty=false`; Minimize group → "Empty +6" bar; the
+  × discards it. Unit: +4 `minimizePanel` tests (12 minimize tests total; 415 all‑up).
+
 ---
 
 ## 5. Files
@@ -250,9 +272,11 @@ phase's decision) — in‑memory, cleared on `loadLayout`.
   `applyFloatMaximize` + `loadLayout` wiring + `floatPanel` clear) ·
   `CommandVueHeaderActions.vue` (float Maximize/Restore + Close) · tests
   (`session.spec.ts`, `float.spec.ts`) · this spec · roadmap.
-- **4c (this PR):** `stores/minimized.ts` (store + `MinimizedEntry`/`CapturedPanel`) ·
-  `components/layout/MinimizedDock.vue` + `MinimizedBar.vue` · `AppShell.vue`
-  (mount, `<main>` relative) · `CommandVueHeaderActions.vue` (Minimize on both
-  branches) · `session.ts` (`minimizeGroup` + `restoreMinimized` + `componentFor`
-  - `loadLayout` clear + the deferred‑dirty fix) · `session.spec.ts` (7 tests) ·
-    this spec · roadmap.
+- **4c (this PR):** `stores/minimized.ts` (store + `MinimizedEntry`/`CapturedPanel`;
+  `minimizeGroup` + `minimizePanel`) · `components/layout/MinimizedDock.vue` +
+  `MinimizedBar.vue` (⤢ restore + × close) · `AppShell.vue` (mount, `<main>`
+  relative) · `CommandVueHeaderActions.vue` (Minimize on both branches) ·
+  `dock/DockContextMenu.vue` (Minimize tab / Minimize group) · `session.ts`
+  (`minimizeGroup` + `minimizePanel` + `restoreMinimized` + `componentFor` +
+  `capturePanel` + the `within` anchor + `loadLayout` clear + the deferred‑dirty
+  fix) · `session.spec.ts` (12 minimize tests) · this spec · roadmap.
