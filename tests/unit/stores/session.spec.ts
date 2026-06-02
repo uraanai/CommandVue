@@ -198,7 +198,7 @@ function makeFakeApi(): DockviewApi {
     id: string;
     component: string;
     title?: string;
-    position?: { referenceGroup?: FakeGroup; direction?: string };
+    position?: { referenceGroup?: FakeGroup; direction?: string; index?: number };
   }): FakePanel {
     const ref = p.position?.referenceGroup;
     const within = p.position?.direction === "within";
@@ -244,7 +244,13 @@ function makeFakeApi(): DockviewApi {
         },
       },
     };
-    group.panels.push(panel);
+    // Honor `position.index` for a within-add (dockview inserts at that tab slot);
+    // clamp, else append. A fresh neighbor group is empty so this is just a push.
+    const at =
+      within && typeof p.position?.index === "number"
+        ? Math.max(0, Math.min(p.position.index, group.panels.length))
+        : group.panels.length;
+    group.panels.splice(at, 0, panel);
     panels.push(panel);
     return panel;
   }
@@ -1583,6 +1589,39 @@ describe("useSessionStore", () => {
     const g2 = fake.getPanel(p2.id)!.api.group;
     expect(g2).toBe(g1); // p2 re-joined p1's SAME group
     expect(g1.panels.map((p) => p.id).sort()).toEqual([p1.id, p2.id].sort());
+  });
+
+  it("restoreMinimized returns a minimized tab to its ORIGINAL index, not the end", async () => {
+    const { layout, p1, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+
+    const fake = api as unknown as {
+      getPanel: (
+        id: string,
+      ) => { api: { group: FakeGroup; moveTo: (o: { group?: unknown }) => void } } | undefined;
+    };
+    // Order a 3-tab group [p2, p1, p3]; p1 is the MIDDLE tab (index 1).
+    const group = fake.getPanel(p2.id)!.api.group;
+    fake.getPanel(p1.id)!.api.moveTo({ group: group as never }); // [p2, p1]
+    const p3 = await panelStateRepo.create({ layoutId: layout.id, panelType: "maplibre" });
+    (api as unknown as DockviewApi).addPanel({
+      id: p3.id,
+      component: "maplibre",
+      title: "third",
+      position: { referenceGroup: group as never, direction: "within" },
+    }); // [p2, p1, p3]
+    expect(group.panels.map((p) => p.id)).toEqual([p2.id, p1.id, p3.id]);
+
+    const entry = session.minimizePanel(p1.id);
+    expect(entry!.originAnchor.index).toBe(1); // captured the middle index
+    expect(group.panels.map((p) => p.id)).toEqual([p2.id, p3.id]);
+
+    session.restoreMinimized(entry!);
+    // p1 lands back at index 1 (between p2 and p3), NOT appended to the end.
+    expect(fake.getPanel(p1.id)!.api.group.panels.map((p) => p.id)).toEqual([p2.id, p1.id, p3.id]);
   });
 
   it("minimizePanel on a sole-member group delegates to a whole-group minimize", async () => {

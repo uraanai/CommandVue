@@ -32,12 +32,15 @@ const hideLabel = computed(() => `Hide ${entries.value.length} minimized window$
 <template>
   <div
     v-if="entries.length > 0"
-    class="pointer-events-none absolute bottom-0 left-0 z-30 flex max-w-full items-end gap-1.5 p-2"
+    class="pointer-events-none absolute bottom-0 left-0 z-30 flex max-w-full items-end gap-1.5 py-2 pr-2"
   >
+    <!-- Handle: flush to the left edge (square left corner), always visible (solid
+         `secondary` fill, not ghost), and the count is shown in BOTH states so the
+         button height never changes and stays aligned with the bars. -->
     <Button
-      variant="ghost"
+      variant="secondary"
       size="sm"
-      class="border-border bg-surface-raised pointer-events-auto shrink-0 rounded-md border shadow-md"
+      class="pointer-events-auto shrink-0 rounded-l-none shadow-md"
       :title="collapsed ? showLabel : hideLabel"
       :aria-label="collapsed ? showLabel : hideLabel"
       :aria-expanded="!collapsed"
@@ -45,9 +48,7 @@ const hideLabel = computed(() => `Hide ${entries.value.length} minimized window$
       @click="minimized.toggleCollapsed()"
     >
       <component :is="collapsed ? ChevronRight : ChevronLeft" class="size-4 shrink-0" />
-      <span v-if="collapsed" class="text-[length:var(--density-font-size)] tabular-nums">{{
-        entries.length
-      }}</span>
+      <span class="text-[length:var(--density-font-size)] tabular-nums">{{ entries.length }}</span>
     </Button>
 
     <Transition

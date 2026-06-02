@@ -30,10 +30,12 @@ export interface MinimizedEntry {
   floatBox?: FloatBox;
   /** Best-effort re-dock anchor (a surviving panel + side). A single minimized
    *  TAB uses `direction: "within"` to re-join its sibling's group on restore —
-   *  wherever that group then lives (grid or float). */
+   *  wherever that group then lives (grid or float) — and `index` to land back at
+   *  its ORIGINAL tab position rather than the end (dockview clamps if shrunk). */
   originAnchor: {
     referencePanelId?: Ulid;
     direction: "left" | "right" | "above" | "below" | "within";
+    index?: number;
   };
   /** Every panel captured for this entry, in tab order. A whole-group minimize
    *  holds all the group's tabs; a single-tab minimize holds exactly one. */
