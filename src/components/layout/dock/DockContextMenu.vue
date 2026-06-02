@@ -42,7 +42,7 @@ function onContextMenu(event: MouseEvent): void {
   // Over a gutter or no group at all: do nothing, let the event bubble.
   if (!group) return;
 
-  const next = buildModelForGroup(group, api.panels.length);
+  const next = buildModelForGroup(group, api);
   if (next.length === 0) return;
 
   event.preventDefault();

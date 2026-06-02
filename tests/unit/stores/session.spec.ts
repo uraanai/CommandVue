@@ -1096,6 +1096,57 @@ describe("useSessionStore", () => {
     expect(session.dirty).toBe(false);
   });
 
+  /** Cross-window relocation (Phase 7). loadLayout places p1 (cesium) and p2
+   *  (maplibre) in separate grid groups, so they make a clean source/target pair. */
+  type GroupPeek = { getPanel: (id: string) => { api: { group: { id: string } } } | undefined };
+  const groupIdOf = (api: unknown, id: string): string | undefined =>
+    (api as GroupPeek).getPanel(id)?.api.group.id;
+
+  it("sendPanelToWindow moves the panel into the target group by id and marks dirty", async () => {
+    const { layout, p1, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    session.clearDirty();
+
+    const targetGroupId = groupIdOf(api, p2.id)!;
+    expect(groupIdOf(api, p1.id)).not.toBe(targetGroupId); // start apart
+
+    expect(session.sendPanelToWindow(p1.id, targetGroupId)).toBe(true);
+    expect(groupIdOf(api, p1.id)).toBe(targetGroupId); // p1 now lives in p2's group
+    expect(session.dirty).toBe(true);
+  });
+
+  it("sendPanelToWindow(panelId, null) sends to a different grid group (main window)", async () => {
+    const { layout, p1, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    session.clearDirty();
+
+    const otherGrid = groupIdOf(api, p2.id)!;
+    expect(session.sendPanelToWindow(p1.id, null)).toBe(true);
+    expect(groupIdOf(api, p1.id)).toBe(otherGrid); // landed in the existing grid group
+    expect(session.dirty).toBe(true);
+  });
+
+  it("sendPanelToWindow returns false for an unknown panel or a stale target id", async () => {
+    const { layout, p1 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    session.clearDirty();
+
+    expect(session.sendPanelToWindow("nope" as never, null)).toBe(false);
+    expect(session.sendPanelToWindow(p1.id, "ghost-group")).toBe(false); // no such group
+    // No-op target (its own group) is refused too.
+    expect(session.sendPanelToWindow(p1.id, groupIdOf(api, p1.id)!)).toBe(false);
+    expect(session.dirty).toBe(false);
+  });
+
   /** Cast helper: a panel's group (header/panels/locationType) + location + moveTo. */
   type DockFake = {
     getPanel: (id: string) =>

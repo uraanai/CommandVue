@@ -1,18 +1,21 @@
-import type { DockviewGroupPanel, IDockviewPanel } from "dockview-vue";
+import type { DockviewApi, DockviewGroupPanel, IDockviewPanel } from "dockview-vue";
 import type { MenuItem } from "primevue/menuitem";
 import type { Component } from "vue";
 
 import {
+  AppWindow,
   Columns2,
   ExternalLink,
   Maximize2,
   Minimize,
   Minimize2,
   Minus,
+  Monitor,
   PanelTop,
   PanelTopClose,
   PinOff,
   PictureInPicture2,
+  Send,
   SquareArrowOutUpRight,
   X,
 } from "@lucide/vue";
@@ -57,7 +60,7 @@ export interface DockMenuModelOptions {
 export function useDockMenuModel(): {
   buildModelForGroup: (
     group: DockviewGroupPanel,
-    totalPanels: number,
+    api: DockviewApi,
     opts?: DockMenuModelOptions,
   ) => DockMenuItem[];
 } {
@@ -156,6 +159,44 @@ export function useDockMenuModel(): {
   }
 
   /**
+   * "Send to window" submenu (Track B Phase 7) — cross-window relocation. Lists
+   * every OTHER open window as a target and moves THIS panel there via
+   * `session.sendPanelToWindow` (live-DOM `moveTo`; the GL context survives the
+   * cross-document move). A panel in the main window (grid or floating) can be sent
+   * to any open pop-out; a panel in a pop-out can be sent to the main window or to a
+   * different pop-out. Returns `null` when there's nowhere else to send it (no
+   * pop-out open and not already in one), so the item only appears when useful.
+   * Pop-out targets are labelled by their active panel's title.
+   */
+  function sendToWindowItem(panel: IDockviewPanel, api: DockviewApi): DockMenuItem | null {
+    const currentGroup = panel.api.group;
+    const targets: DockMenuItem[] = [];
+
+    // From a pop-out, the main window is a target (grid/floating panels are already
+    // there). `null` tells the action to pick/create a main grid group.
+    if (currentGroup.api.location.type === "popout") {
+      targets.push({
+        label: "Main window",
+        lucide: Monitor,
+        command: () => void session.sendPanelToWindow(panel.id, null),
+      });
+    }
+    // Every OTHER pop-out window (re-resolved by group id at click time).
+    for (const g of api.groups) {
+      if (g.api.location.type !== "popout" || g === currentGroup) continue;
+      const groupId = g.id;
+      targets.push({
+        label: g.activePanel?.title ?? "Pop-out",
+        lucide: AppWindow,
+        command: () => void session.sendPanelToWindow(panel.id, groupId),
+      });
+    }
+
+    if (targets.length === 0) return null;
+    return { label: "Send to window", lucide: Send, items: targets };
+  }
+
+  /**
    * Minimize item(s) (Track B Phase 4c). A multi-tab group offers "Minimize tab"
    * + "Minimize group"; a single-panel group offers one "Minimize". The tray is a
    * MAIN-window surface and the store actions only minimize grid/float groups, so
@@ -199,12 +240,13 @@ export function useDockMenuModel(): {
    */
   function buildCleanModel(
     panel: IDockviewPanel,
-    totalPanels: number,
+    api: DockviewApi,
     opts?: DockMenuModelOptions,
   ): DockMenuItem[] {
-    const controls = cleanPaneControls({ isHeaderless: true, totalPanels });
+    const controls = cleanPaneControls({ isHeaderless: true, totalPanels: api.panels.length });
     const showHeader = controls.find((c) => c.id === "toggle-header");
     const close = controls.find((c) => c.id === "close");
+    const send = sendToWindowItem(panel, api);
 
     return [
       {
@@ -216,6 +258,7 @@ export function useDockMenuModel(): {
       ...windowItems(panel, 1, opts),
       maximizeItem(panel),
       ...minimizeItems(panel, 1),
+      ...(send ? [send] : []),
       { separator: true },
       {
         label: "Close",
@@ -233,13 +276,14 @@ export function useDockMenuModel(): {
   function buildTabbedModel(
     panel: IDockviewPanel,
     panelsInGroup: number,
-    totalPanels: number,
+    api: DockviewApi,
     opts?: DockMenuModelOptions,
   ): DockMenuItem[] {
-    const controls = tabbedPaneControls({ totalPanels, panelsInGroup });
+    const controls = tabbedPaneControls({ totalPanels: api.panels.length, panelsInGroup });
     const close = controls.find((c) => c.id === "close")!;
     const closeOthers = controls.find((c) => c.id === "close-others")!;
     const isPopout = opts?.onDockBack != null;
+    const send = sendToWindowItem(panel, api);
 
     return [
       {
@@ -263,6 +307,7 @@ export function useDockMenuModel(): {
       ...windowItems(panel, panelsInGroup, opts),
       maximizeItem(panel),
       ...minimizeItems(panel, panelsInGroup),
+      ...(send ? [send] : []),
       { separator: true },
       {
         label: close.label,
@@ -275,19 +320,20 @@ export function useDockMenuModel(): {
 
   /**
    * Pick the right model for a right-clicked group: clean (header hidden) vs tabbed.
-   * `totalPanels` (`api.panels.length`) drives the Close empty-workspace guard.
-   * Returns `[]` when the group has no panels (caller should not open a menu).
+   * `api` supplies the panel count for the Close empty-workspace guard and the open
+   * windows for the "Send to window" submenu. Returns `[]` when the group has no
+   * panels (caller should not open a menu).
    */
   function buildModelForGroup(
     group: DockviewGroupPanel,
-    totalPanels: number,
+    api: DockviewApi,
     opts?: DockMenuModelOptions,
   ): DockMenuItem[] {
     const panel = group.activePanel ?? group.panels[0];
     if (!panel) return [];
     return group.header.hidden
-      ? buildCleanModel(panel, totalPanels, opts)
-      : buildTabbedModel(panel, group.panels.length, totalPanels, opts);
+      ? buildCleanModel(panel, api, opts)
+      : buildTabbedModel(panel, group.panels.length, api, opts);
   }
 
   return { buildModelForGroup };
