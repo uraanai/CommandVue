@@ -57,10 +57,12 @@ interface FakeGroup {
     location: { type: "grid" | "floating" | "popout" | "edge" };
     moveTo: (opts: { group?: FakeGroup; position?: unknown }) => void;
   };
-  /** Minimal DOM stub — float opacity writes (`setProperty`, a spy) and reads
-   *  back (`getPropertyValue`) the `--cv-float-alpha` var. */
+  /** Minimal DOM stub — float opacity writes (`setProperty`, a spy) + reads back
+   *  (`getPropertyValue`) the `--cv-float-alpha` var; `getBoundingClientRect` is the
+   *  pop-out position source. */
   element: {
     style: { setProperty: ReturnType<typeof vi.fn>; getPropertyValue: (k: string) => string };
+    getBoundingClientRect: () => { left: number; top: number; width: number; height: number };
   };
 }
 interface FakePanel {
@@ -113,6 +115,7 @@ interface FakeDockviewApi {
   addGroup: () => FakeGroup;
   addPanel: ReturnType<typeof vi.fn>;
   addFloatingGroup: ReturnType<typeof vi.fn>;
+  addPopoutGroup: ReturnType<typeof vi.fn>;
   removePanel: ReturnType<typeof vi.fn>;
   getPanel: (id: string) => FakePanel | undefined;
   getGroup: (id: string) => FakeGroup | undefined;
@@ -162,7 +165,10 @@ function makeFakeApi(): DockviewApi {
         return group.panels.find((p) => p.id === group.activeId) ?? group.panels[0];
       },
       locationType: "grid",
-      element: { style: makeStyleStub() },
+      element: {
+        style: makeStyleStub(),
+        getBoundingClientRect: () => ({ left: 100, top: 50, width: 600, height: 400 }),
+      },
       api: {
         // Self-reference is SAFE: bodies run only when invoked later.
         get location() {
@@ -305,6 +311,10 @@ function makeFakeApi(): DockviewApi {
       };
       floatingGroups.push(handle);
     }),
+    // Pop-out (Phase 6a). Returns a configurable success flag; the real call opens
+    // a window from a user gesture (untestable in jsdom), so we only model the
+    // resolve. Defaults to opened=true; the blocked path uses `mockResolvedValueOnce`.
+    addPopoutGroup: vi.fn(() => Promise.resolve(true)),
     removePanel: vi.fn((panel: FakePanel) => {
       const i = panels.indexOf(panel);
       if (i >= 0) panels.splice(i, 1);
@@ -1003,6 +1013,51 @@ describe("useSessionStore", () => {
     expect(fake.getPanel(p2.id)!.api.location.type).toBe("grid");
     expect(fake.getPanel(p2.id)!.api.group.header.hidden).toBe(false); // stays headered
     expect(isHeaderless(pss.getState(p2.id)?.state)).toBe(false);
+  });
+
+  it("popOut returns false for an unknown panel and never opens a window", async () => {
+    const { layout } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    expect(await session.popOut("does-not-exist" as never)).toBe(false);
+    expect(
+      (api as unknown as { addPopoutGroup: ReturnType<typeof vi.fn> }).addPopoutGroup,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("popOut opens a popout group with a VIEWPORT-relative position + the popout url, and marks dirty", async () => {
+    const { layout, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    session.clearDirty();
+
+    expect(await session.popOut(p2.id)).toBe(true);
+    expect(session.dirty).toBe(true);
+    const opts = (api as unknown as { addPopoutGroup: ReturnType<typeof vi.fn> }).addPopoutGroup
+      .mock.calls[0]![1] as { position: Record<string, number>; popoutUrl: string };
+    expect(opts.popoutUrl).toBe("/popout.html");
+    // Group rect is {left:100, top:50, w:600, h:400}; the position is viewport-relative
+    // (NO `window.screenX/Y` double-add — dockview adds the screen offset itself).
+    expect(opts.position).toEqual({ left: 140, top: 130, width: 600, height: 400 });
+  });
+
+  it("popOut returns false and stays clean when the browser blocks the window", async () => {
+    const { layout, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    session.clearDirty();
+    (
+      api as unknown as { addPopoutGroup: ReturnType<typeof vi.fn> }
+    ).addPopoutGroup.mockResolvedValueOnce(false);
+
+    expect(await session.popOut(p2.id)).toBe(false);
+    expect(session.dirty).toBe(false);
   });
 
   /** Cast helper: a panel's group (header/panels/locationType) + location + moveTo. */

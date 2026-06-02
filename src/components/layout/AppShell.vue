@@ -8,6 +8,7 @@ import ConfirmDialog from "@/components/dialogs/ConfirmDialog.vue";
 import SaveLayoutAsDialog from "@/components/dialogs/SaveLayoutAsDialog.vue";
 import MinimizedDock from "@/components/layout/MinimizedDock.vue";
 import { useKeyboardShortcuts } from "@/composables/useKeyboardShortcuts";
+import { initPopoutThemeSync } from "@/composables/usePopoutThemeSync";
 import { useTheme } from "@/composables/useTheme";
 import { newId } from "@/modules/storage/ids";
 import { useChromeStore } from "@/stores/chrome";
@@ -22,6 +23,8 @@ import CommandPalette from "./CommandPalette.vue";
 
 // Bootstrap the theme composable so `data-theme` lands on <html> from first paint.
 useTheme();
+// Keep any pop-out windows' theme tokens mirrored to <html> (Track B Phase 6a).
+initPopoutThemeSync();
 
 const tools = useToolsStore();
 const ui = useUiStore();
