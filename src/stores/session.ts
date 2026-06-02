@@ -5,7 +5,7 @@ import { nanoid } from "nanoid";
 import { defineStore } from "pinia";
 import { ref, shallowRef } from "vue";
 
-import { registerPopoutWindow, unregisterPopoutWindow } from "@/composables/usePopoutThemeSync";
+import { trackPopoutWindow, untrackPopoutWindow } from "@/composables/usePopoutWindows";
 import {
   type FloatBox,
   floatWasHeaderless,
@@ -654,8 +654,8 @@ export const useSessionStore = defineStore("session", () => {
           height: Math.max(360, Math.round(rect.height)),
         },
         popoutUrl: "/popout.html",
-        onDidOpen: ({ window: win }) => registerPopoutWindow(win),
-        onWillClose: ({ window: win }) => unregisterPopoutWindow(win),
+        onDidOpen: ({ window: win }) => trackPopoutWindow(win),
+        onWillClose: ({ window: win }) => untrackPopoutWindow(win),
       });
     } finally {
       setRestoring(false);

@@ -235,3 +235,10 @@ reparent
 reparented
 reparenting
 desync
+teleport
+teleporting
+teleports
+untrack
+untracks
+untracked
+untracking
