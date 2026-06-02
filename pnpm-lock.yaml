@@ -81,8 +81,8 @@ importers:
         specifier: ^0.38.0
         version: 0.38.0
       cesium:
-        specifier: ^1.124.0
-        version: 1.141.0
+        specifier: ^1.142.0
+        version: 1.142.0
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -429,15 +429,15 @@ packages:
     resolution: {integrity: sha512-ctxtJ/eA+t+6q2++vj5j7FYX3nRu311q1wfYH3xjlLOsczhlhxAg2FWNUXhpGvAw3BWo1xBcvOV6/YLc2r5FJw==}
     hasBin: true
 
-  '@cesium/engine@25.0.0':
-    resolution: {integrity: sha512-vJZfgAAB7WTvUPsI8dFV+wKleweCZgpJj1ckcTIERnC+NWvJ9bjlAx0xPl0We57NoQKcdMDy+6UiFjOvPB/yGg==}
+  '@cesium/engine@26.0.0':
+    resolution: {integrity: sha512-iV2mUQHUffYBEQii7n8CQ0XA1eSmcetOedsLoZvDJG6LW9aRHxL008rVvGnnZelQVRUQWNFFX5/+Tos3TBIIcw==}
     engines: {node: '>=22.0.0'}
 
   '@cesium/wasm-splats@0.1.0-alpha.2':
     resolution: {integrity: sha512-t9pMkknv31hhIbLpMa8yPvmqfpvs5UkUjgqlQv9SeO8VerCXOYnyP8/486BDaFrztM0A7FMbRjsXtNeKvqQghA==}
 
-  '@cesium/widgets@15.0.0':
-    resolution: {integrity: sha512-a0udi+EKEeCyM4F+pxp9Qx8HXgh2eWVQrksxGO4lSu3f35XWc+eKdYiJBEP2t1d4tjw2MxOsjbVyMj7VQZ4JDw==}
+  '@cesium/widgets@16.0.0':
+    resolution: {integrity: sha512-52PO61PKm6Cut1BR/OqrPLmDXL9lk7iwGHXWbWQpg1pJT8SaJ7PXyLqcAPz+6VTYXspmE4D6Xo0PgIav33dEEQ==}
     engines: {node: '>=22.0.0'}
 
   '@commitlint/cli@21.0.1':
@@ -2258,8 +2258,8 @@ packages:
   ccount@2.0.1:
     resolution: {integrity: sha512-eyrF0jiFpY+3drT6383f1qhkbGsLSifNAjA61IUjZjmLCWjItY6LB9ft9YhoDgwfmclB2zhu51Lc7+95b8NRAg==}
 
-  cesium@1.141.0:
-    resolution: {integrity: sha512-bRwgABDjsXRqNLjeJAxSlCrWCTvAt/yWJD30fY5CbqtoEKR6g/YCOcJW37vk4w/Gq3uMW7sF1uP74ajRrktjEw==}
+  cesium@1.142.0:
+    resolution: {integrity: sha512-Z6mBxdeBS0lEXM7WAQgG8Q0FovXYAJpZsMOSWgd7dH28Ov+djJxWOlUMiG8jOai0TzeOYdYsMLgnYb2uB/aI/A==}
     engines: {node: '>=22.0.0'}
 
   chai@6.2.2:
@@ -2483,8 +2483,8 @@ packages:
     peerDependencies:
       vue: ^3.4.0
 
-  dompurify@3.4.5:
-    resolution: {integrity: sha512-OrwIBKsdNSVEeubdJ1HBv/wNENRM9ytAVCv7YXt//A3vPdVMNuACRqK9mXCGCBW2ln7BT/A4X0jXHo2Gu89miA==}
+  dompurify@3.4.7:
+    resolution: {integrity: sha512-2jBxDJY4RR06tQNy4w5FlFH7kfxsQZlufd0sbv+chfHCxeJwrFw2baUDsSwvBISD4K4RDbd0PTfy3uNXsR6siA==}
 
   dot-prop@5.3.0:
     resolution: {integrity: sha512-QM8q3zDe58hqUqjraQOmzZ1LIH9SWQJTlEKCH4kJ2oQvLZk7RbQXvtDM2XEq3fwkV9CCvvH4LA0AV+ogFsBM2Q==}
@@ -2991,6 +2991,9 @@ packages:
   kdbush@4.0.2:
     resolution: {integrity: sha512-WbCVYJ27Sz8zi9Q7Q0xHC+05iwkm3Znipc2XTlrnJbsHMYktW4hPhXUE8Ys1engBrvffoSCqbil1JQAa7clRpA==}
 
+  kdbush@4.1.0:
+    resolution: {integrity: sha512-e9vurzrXJQrFX6ckpHP3bvj5l+9CnYzkxDNnNQ1h2QTqdWsUAJgXiKdGNcOa1EY85dU8KbQ+z/FdQdB7P+9yfQ==}
+
   keyv@4.5.4:
     resolution: {integrity: sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw==}
 
@@ -3461,8 +3464,8 @@ packages:
   proto-list@1.2.4:
     resolution: {integrity: sha512-vtK/94akxsTMhe0/cbfpR+syPuszcuwhqVjJq26CuNDgFGj682oRBXOP5MJpv2r7JtE8MsiepGIqvvOTBwn2vA==}
 
-  protobufjs@8.4.0:
-    resolution: {integrity: sha512-iriNhQ57SYA5Jbdi+41AyPdx6jPPkFO7DODzkOBmqFhgYn/JzX2HxgxYPY18eQAs3CP/AWqtPvkWn8rclRAxdQ==}
+  protobufjs@8.5.0:
+    resolution: {integrity: sha512-df1jWDPA5VIBNRtuAHjqr09f2qN5D4Vke1wYqOQg1XJ7ZDpA7BD6L7E4tyChgGRLB5hqk2m79Zsy0WHwV9a84A==}
     engines: {node: '>=12.0.0'}
 
   protocol-buffers-schema@3.6.1:
@@ -4304,7 +4307,7 @@ snapshots:
     dependencies:
       css-tree: 3.2.1
 
-  '@cesium/engine@25.0.0':
+  '@cesium/engine@26.0.0':
     dependencies:
       '@cesium/wasm-splats': 0.1.0-alpha.2
       '@spz-loader/core': 0.3.1
@@ -4312,27 +4315,27 @@ snapshots:
       '@zip.js/zip.js': 2.8.26
       autolinker: 4.1.5
       bitmap-sdf: 1.0.4
-      dompurify: 3.4.5
+      dompurify: 3.4.7
       draco3d: 1.5.7
       earcut: 3.0.2
       grapheme-splitter: 1.0.4
       jsep: 1.4.0
-      kdbush: 4.0.2
+      kdbush: 4.1.0
       ktx-parse: 1.1.0
       lerc: 2.0.0
       mersenne-twister: 1.1.0
       meshoptimizer: 1.1.1
       pako: 2.1.0
-      protobufjs: 8.4.0
+      protobufjs: 8.5.0
       rbush: 4.0.1
       topojson-client: 3.1.0
       urijs: 1.19.11
 
   '@cesium/wasm-splats@0.1.0-alpha.2': {}
 
-  '@cesium/widgets@15.0.0':
+  '@cesium/widgets@16.0.0':
     dependencies:
-      '@cesium/engine': 25.0.0
+      '@cesium/engine': 26.0.0
       nosleep.js: 0.12.0
 
   '@commitlint/cli@21.0.1(@types/node@25.9.1)(conventional-commits-parser@6.4.0)(typescript@6.0.3)':
@@ -5988,10 +5991,10 @@ snapshots:
 
   ccount@2.0.1: {}
 
-  cesium@1.141.0:
+  cesium@1.142.0:
     dependencies:
-      '@cesium/engine': 25.0.0
-      '@cesium/widgets': 15.0.0
+      '@cesium/engine': 26.0.0
+      '@cesium/widgets': 16.0.0
 
   chai@6.2.2: {}
 
@@ -6249,7 +6252,7 @@ snapshots:
       dockview-core: 6.6.1
       vue: 3.5.35(typescript@6.0.3)
 
-  dompurify@3.4.5:
+  dompurify@3.4.7:
     optionalDependencies:
       '@types/trusted-types': 2.0.7
 
@@ -6758,6 +6761,8 @@ snapshots:
 
   kdbush@4.0.2: {}
 
+  kdbush@4.1.0: {}
+
   keyv@4.5.4:
     dependencies:
       json-buffer: 3.0.1
@@ -7170,7 +7175,7 @@ snapshots:
 
   proto-list@1.2.4: {}
 
-  protobufjs@8.4.0:
+  protobufjs@8.5.0:
     dependencies:
       long: 5.3.2
 
