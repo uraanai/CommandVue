@@ -330,7 +330,11 @@ export const useSessionStore = defineStore("session", () => {
       let group = panel.api.group;
       const makingClean = !group.header.hidden;
       if (makingClean && group.panels.length > 1) {
-        // A clean pane is single-panel — split this panel to its own group.
+        // A clean pane is single-panel — split this panel to its own group. A
+        // pop-out window hosts ONE group with nowhere to split, so `api.addGroup()`
+        // would land in the MAIN grid and yank the tab out of the pop-out (the
+        // "vanishing tabs" bug). Refuse the split there; the menu disables it too.
+        if (group.api.location.type === "popout") return;
         panel.api.moveTo({ group: api.addGroup(), skipSetActive: true });
         group = panel.api.group;
       }

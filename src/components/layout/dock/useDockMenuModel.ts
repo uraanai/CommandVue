@@ -130,7 +130,7 @@ export function useDockMenuModel(): {
     }
     return [
       {
-        label: "Pop out to window",
+        label: "Pop out",
         lucide: ExternalLink,
         command: () => void session.popOutGroup(panel.id),
       },
@@ -150,7 +150,7 @@ export function useDockMenuModel(): {
     opts?: DockMenuModelOptions,
   ): DockMenuItem[] {
     if (opts?.onDockBack) {
-      return [{ label: "Dock back to main window", lucide: PinOff, command: opts.onDockBack }];
+      return [{ label: "Dock back", lucide: PinOff, command: opts.onDockBack }];
     }
     return popOutItems(panel, panelsInGroup);
   }
@@ -239,11 +239,18 @@ export function useDockMenuModel(): {
     const controls = tabbedPaneControls({ totalPanels, panelsInGroup });
     const close = controls.find((c) => c.id === "close")!;
     const closeOthers = controls.find((c) => c.id === "close-others")!;
+    const isPopout = opts?.onDockBack != null;
 
     return [
       {
         label: "Hide header",
         lucide: PanelTopClose,
+        // Hiding the header on a MULTI-tab group splits the active panel into its
+        // own clean pane beside the others — fine in the main grid, but a pop-out
+        // window hosts ONE group with no room to split, so the split would shove
+        // the tab back into the main window (the "vanishing tabs" bug). Disable it
+        // for multi-tab pop-out groups; single-tab pop-outs hide in place.
+        disabled: isPopout && panelsInGroup > 1,
         command: () => void session.toggleHeaderless(panel.id),
       },
       {
