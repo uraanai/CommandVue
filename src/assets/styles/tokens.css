@@ -168,9 +168,15 @@
   --color-accent-900: var(--color-blue-900);
 
   /* --------------------------------------------------------------------------
-   * PrimeVue surface palette — required by `tailwindcss-primeui`.
-   * Volt and PrimeVue's unstyled mode read `--color-p-surface-*` for
-   * `bg-surface-0` / `dark:bg-surface-900` etc. utilities.
+   * PrimeVue / Volt surface ramp — the AUTHORED source for every theme's surface
+   * neutrals. A fixed light→dark scale (0 = lightest … 950 = darkest); themes
+   * re-emit it via the generator. These are the DEFAULT (no-theme) values.
+   *
+   * The live lever Volt actually resolves is `--p-surface-N` (single `p`), which
+   * `main.css` bridges to this ramp (`--p-surface-N: var(--color-p-surface-N)`),
+   * so `bg-surface-0` / `dark:bg-surface-900` etc. follow the theme (Track A A1a).
+   * Do NOT confuse this with the app's 4-rung `--color-surface-{base,raised,…}`
+   * ladder, nor with the numeric `--color-surface-N` utility alias.
    * -------------------------------------------------------------------------- */
   --color-p-surface-0: #ffffff;
   --color-p-surface-50: var(--color-slate-50);
@@ -461,11 +467,13 @@
   /* Floating window (Track B Phase 3) — the see-through "glass" tint of an
      in-window floating pane. THEME-FOLLOWING so the float matches the rest of the
      UI: a light tint in light mode (here), a dark tint in dark mode (overridden in
-     html[data-theme="dark"] below). A primitive, not a surface token, so it is
-     immune to the surface-token-transparent override applied inside floats. The
-     per-window alpha is the runtime var `--cv-float-alpha` (0..1), composed via
-     color-mix in dockview.css. */
-  --cv-float-tint: var(--color-slate-100);
+     html[data-theme="dark"] below). Sourced from the `--color-p-surface-*` ramp
+     (Track A A1a) so it now follows the active THEME's neutrals rather than a
+     fixed slate primitive — and that ramp is NOT among the surface tokens zeroed
+     to transparent inside floats, so the tint stays opaque where it is actually
+     used. The per-window alpha is the runtime var `--cv-float-alpha` (0..1),
+     composed via color-mix in dockview.css. */
+  --cv-float-tint: var(--color-p-surface-100);
 
   /* MenuBar */
   --menubar-bg: var(--color-surface-base);
@@ -514,8 +522,9 @@ html[data-theme="dark"] {
   --color-surface-raised: var(--color-slate-800);
   --color-surface-overlay: var(--color-slate-800);
 
-  /* Floating-window glass tint — dark in dark mode (light default lives in :root). */
-  --cv-float-tint: var(--color-slate-800);
+  /* Floating-window glass tint — dark in dark mode (light default lives in :root).
+     Theme-following + float-immune via the `--color-p-surface-*` ramp (A1a). */
+  --cv-float-tint: var(--color-p-surface-800);
   --color-surface-sunken: var(--color-slate-950);
 
   /* Border */
