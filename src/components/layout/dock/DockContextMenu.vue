@@ -14,6 +14,7 @@ import {
   PanelTopClose,
   PictureInPicture2,
   PinOff,
+  SquareArrowOutUpRight,
   X,
 } from "@lucide/vue";
 import { onUnmounted, ref, watch, type Component } from "vue";
@@ -120,17 +121,36 @@ function floatItem(panel: IDockviewPanel): DockMenuItem {
 }
 
 /**
- * Pop-out item shared by both menus (Track B Phase 6a). Opens the group in a
- * SEPARATE browser window (`session.popOut` → dockview `addPopoutGroup`); the
- * theme is mirrored into the child window. Closing that window re-docks the
- * content. Group-location op, so it sits beside Float.
+ * Pop-out item(s) shared by both menus (Track B Phase 6a). Mirrors `minimizeItems`:
+ * a multi-tab group offers BOTH "Pop out tab" (just the active panel → its own
+ * window; the group keeps the rest) and "Pop out group" (every tab → one window);
+ * a single-panel group collapses the two into one "Pop out to window". Each opens a
+ * SEPARATE browser window (`session.popOutPanel` / `popOutGroup` →
+ * `addPopoutGroup`) with the theme mirrored in; closing that window re-docks the
+ * content. Group/panel-location op, so it sits beside Float.
  */
-function popOutItem(panel: IDockviewPanel): DockMenuItem {
-  return {
-    label: "Pop out to window",
-    lucide: ExternalLink,
-    command: () => void session.popOut(panel.id),
-  };
+function popOutItems(panel: IDockviewPanel, panelsInGroup: number): DockMenuItem[] {
+  if (panelsInGroup > 1) {
+    return [
+      {
+        label: "Pop out tab",
+        lucide: ExternalLink,
+        command: () => void session.popOutPanel(panel.id),
+      },
+      {
+        label: "Pop out group",
+        lucide: SquareArrowOutUpRight,
+        command: () => void session.popOutGroup(panel.id),
+      },
+    ];
+  }
+  return [
+    {
+      label: "Pop out to window",
+      lucide: ExternalLink,
+      command: () => void session.popOutGroup(panel.id),
+    },
+  ];
 }
 
 /**
@@ -182,7 +202,8 @@ function buildCleanModel(panel: IDockviewPanel, totalPanels: number): DockMenuIt
       command: () => void session.toggleHeaderless(panel.id),
     },
     floatItem(panel),
-    popOutItem(panel),
+    // Clean pane is a single visible pane → one "Pop out to window" (whole group).
+    ...popOutItems(panel, 1),
     maximizeItem(panel),
     // Clean pane is a single visible pane → one "Minimize" (whole group).
     ...minimizeItems(panel, 1),
@@ -227,7 +248,8 @@ function buildTabbedModel(
       command: () => void session.closeOthersInGroup(panel.id),
     },
     floatItem(panel),
-    popOutItem(panel),
+    // Multi-tab group → "Pop out tab" + "Pop out group"; single → one "Pop out".
+    ...popOutItems(panel, panelsInGroup),
     maximizeItem(panel),
     // Multi-tab group → "Minimize tab" + "Minimize group"; single → one "Minimize".
     ...minimizeItems(panel, panelsInGroup),

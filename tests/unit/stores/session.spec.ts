@@ -1015,19 +1015,19 @@ describe("useSessionStore", () => {
     expect(isHeaderless(pss.getState(p2.id)?.state)).toBe(false);
   });
 
-  it("popOut returns false for an unknown panel and never opens a window", async () => {
+  it("popOutGroup returns false for an unknown panel and never opens a window", async () => {
     const { layout } = await seedWorkspace();
     const session = useSessionStore();
     const api = makeFakeApi();
     session.bindDockview(api);
     await session.loadLayout(layout.id);
-    expect(await session.popOut("does-not-exist" as never)).toBe(false);
+    expect(await session.popOutGroup("does-not-exist" as never)).toBe(false);
     expect(
       (api as unknown as { addPopoutGroup: ReturnType<typeof vi.fn> }).addPopoutGroup,
     ).not.toHaveBeenCalled();
   });
 
-  it("popOut opens a popout group with a VIEWPORT-relative position + the popout url, and marks dirty", async () => {
+  it("popOutGroup pops the WHOLE group with a VIEWPORT-relative position + popout url, and marks dirty", async () => {
     const { layout, p2 } = await seedWorkspace();
     const session = useSessionStore();
     const api = makeFakeApi();
@@ -1035,17 +1035,53 @@ describe("useSessionStore", () => {
     await session.loadLayout(layout.id);
     session.clearDirty();
 
-    expect(await session.popOut(p2.id)).toBe(true);
+    expect(await session.popOutGroup(p2.id)).toBe(true);
     expect(session.dirty).toBe(true);
-    const opts = (api as unknown as { addPopoutGroup: ReturnType<typeof vi.fn> }).addPopoutGroup
-      .mock.calls[0]![1] as { position: Record<string, number>; popoutUrl: string };
+    const call = (api as unknown as { addPopoutGroup: ReturnType<typeof vi.fn> }).addPopoutGroup
+      .mock.calls[0]!;
+    // The relocated item is the GROUP (it carries a `panels` array; a panel doesn't).
+    expect(Array.isArray((call[0] as { panels?: unknown }).panels)).toBe(true);
+    const opts = call[1] as { position: Record<string, number>; popoutUrl: string };
     expect(opts.popoutUrl).toBe("/popout.html");
     // Group rect is {left:100, top:50, w:600, h:400}; the position is viewport-relative
     // (NO `window.screenX/Y` double-add — dockview adds the screen offset itself).
     expect(opts.position).toEqual({ left: 140, top: 130, width: 600, height: 400 });
   });
 
-  it("popOut returns false and stays clean when the browser blocks the window", async () => {
+  it("popOutPanel pops only the single panel (relocates the PANEL, not its group), and marks dirty", async () => {
+    const { layout, p2 } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    session.clearDirty();
+
+    expect(await session.popOutPanel(p2.id)).toBe(true);
+    expect(session.dirty).toBe(true);
+    const call = (api as unknown as { addPopoutGroup: ReturnType<typeof vi.fn> }).addPopoutGroup
+      .mock.calls[0]!;
+    // The relocated item is the PANEL itself (id matches; no `panels` array), so the
+    // rest of its group stays docked — the per-tab counterpart of popOutGroup.
+    expect((call[0] as { id?: string }).id).toBe(p2.id);
+    expect((call[0] as { panels?: unknown }).panels).toBeUndefined();
+    // Same viewport-relative position (seeded from the source group's rect).
+    const opts = call[1] as { position: Record<string, number>; popoutUrl: string };
+    expect(opts.position).toEqual({ left: 140, top: 130, width: 600, height: 400 });
+  });
+
+  it("popOutPanel returns false for an unknown panel and never opens a window", async () => {
+    const { layout } = await seedWorkspace();
+    const session = useSessionStore();
+    const api = makeFakeApi();
+    session.bindDockview(api);
+    await session.loadLayout(layout.id);
+    expect(await session.popOutPanel("does-not-exist" as never)).toBe(false);
+    expect(
+      (api as unknown as { addPopoutGroup: ReturnType<typeof vi.fn> }).addPopoutGroup,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("popOutGroup returns false and stays clean when the browser blocks the window", async () => {
     const { layout, p2 } = await seedWorkspace();
     const session = useSessionStore();
     const api = makeFakeApi();
@@ -1056,7 +1092,7 @@ describe("useSessionStore", () => {
       api as unknown as { addPopoutGroup: ReturnType<typeof vi.fn> }
     ).addPopoutGroup.mockResolvedValueOnce(false);
 
-    expect(await session.popOut(p2.id)).toBe(false);
+    expect(await session.popOutGroup(p2.id)).toBe(false);
     expect(session.dirty).toBe(false);
   });
 
