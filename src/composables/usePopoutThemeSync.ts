@@ -39,9 +39,15 @@ function syncWindow(win: Window): void {
       if (v === null) dst.removeAttribute(attr);
       else dst.setAttribute(attr, v);
     }
-    // The inline `--*` token props live in the opener's `style` attribute; copy it
-    // wholesale (the pop-out root carries no competing inline styles of its own).
-    dst.setAttribute("style", src.getAttribute("style") ?? "");
+    // Copy ONLY the theme `--*` custom properties, not any other inline style the
+    // opener might carry now or later (a scroll-lock `overflow`, a `--vh` fix, …),
+    // which would wrongly override the pop-out root's own styles.
+    let tokens = "";
+    for (let i = 0; i < src.style.length; i += 1) {
+      const prop = src.style.item(i);
+      if (prop.startsWith("--")) tokens += `${prop}:${src.style.getPropertyValue(prop)};`;
+    }
+    dst.setAttribute("style", tokens);
   } catch {
     // A window torn down mid-sync (race with close) — drop it; the observer's
     // next pass and `onWillClose` keep the set honest.
@@ -81,4 +87,9 @@ export function unregisterPopoutWindow(win: Window): void {
 /** Test seam: number of pop-outs currently mirrored. */
 export function __popoutWindowCountForTests(): number {
   return popoutWindows.size;
+}
+
+/** Test seam: clear the tracked-window set for per-test isolation. */
+export function __resetForTests(): void {
+  popoutWindows.clear();
 }

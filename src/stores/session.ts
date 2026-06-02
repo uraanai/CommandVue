@@ -635,9 +635,13 @@ export const useSessionStore = defineStore("session", () => {
     let opened = false;
     try {
       opened = await api.addPopoutGroup(panel.api.group, {
+        // `position` is VIEWPORT-relative: dockview adds `window.screenX/screenY`
+        // itself when opening the window (its own default path uses
+        // `getBoundingClientRect()`), so adding it here too would double the offset
+        // and open far off-target on any window not at screen origin.
         position: {
-          left: window.screenX + Math.max(0, Math.round(rect.left)) + 40,
-          top: window.screenY + Math.max(0, Math.round(rect.top)) + 80,
+          left: Math.max(0, Math.round(rect.left)) + 40,
+          top: Math.max(0, Math.round(rect.top)) + 80,
           width: Math.max(480, Math.round(rect.width)),
           height: Math.max(360, Math.round(rect.height)),
         },

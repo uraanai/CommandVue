@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   __popoutWindowCountForTests,
+  __resetForTests,
   initPopoutThemeSync,
   registerPopoutWindow,
   unregisterPopoutWindow,
@@ -15,6 +16,7 @@ function makeFakeWindow(): Window {
 
 describe("usePopoutThemeSync (Track B Phase 6a)", () => {
   beforeEach(() => {
+    __resetForTests(); // drop any windows leaked by a prior (failed) test
     const html = document.documentElement;
     html.setAttribute("data-theme", "dark");
     html.setAttribute("data-density", "compact");
@@ -37,8 +39,8 @@ describe("usePopoutThemeSync (Track B Phase 6a)", () => {
     const dst = win.document.documentElement;
     expect(dst.getAttribute("data-theme")).toBe("dark");
     expect(dst.getAttribute("data-density")).toBe("compact");
-    expect(dst.getAttribute("style")).toContain("--color-surface: rgb(1, 2, 3)");
-    expect(dst.getAttribute("style")).toContain("--color-accent-600: red");
+    expect(dst.style.getPropertyValue("--color-surface")).toBe("rgb(1, 2, 3)");
+    expect(dst.style.getPropertyValue("--color-accent-600")).toBe("red");
 
     unregisterPopoutWindow(win);
     expect(__popoutWindowCountForTests()).toBe(0);
@@ -56,7 +58,7 @@ describe("usePopoutThemeSync (Track B Phase 6a)", () => {
 
     const dst = win.document.documentElement;
     expect(dst.getAttribute("data-theme")).toBe("light");
-    expect(dst.getAttribute("style")).toContain("--color-surface: rgb(9, 9, 9)");
+    expect(dst.style.getPropertyValue("--color-surface")).toBe("rgb(9, 9, 9)");
 
     unregisterPopoutWindow(win);
   });
