@@ -60,6 +60,23 @@ export interface MinimizedEntry {
  */
 export const useMinimizedStore = defineStore("minimized", () => {
   const entries = ref<MinimizedEntry[]>([]);
+  /**
+   * Whether the tray's bars are hidden behind the left-edge handle (Phase 5b).
+   * Starts COLLAPSED (master decision: the tray is out of the way by default) and
+   * resets to collapsed whenever it empties, so the NEXT minimize starts collapsed.
+   */
+  const collapsed = ref(true);
+
+  /** Show/hide the tray's bars; a no-op when the tray is empty (nothing to show). */
+  function toggleCollapsed(): void {
+    if (entries.value.length > 0) collapsed.value = !collapsed.value;
+  }
+
+  /** Drop an entry, then re-collapse once the tray is empty. */
+  function removeEntry(entryId: string): void {
+    entries.value = entries.value.filter((e) => e.id !== entryId);
+    if (entries.value.length === 0) collapsed.value = true;
+  }
 
   /** Minimize the whole group containing `panelId` into the tray (all its tabs). */
   function minimizeGroup(panelId: Ulid): void {
@@ -79,9 +96,7 @@ export const useMinimizedStore = defineStore("minimized", () => {
   function restore(entryId: string): void {
     const entry = entries.value.find((e) => e.id === entryId);
     if (!entry) return;
-    if (useSessionStore().restoreMinimized(entry)) {
-      entries.value = entries.value.filter((e) => e.id !== entryId);
-    }
+    if (useSessionStore().restoreMinimized(entry)) removeEntry(entryId);
   }
 
   /**
@@ -90,13 +105,23 @@ export const useMinimizedStore = defineStore("minimized", () => {
    * records persist and are reclaimed only by the layout/workspace delete cascade.)
    */
   function discard(entryId: string): void {
-    entries.value = entries.value.filter((e) => e.id !== entryId);
+    removeEntry(entryId);
   }
 
   /** Empty the tray (called from `session.loadLayout` — ephemeral v1). */
   function clear(): void {
     entries.value = [];
+    collapsed.value = true;
   }
 
-  return { entries, minimizeGroup, minimizePanel, restore, discard, clear };
+  return {
+    entries,
+    collapsed,
+    minimizeGroup,
+    minimizePanel,
+    restore,
+    discard,
+    toggleCollapsed,
+    clear,
+  };
 });

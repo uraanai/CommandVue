@@ -12,6 +12,7 @@ The `mod` modifier is platform-conditional: **Cmd on macOS**, **Ctrl on Windows/
 | `mod+s`       | Save Layout             | `useSessionStore.updateCurrentLayout` |
 | `mod+shift+s` | Save Layout As…         | Opens `SaveLayoutAsDialog`            |
 | `mod+b`       | Toggle Components Panel | `AppShell.toggleComponentsPanel`      |
+| `mod+/`       | Toggle minimized tray   | `useMinimizedStore.toggleCollapsed`   |
 
 ## Map tools
 
