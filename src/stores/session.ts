@@ -1,6 +1,7 @@
 import type { Layout, PanelState, PanelType, Ulid } from "@/types/workspace";
 import type { DockviewApi, DockviewGroupPanel, IDockviewPanel } from "dockview-vue";
 
+import { nanoid } from "nanoid";
 import { defineStore } from "pinia";
 import { ref, shallowRef } from "vue";
 
@@ -9,9 +10,11 @@ import {
   floatWasHeaderless,
   getFloatAlpha as getFloatAlphaFromState,
   getFloatMaximized as getFloatMaximizedFromState,
+  getFloatOrigin as getFloatOriginFromState,
   getFloatPrevBox as getFloatPrevBoxFromState,
   withFloatAlpha,
   withFloatMaximized,
+  withFloatOrigin,
   withFloatPrevBox,
   withFloatPrevHeaderless,
 } from "@/modules/panels/float";
@@ -23,6 +26,7 @@ import { layoutRepo } from "@/modules/storage/layoutRepo";
 import { panelStateRepo } from "@/modules/storage/panelStateRepo";
 
 import { useLayoutStore } from "./layout";
+import { type CapturedPanel, type MinimizedEntry, useMinimizedStore } from "./minimized";
 import { usePanelStateStore } from "./panelState";
 import { useThemeStore } from "./theme";
 import { useWorkspaceStore } from "./workspace";
@@ -123,6 +127,7 @@ export const useSessionStore = defineStore("session", () => {
     applyHeaderlessGroups(api);
     applyFloatAlphas(api);
     applyFloatMaximize(api);
+    useMinimizedStore().clear(); // ephemeral tray: a load/switch empties it (D6)
 
     loadedLayoutId.value = layoutId;
     dirty.value = false;
@@ -150,23 +155,28 @@ export const useSessionStore = defineStore("session", () => {
   }
 
   /**
-   * Re-apply per-window see-through opacity after a load. Like
-   * `applyHeaderlessGroups`, dockview does not persist the `--cv-float-alpha`
-   * CSS var, so for every panel whose persisted state carries a non-default
-   * `floatAlpha` we set the var on its group element. Safe no-op when nothing is
-   * dimmed; restoring-guarded so it never dirties. (The CSS only takes effect on
-   * a `.dv-groupview-floating` group, so the var stays inert until the pane
-   * floats — a dimmed-then-docked pane reloads correct and re-floats dimmed.)
+   * Re-apply see-through opacity after a load. Like `applyHeaderlessGroups`,
+   * dockview does not persist the `--cv-float-alpha` CSS var, so we set it from
+   * the persisted `floatAlpha`. Opacity is a GROUP property, so we apply ONE alpha
+   * per group — the ACTIVE tab's — rather than per panel: a group whose tabs hold
+   * divergent persisted values (e.g. a tab dragged in and saved before it was
+   * activated/reconciled) then reloads to a single, deterministic glass instead of
+   * a last-writer-wins race over the shared var. Iterating GROUPS (not panels) also
+   * sets the var BEFORE the header-actions component's `immediate` watcher reads it,
+   * so an active dimmed tab never observes an unset var. Safe no-op when nothing is
+   * dimmed; restoring-guarded so it never dirties. (The CSS only takes effect on a
+   * `.dv-groupview-floating` group, so the var stays inert on a docked group until
+   * it floats — where `floatPanel` re-applies it.)
    */
   function applyFloatAlphas(api: DockviewApi): void {
     setRestoring(true);
     try {
       const panelStateStore = usePanelStateStore();
-      for (const ps of panelStateStore.listForLayout()) {
-        const alpha = getFloatAlphaFromState(ps.state);
-        if (alpha >= 1) continue;
-        const group = api.getPanel(ps.id)?.api.group;
-        if (group) group.element.style.setProperty("--cv-float-alpha", String(alpha));
+      for (const group of api.groups) {
+        const rep = group.activePanel ?? group.panels[0];
+        if (!rep) continue;
+        const alpha = getFloatAlphaFromState(panelStateStore.getState(rep.id)?.state);
+        if (alpha < 1) group.element.style.setProperty("--cv-float-alpha", String(alpha));
       }
     } finally {
       setRestoring(false);
@@ -485,6 +495,14 @@ export const useSessionStore = defineStore("session", () => {
     try {
       const panelStateStore = usePanelStateStore();
       const wasHeaderless = isHeaderless(panelStateStore.getState(panelId)?.state);
+      // Capture a surviving group-mate + this pane's tab index BEFORE the move so
+      // `dockBack` can return it to its ORIGINAL tab group AND position. Undefined
+      // when it's the sole pane (its group is destroyed) → dockBack opens a fresh group.
+      const groupPanels = panel.api.group.panels;
+      const originMate = groupPanels.find((p) => p.id !== panelId)?.id;
+      const origin = originMate
+        ? { mate: originMate, index: groupPanels.findIndex((p) => p.id === panelId) }
+        : undefined;
       const n = api.groups.filter((g) => g.api.location.type === "floating").length;
       api.addFloatingGroup(panel, { width: 520, height: 360, x: 120 + n * 28, y: 120 + n * 28 });
       panel.api.group.header.hidden = false; // a float always keeps a drag handle
@@ -498,15 +516,18 @@ export const useSessionStore = defineStore("session", () => {
       await panelStateStore.updateState(panelId, {
         // A fresh float is never maximized — clear any stale maximize state left
         // by a prior maximize → dock-back / reload-without-save.
-        state: withFloatPrevBox(
-          withFloatMaximized(
-            withFloatPrevHeaderless(
-              withHeaderless(panelStateStore.getState(panelId)?.state, false),
-              wasHeaderless,
+        state: withFloatOrigin(
+          withFloatPrevBox(
+            withFloatMaximized(
+              withFloatPrevHeaderless(
+                withHeaderless(panelStateStore.getState(panelId)?.state, false),
+                wasHeaderless,
+              ),
+              false,
             ),
-            false,
+            undefined,
           ),
-          undefined,
+          origin,
         ),
       });
     } finally {
@@ -517,12 +538,20 @@ export const useSessionStore = defineStore("session", () => {
   }
 
   /**
-   * Dock a floating pane back into the grid. `moveTo({ position: "right" })`
-   * with no target group creates a new right-edge GRID group and moves the panel
-   * into it (traced: dockviewGroupPanelApi.moveTo -> accessor.addGroup +
-   * moveGroupOrPanel). Floating-gated. Restores the pane's pre-float clean
-   * (header-less) status if it had one, clears the `floatPrevHeaderless` flag,
-   * and persists the result. Marks dirty (geometry changes toJSON).
+   * Dock a floating pane back into the grid. Prefers returning the pane to its
+   * ORIGINAL tab group — resolved via the surviving group-mate `floatPanel`
+   * captured (`floatOrigin`); `panel.api.moveTo({ group })` re-joins it as a tab.
+   * The origin only counts when it is a surviving, **headered** grid group: a CLEAN
+   * (header-hidden, single-pane) origin is skipped, since re-joining it would make
+   * an illegal 2-tab clean group with no tab strip. Falls back to
+   * `moveTo({ position: "right" })` — a fresh right-edge GRID group (traced:
+   * dockviewGroupPanelApi.moveTo -> accessor.addGroup + moveGroupOrPanel) — when the
+   * origin is gone/clean (the pane was its group's sole member, the group has since
+   * closed/floated/gone-clean, or it floated via native drag); only that fallback
+   * restores the pane's pre-float clean status. (Fallback is group-level, so docking
+   * one tab of a MULTI-tab float whose origin is gone brings the float's other tabs
+   * along — pre-existing behavior, and the common single-tab case is unaffected.)
+   * Floating-gated. Clears the maximize + origin flags. Marks dirty (toJSON changes).
    */
   async function dockBack(panelId: Ulid): Promise<boolean> {
     const api = dockviewApi.value;
@@ -532,21 +561,44 @@ export const useSessionStore = defineStore("session", () => {
     setRestoring(true);
     try {
       const panelStateStore = usePanelStateStore();
-      const restoreClean = floatWasHeaderless(panelStateStore.getState(panelId)?.state);
-      panel.api.group.api.moveTo({ position: "right" }); // new right-edge grid group
-      // `panel.api.group` is a live getter — it now resolves to that NEW grid group.
-      if (restoreClean) panel.api.group.header.hidden = true; // restore clean status
+      const state = panelStateStore.getState(panelId)?.state;
+      // Resolve the origin group via the captured group-mate; only a SURVIVING grid
+      // group counts (a floated/popped/closed mate falls back to a fresh group).
+      const origin = getFloatOriginFromState(state);
+      const originPanel = origin ? api.getPanel(origin.mate) : undefined;
+      // Only a surviving, HEADERED grid group is a valid re-join target — re-joining
+      // a CLEAN (header-hidden) single pane would make an illegal 2-tab clean group.
+      const originGroup =
+        originPanel &&
+        originPanel.api.location.type === "grid" &&
+        !originPanel.api.group.header.hidden
+          ? originPanel.api.group
+          : undefined;
+      let dockedHeaderless: boolean;
+      if (originGroup) {
+        // Re-join at the ORIGINAL tab index (dockview clamps if the group shrank).
+        panel.api.moveTo({ group: originGroup, index: origin?.index });
+        dockedHeaderless = false; // a headered host group → the re-joined pane is a normal tab
+      } else {
+        const restoreClean = floatWasHeaderless(state);
+        panel.api.group.api.moveTo({ position: "right" }); // new right-edge grid group
+        // `panel.api.group` is a live getter — it now resolves to that NEW grid group.
+        if (restoreClean) panel.api.group.header.hidden = true; // restore clean status
+        dockedHeaderless = restoreClean;
+      }
       await panelStateStore.updateState(panelId, {
-        // Clear maximize state too: a docked pane has no float to maximize, so it
-        // must never carry a stale `floatMaximized`/`floatPrevBox` (symmetry with
-        // floatPanel's fresh-float clear).
-        state: withFloatPrevBox(
-          withFloatMaximized(
-            withFloatPrevHeaderless(
-              withHeaderless(panelStateStore.getState(panelId)?.state, restoreClean),
+        // Clear maximize + origin: a docked pane has no float to maximize and no
+        // origin to return to (symmetry with floatPanel's fresh-float clear).
+        state: withFloatOrigin(
+          withFloatPrevBox(
+            withFloatMaximized(
+              withFloatPrevHeaderless(
+                withHeaderless(panelStateStore.getState(panelId)?.state, dockedHeaderless),
+                false,
+              ),
               false,
             ),
-            false,
+            undefined,
           ),
           undefined,
         ),
@@ -559,13 +611,19 @@ export const useSessionStore = defineStore("session", () => {
   }
 
   /**
-   * Set a floating pane's see-through opacity (the background alpha of its glass;
+   * Set a floating GROUP's see-through opacity (the background alpha of its glass;
    * 0 = fully transparent so only the content shows over the map, 1 = solid).
-   * Sets the `--cv-float-alpha` CSS var on the group element (the CSS only acts on
-   * floating groups) and persists `floatAlpha` to `PanelState.state` so it
-   * survives reload. Clamped to [0, 1]; marks dirty. No location gate — the var
-   * is inert on a docked group (CSS scoped to `.dv-groupview-floating`), and
-   * persisting now means a later re-float restores the dim. No-op for unknown id.
+   *
+   * Opacity is a GROUP property, not a per-window one: the glass `--cv-float-alpha`
+   * var lives on the ONE shared group element, so a multi-tab float renders every
+   * tab at the same alpha. We therefore set the var on the group element AND
+   * persist the same `floatAlpha` to EVERY panel in the group — so switching tabs
+   * reads a consistent value (a per-panel value would snap the opacity control
+   * back to the new tab's default while the group's glass stayed put). Persisting
+   * per-panel is how the alpha survives reload (re-applied by `applyFloatAlphas`).
+   * Clamped to [0, 1]; marks dirty once. No location gate — the var is inert on a
+   * docked group (CSS scoped to `.dv-groupview-floating`), and persisting now means
+   * a later re-float restores the dim. No-op for unknown id.
    */
   async function setFloatAlpha(panelId: Ulid, value: number): Promise<void> {
     const api = dockviewApi.value;
@@ -575,15 +633,67 @@ export const useSessionStore = defineStore("session", () => {
     const clamped = Math.min(1, Math.max(0, value));
     setRestoring(true);
     try {
-      panel.api.group.element.style.setProperty("--cv-float-alpha", String(clamped));
+      const group = panel.api.group;
+      group.element.style.setProperty("--cv-float-alpha", String(clamped));
       const panelStateStore = usePanelStateStore();
-      await panelStateStore.updateState(panelId, {
-        state: withFloatAlpha(panelStateStore.getState(panelId)?.state, clamped),
-      });
+      // Persist to every tab in the group (group-wide opacity), in PARALLEL so the
+      // guarded window doesn't widen with tab count. Reads snapshot synchronously at
+      // map-build time, before any await, so the writes don't race each other.
+      await Promise.all(
+        group.panels.map((p) =>
+          panelStateStore.updateState(p.id, {
+            state: withFloatAlpha(panelStateStore.getState(p.id)?.state, clamped),
+          }),
+        ),
+      );
     } finally {
       setRestoring(false);
     }
     markDirty();
+  }
+
+  /**
+   * Reconcile a float's now-active tab with the GROUP's shared opacity (called by
+   * the header on every float active-panel change). Float alpha is group-wide but
+   * persisted per-panel, so a tab DRAGGED into a float keeps its own value — which
+   * would desync the opacity control from the group's actual glass on activation.
+   *
+   * Reads the group's APPLIED alpha (the `--cv-float-alpha` var = the visible truth):
+   *  - var SET → the active tab adopts the group's value (a dragged-in tab takes the
+   *    group's look — dimmed OR solid).
+   *  - var UNSET on a LONE float (a tab torn off into its own new group) → push the
+   *    tab's OWN persisted dim onto the fresh var instead of snapping it to solid, so
+   *    a dimmed window keeps its dim when it forms a new group.
+   *  - var UNSET on a multi-tab group → reads as solid (1); a dragged-in tab adopts
+   *    solid.
+   *
+   * NO `restoring` guard: this writes only panel STATE (never dockview's `toJSON`, so
+   * it fires no `onDidLayoutChange`) and never calls `markDirty`, so it is dirty-neutral
+   * by construction. Guarding it would only risk swallowing a concurrent, legitimate
+   * `markDirty` — e.g. the very tab-drag that triggered this reconcile. The adopted
+   * value is committed DURABLY to panel state (it survives Discard), consistent with
+   * `setFloatAlpha`'s persistence model. No-op when in sync, unbound, or off a float.
+   */
+  async function syncActiveFloatAlpha(panelId: Ulid): Promise<void> {
+    const api = dockviewApi.value;
+    if (!api) return;
+    const panel = api.getPanel(panelId);
+    if (!panel || panel.api.location.type !== "floating") return;
+    const group = panel.api.group;
+    const panelStateStore = usePanelStateStore();
+    const current = getFloatAlphaFromState(panelStateStore.getState(panelId)?.state);
+    const applied = group.element.style.getPropertyValue("--cv-float-alpha").trim();
+    if (applied === "" && group.panels.length <= 1) {
+      // Lone float with no glass set (e.g. a torn-off tab): keep its own dim.
+      if (current < 1) group.element.style.setProperty("--cv-float-alpha", String(current));
+      return;
+    }
+    const parsed = applied === "" ? 1 : Number(applied);
+    const groupAlpha = Number.isFinite(parsed) ? Math.min(1, Math.max(0, parsed)) : 1;
+    if (Math.abs(current - groupAlpha) < 1e-6) return; // already in sync
+    await panelStateStore.updateState(panelId, {
+      state: withFloatAlpha(panelStateStore.getState(panelId)?.state, groupAlpha),
+    });
   }
 
   /** Current persisted float alpha for a panel (1 = solid when unset). */
@@ -671,6 +781,217 @@ export const useSessionStore = defineStore("session", () => {
   /** Whether a panel's floating window is currently maximized. */
   function getFloatMaximized(panelId: Ulid): boolean {
     return getFloatMaximizedFromState(usePanelStateStore().getState(panelId)?.state);
+  }
+
+  /** Snapshot one panel's id/type/title + a clone of its `PanelState.state`
+   *  (Phase 4c) — the serializable capture both minimize paths share. */
+  function capturePanel(m: { id: Ulid; title?: string }): CapturedPanel {
+    const ps = usePanelStateStore().getState(m.id);
+    return {
+      id: m.id,
+      panelType: ps?.panelType ?? null,
+      title: m.title ?? "",
+      state: structuredClone(ps?.state ?? {}),
+    };
+  }
+
+  /** Resolve a captured panel to its dockview component + title (Phase 4c). */
+  function componentFor(captured: CapturedPanel): { component: string; title: string } {
+    if (!captured.panelType) {
+      return { component: UNASSIGNED_PANEL_TYPE, title: captured.title || "Empty" };
+    }
+    const def = panelRegistry.get(captured.panelType);
+    return def
+      ? { component: captured.panelType, title: captured.title || def.title }
+      : { component: MISSING_PANEL_TYPE, title: captured.title || "Missing" };
+  }
+
+  /**
+   * Minimize the GROUP containing `panelId` into the tray (Track B Phase 4c).
+   * Captures every panel's id/type/title + a `structuredClone` of its
+   * `PanelState.state` and `appliedPresetIds` (so restore round-trips per-panel
+   * state), the group location, a floating box (if floating), and a best-effort
+   * grid re-dock anchor — THEN removes the group's panels via `api.removePanel`.
+   * The PanelState RECORDS survive the removal (no removal→delete path exists), so
+   * restore re-adds each panel by its original id and each re-mounted panel
+   * re-runs its own restore hook + preset cascade. Restoring-guarded; EPHEMERAL —
+   * does NOT markDirty (a minimize alone must not make the layout savable). Returns
+   * the entry (fresh nanoid id), or null when there's nothing to minimize.
+   */
+  function minimizeGroup(panelId: Ulid): MinimizedEntry | null {
+    const api = dockviewApi.value;
+    if (!api) return null;
+    const panel = api.getPanel(panelId);
+    if (!panel) return null;
+    const group = panel.api.group;
+    const location = group.api.location.type;
+    if (location !== "grid" && location !== "floating") return null; // popout/edge: skip
+
+    const panelStateStore = usePanelStateStore();
+    const members = [...group.panels];
+    if (members.length === 0) return null;
+    const panels: CapturedPanel[] = members.map((m) => capturePanel(m));
+    const activePanelId = group.activePanel?.id ?? members[0]!.id;
+    const activeType = panelStateStore.getState(activePanelId)?.panelType ?? null;
+    const def = activeType ? panelRegistry.get(activeType) : undefined;
+    const floatBox =
+      location === "floating" ? findFloatingGroup(api, panel)?.overlay.toJSON() : undefined;
+    // Best-effort grid re-dock anchor: a panel in ANOTHER group (it survives this
+    // removal), so restore can dock the group beside it; default side 'right'.
+    const referencePanelId = api.panels.find((p) => p.api.group !== group)?.id;
+
+    const entry: MinimizedEntry = {
+      id: nanoid(),
+      location,
+      floatBox,
+      originAnchor: { referencePanelId, direction: "right" },
+      panels,
+      activePanelId,
+      title: api.getPanel(activePanelId)?.title ?? def?.title ?? "Window",
+    };
+
+    const wasDirty = dirty.value;
+    setRestoring(true);
+    try {
+      for (const m of members) {
+        const p = api.getPanel(m.id);
+        if (p) api.removePanel(p);
+      }
+    } finally {
+      setRestoring(false);
+    }
+    // dockview fires `onDidLayoutChange` via `queueMicrotask` AFTER this sync
+    // block, so the (sync-scoped) restoring guard can't suppress its `markDirty`.
+    // Minimize is ephemeral view state — re-clear dirty on a microtask queued
+    // after dockview's (FIFO order), but ONLY if the layout was already clean, so
+    // a real pre-existing dirty flag is preserved.
+    if (!wasDirty) void Promise.resolve().then(() => clearDirty());
+    return entry;
+  }
+
+  /**
+   * Minimize a SINGLE panel — one tab — into the tray (Track B Phase 4c). The rest
+   * of its group stays docked. When the panel is its group's SOLE member this is
+   * identical to a whole-group minimize, so it delegates to `minimizeGroup`.
+   * Otherwise it captures just this panel and anchors it `within` a surviving
+   * sibling, so `restoreMinimized` re-joins the SAME group wherever it then lives
+   * (grid OR float) — no float box needed. Removes only this panel via
+   * `api.removePanel`; restoring-guarded; ephemeral (no markDirty, same deferred
+   * clear as `minimizeGroup`). Returns the entry (fresh nanoid id), or null.
+   */
+  function minimizePanel(panelId: Ulid): MinimizedEntry | null {
+    const api = dockviewApi.value;
+    if (!api) return null;
+    const panel = api.getPanel(panelId);
+    if (!panel) return null;
+    const group = panel.api.group;
+    const location = group.api.location.type;
+    if (location !== "grid" && location !== "floating") return null; // popout/edge: skip
+    const sibling = group.panels.find((p) => p.id !== panelId);
+    if (!sibling) return minimizeGroup(panelId); // sole member → whole-group minimize
+
+    const captured = capturePanel(panel);
+    const def = captured.panelType ? panelRegistry.get(captured.panelType) : undefined;
+    const entry: MinimizedEntry = {
+      id: nanoid(),
+      location: "grid", // re-joins via the within-anchor — lands wherever the sibling is
+      originAnchor: { referencePanelId: sibling.id, direction: "within" },
+      panels: [captured],
+      activePanelId: panel.id,
+      title: panel.title ?? def?.title ?? "Window",
+    };
+
+    const wasDirty = dirty.value;
+    setRestoring(true);
+    try {
+      api.removePanel(panel);
+    } finally {
+      setRestoring(false);
+    }
+    if (!wasDirty) void Promise.resolve().then(() => clearDirty());
+    return entry;
+  }
+
+  /**
+   * Restore a minimized group back into the dock (Track B Phase 4c). Re-adds each
+   * captured panel BY ITS ORIGINAL ID — the PanelState records survived minimize,
+   * so each re-mounted panel re-runs its own restore hook + preset cascade from the
+   * intact record. The first panel opens a new group beside the captured anchor
+   * (best-effort; a fresh group if the anchor is gone), the rest stack as tabs. A
+   * floating group is re-floated at its captured box (alpha re-applied); a clean
+   * single pane gets its header re-hidden. Restoring-guarded; ephemeral — no
+   * markDirty. Returns false only when the API is unbound / the entry is empty.
+   */
+  function restoreMinimized(entry: MinimizedEntry): boolean {
+    const api = dockviewApi.value;
+    if (!api) return false;
+    const [first, ...rest] = entry.panels;
+    if (!first) return false;
+
+    const wasDirty = dirty.value;
+    setRestoring(true);
+    try {
+      const refPanel = entry.originAnchor.referencePanelId
+        ? api.getPanel(entry.originAnchor.referencePanelId)
+        : undefined;
+      const firstComp = componentFor(first);
+      const added = api.addPanel({
+        id: first.id,
+        component: firstComp.component,
+        title: firstComp.title,
+        ...(refPanel
+          ? {
+              position: {
+                referenceGroup: refPanel.api.group,
+                direction: entry.originAnchor.direction,
+              },
+            }
+          : {}),
+      });
+      for (const m of rest) {
+        const comp = componentFor(m);
+        api.addPanel({
+          id: m.id,
+          component: comp.component,
+          title: comp.title,
+          position: { referenceGroup: added.api.group, direction: "within" },
+        });
+      }
+
+      if (entry.location === "floating") {
+        const box = entry.floatBox;
+        // Float the whole GROUP (not the single panel): `addFloatingGroup(panel)`
+        // would move only that panel into a new float, orphaning the rest in the
+        // grid — wrong for a multi-tab float (a user can drag tabs onto a float).
+        api.addFloatingGroup(
+          added.api.group,
+          box
+            ? { width: box.width, height: box.height, x: box.left ?? 120, y: box.top ?? 120 }
+            : { width: 520, height: 360, x: 120, y: 120 },
+        );
+        added.api.group.header.hidden = false; // a float always keeps its header
+        if (box) findFloatingGroup(api, added)?.position(box); // exact anchor fidelity
+        const alpha = getFloatAlphaFromState(first.state);
+        if (alpha < 1) added.api.group.element.style.setProperty("--cv-float-alpha", String(alpha));
+      } else if (
+        entry.panels.length === 1 &&
+        entry.originAnchor.direction !== "within" &&
+        isHeaderless(first.state)
+      ) {
+        // Restore a clean single pane to its OWN new group. Skipped for a
+        // within-restore (a minimized tab re-joining a sibling's group), where
+        // hiding the header would hide it for the whole host group.
+        added.api.group.header.hidden = true;
+      }
+
+      api.getPanel(entry.activePanelId)?.api.setActive();
+    } finally {
+      setRestoring(false);
+    }
+    // Same deferred-dirty handling as minimizeGroup: dockview's microtask
+    // `onDidLayoutChange` would dirty a clean layout after the sync guard resets.
+    if (!wasDirty) void Promise.resolve().then(() => clearDirty());
+    return true;
   }
 
   /**
@@ -804,9 +1125,13 @@ export const useSessionStore = defineStore("session", () => {
     floatPanel,
     dockBack,
     setFloatAlpha,
+    syncActiveFloatAlpha,
     getFloatAlpha,
     toggleFloatMaximize,
     getFloatMaximized,
+    minimizeGroup,
+    minimizePanel,
+    restoreMinimized,
     splitCleanNeighbor,
     discardChanges,
     switchWorkspace,

@@ -1,7 +1,7 @@
 # Track B Phase 4 — Group header actions (Close All · Float Maximize · Minimize‑to‑tray)
 
-> Status: **4a (Close All) shipped — #109.** **4b (Float Maximize) in progress —
-> this PR.** 4c (Minimize‑to‑tray) is next, its own PR.
+> Status: **4a (Close All) shipped — #109. 4b (Float Maximize) shipped — #110.**
+> **4c (Minimize‑to‑tray) in progress — this PR** (completes Phase 4).
 > Supersedes/realizes the Phase 4 notes in
 > [`track-b-dockview-windowing.md`](./track-b-dockview-windowing.md) (Decision
 > **D6**, §6.2) and the roadmap "Tab‑group header actions" task. Builds on Phase
@@ -12,10 +12,14 @@
 Per‑group **header‑action buttons**, rendered in dockview's per‑group
 right‑header‑actions slot, branched by the group's `location.type`:
 
-| Location        | Buttons (left→right)                                | Sub‑phase |
-| --------------- | --------------------------------------------------- | --------- |
-| `floating`      | eye/opacity (shipped 3b) · **Maximize** · **Close** | 4b        |
-| `grid` (tabbed) | **Close All** · **Minimize**                        | 4a · 4c   |
+| Location        | Buttons (left→right)                                       | Sub‑phase |
+| --------------- | ---------------------------------------------------------- | --------- |
+| `floating`      | eye/opacity (3b) · **Maximize** · **Minimize** · **Close** | 4b/4c¹    |
+| `grid` (tabbed) | **Minimize** · **Close All**                               | 4a/4c¹    |
+
+¹ Order revised post‑review (4c feedback round 2): a uniform **Close rightmost,
+Minimize immediately to its left** convention across both branches — see the "4c
+feedback round 2" note in §4. (Float opacity also became a GROUP property then.)
 
 `popout` / `edge` groups get neither (mirrors the existing maximize/float
 grid‑gating).
@@ -192,6 +196,92 @@ phase's decision) — in‑memory, cleared on `loadLayout`.
   the session `restoring` flag gates `markDirty` around capture/restore (it
   exists — `setRestoring`).
 
+### As shipped (4c — this PR)
+
+- **Decisive simplification:** removing a panel/group from dockview does NOT delete
+  its `PanelState` record (no removal→delete watcher exists). So minimize =
+  capture the group's structure + `api.removePanel` each panel; restore = re‑add
+  **by original id**, and every re‑mounted panel re‑runs its own restore hook +
+  preset cascade from the intact record. No manual per‑panel state re‑drive needed.
+- **Store/session split:** `stores/minimized.ts` holds only the serializable
+  `MinimizedEntry[]` (CLAUDE.md rule 4); the dockview work lives in two session
+  actions — `minimizeGroup(panelId): MinimizedEntry | null` (capture + remove) and
+  `restoreMinimized(entry): boolean` (re‑add). The two stores reference each other
+  lazily inside actions.
+- **Group‑level, multi‑panel:** captures every panel in tab order + the active id;
+  restore opens the first panel beside a best‑effort anchor (a surviving panel,
+  default `right`; fresh group if gone) and stacks the rest `within`. A clean
+  single pane re‑hides its header; a float re‑floats at its captured box (alpha
+  re‑applied). The bar shows the active title + a `+N` tab count.
+- **Dirty‑neutral (important):** dockview fires `onDidLayoutChange` via
+  `queueMicrotask` (an `AsapEvent`), so it lands AFTER the sync `setRestoring`
+  guard resets and would dirty a clean layout. Minimize/restore capture `wasDirty`
+  and, only when the layout was clean, re‑`clearDirty()` on a microtask queued
+  after dockview's (FIFO) — so an ephemeral minimize never makes the layout
+  savable, while a real pre‑existing dirty flag is preserved. (Verified at runtime.)
+- **Tray:** `MinimizedDock.vue` overlay in `AppShell`'s `<main>` (made `relative`),
+  `pointer-events-none absolute bottom-0 left-0 z-30`; each `MinimizedBar.vue` is
+  `pointer-events-auto`. Empty ⇒ renders nothing. `clear()` from `loadLayout`.
+- **Known v1 limitation:** explicitly Saving the layout WHILE a group is minimized
+  serializes the dock without it (the panel‑state record persists but is orphaned).
+  Since minimize is now dirty‑neutral, a clean layout isn't nudged to save, and a
+  reload restores the minimized groups to the dock from the (unchanged) layout.
+- **Verified (Stage 1, Playwright):** Minimize buttons on grid (Close All ·
+  Minimize) + float (eye · minimize · maximize · close); minimize a float → bar →
+  restore (Cesium WebGL survives the re‑mount); minimize a 5‑tab group → "Briefing
+  +4" bar → restore all tabs; bottom‑left placement above the status bar; minimize
+  is dirty‑neutral (clean stays clean, real dirty preserved); reload clears the
+  tray and restores the group. Unit: `minimizeGroup`/`restoreMinimized`
+  (single + multi‑panel + float round‑trip, ephemeral, unknown‑id null, the store
+  round‑trip, `loadLayout` clears the tray).
+
+#### Feedback round (post‑review on #111)
+
+- **Context‑menu minimize.** `DockContextMenu.vue` now offers Minimize from the
+  right‑click menu (grid + float), just after Maximize: a multi‑tab group shows
+  **Minimize tab** (`minimizePanel`) + **Minimize group** (`minimizeGroup`); a
+  single/clean pane shows one **Minimize**. The header buttons stay group‑level.
+- **Per‑tab minimize.** New `session.minimizePanel(panelId)` captures a SINGLE
+  tab and anchors it `direction: "within"` a surviving sibling, so
+  `restoreMinimized` re‑joins the **same group wherever it then lives** (grid OR
+  float) — no float box needed. It delegates to `minimizeGroup` when the tab is
+  its group's sole member. `originAnchor.direction` gained `"within"`, and the
+  clean‑pane header‑re‑hide in restore is skipped for a within‑restore (else it
+  would hide the host group's header). A shared `capturePanel()` backs both paths.
+- **Bar buttons.** `MinimizedBar.vue` now has two explicit buttons — **⤢ restore**
+  (`Maximize2`) and **× close** (label "Close `<title>`") — alongside the
+  still‑clickable title. Both the title and ⤢ restore; × discards.
+- **Verified (Stage 1, Playwright):** both menu shapes (clean → one Minimize;
+  multi‑tab → tab + group); Minimize tab on the active tab of a 7‑tab group keeps
+  the other 6 and adds a `within` bar; restore via the ⤢ button re‑joins the same
+  group, clears the tray, stays `dirty=false`; Minimize group → "Empty +6" bar; the
+  × discards it. Unit: +4 `minimizePanel` tests (12 minimize tests total; 415 all‑up).
+
+#### Feedback round 2 (header icon order + group opacity)
+
+- **Uniform icon order.** `CommandVueHeaderActions.vue` — **Close is always
+  rightmost, Minimize immediately to its left**, in BOTH branches: float =
+  `eye · maximize · minimize · close`; grid = `minimize · close`. (Supersedes the
+  table at the top of this doc.)
+- **Float opacity is a GROUP property.** Was stored per‑panel but applied to the
+  shared group element (`--cv-float-alpha`), so a multi‑tab float desynced on tab
+  switch (control snapped to 100% while the glass persisted). Now:
+  `setFloatAlpha` writes the same alpha to EVERY panel in the group (parallel) +
+  sets the var; a new `syncActiveFloatAlpha` (called by the header on float
+  active‑panel change) reads the applied var and adopts it onto the active tab
+  (a dragged‑in tab takes the group's look; a torn‑off lone float keeps its own
+  dim). It is dirty‑neutral with **no `restoring` guard** (so it can't swallow the
+  tab‑drag's own `markDirty`) but commits durably. `applyFloatAlphas` is now
+  group‑aware (one alpha per group, the active tab's) so a divergent group reloads
+  deterministically rather than last‑writer‑wins.
+- **Adversarial review:** 3 diverse‑lens reviewers (alpha‑correctness,
+  regressions, icon/UX) → approve(‑with‑fixes); the two IMPORTANT findings (sync
+  guard, applyFloatAlphas last‑writer‑wins) and the tear‑off minor are fixed above.
+- **Verified (Stage 1, Playwright):** grid order `minimize·close`, float order
+  `eye·maximize·minimize·close`; a 2‑tab float at 0.4 → both tabs read 40% and the
+  glass stays on tab switch (no 100% snap). Unit: +4 float‑alpha tests
+  (group‑wide write, drag‑in adopt, no‑op, tear‑off inherit).
+
 ---
 
 ## 5. Files
@@ -211,6 +301,11 @@ phase's decision) — in‑memory, cleared on `loadLayout`.
   `applyFloatMaximize` + `loadLayout` wiring + `floatPanel` clear) ·
   `CommandVueHeaderActions.vue` (float Maximize/Restore + Close) · tests
   (`session.spec.ts`, `float.spec.ts`) · this spec · roadmap.
-- **4c:** `stores/minimized.ts` · `MinimizedDock.vue` + `MinimizedBar.vue` ·
-  `AppShell.vue` (mount) · `CommandVueHeaderActions.vue` (Minimize) ·
-  `session.ts` (`loadLayout` clear) · tests.
+- **4c (this PR):** `stores/minimized.ts` (store + `MinimizedEntry`/`CapturedPanel`;
+  `minimizeGroup` + `minimizePanel`) · `components/layout/MinimizedDock.vue` +
+  `MinimizedBar.vue` (⤢ restore + × close) · `AppShell.vue` (mount, `<main>`
+  relative) · `CommandVueHeaderActions.vue` (Minimize on both branches) ·
+  `dock/DockContextMenu.vue` (Minimize tab / Minimize group) · `session.ts`
+  (`minimizeGroup` + `minimizePanel` + `restoreMinimized` + `componentFor` +
+  `capturePanel` + the `within` anchor + `loadLayout` clear + the deferred‑dirty
+  fix) · `session.spec.ts` (12 minimize tests) · this spec · roadmap.

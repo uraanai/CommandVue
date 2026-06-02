@@ -32,6 +32,49 @@ export function withFloatPrevHeaderless(
 }
 
 /**
+ * Where a floated pane came from (Track B), captured when it was floated so
+ * `dockBack` can return it to its ORIGINAL tab group AND tab position rather than
+ * spawning a fresh right-edge group:
+ *  - `mate` — a SURVIVING group-mate's panel id, which resolves the origin group.
+ *    Panel ids are stable (group ids are not), so it survives reload (best-effort:
+ *    after a reload + rearrangement that mate may sit elsewhere, so dock-back lands
+ *    beside it rather than in a guaranteed-identical group).
+ *  - `index` — the pane's tab index within that group at float time, so it re-docks
+ *    in place (dockview clamps to the group's current size).
+ * Undefined when the pane was its group's SOLE member (the origin group is destroyed
+ * by the float) or it floated via a native drag (no action hook); `dockBack` then
+ * falls back to a fresh group.
+ */
+export const FLOAT_ORIGIN_KEY = "floatOrigin" as const;
+
+export interface FloatOrigin {
+  mate: string;
+  index: number;
+}
+
+/** Read the captured float origin (`{ mate, index }`), or undefined. */
+export function getFloatOrigin(
+  state: Record<string, unknown> | undefined,
+): FloatOrigin | undefined {
+  const v = state?.[FLOAT_ORIGIN_KEY] as Partial<FloatOrigin> | undefined;
+  if (v && typeof v.mate === "string" && v.mate !== "" && typeof v.index === "number") {
+    return { mate: v.mate, index: v.index };
+  }
+  return undefined;
+}
+
+/** Record (or clear, when `origin` is undefined) the float origin. */
+export function withFloatOrigin(
+  state: Record<string, unknown> | undefined,
+  origin: FloatOrigin | undefined,
+): Record<string, unknown> {
+  const next: Record<string, unknown> = { ...(state ?? {}) };
+  if (origin && origin.mate) next[FLOAT_ORIGIN_KEY] = { mate: origin.mate, index: origin.index };
+  else delete next[FLOAT_ORIGIN_KEY];
+  return next;
+}
+
+/**
  * Per-window see-through opacity (Track B Phase 3b). `floatAlpha` (0..1) is the
  * BACKGROUND alpha of a floating pane's glass — 1 = solid, 0 = fully transparent
  * (only the content shows; the map reads straight through). Applied at runtime as
