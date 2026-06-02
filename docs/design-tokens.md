@@ -66,7 +66,13 @@ Six families: `blue`, `teal`, `green`, `amber`, `red`, `violet`. Each with 11 st
 
 ### Color — PrimeVue surface palette
 
-`--color-p-surface-0…950` is required by `tailwindcss-primeui` for Volt-vendored components. Mirrors `slate-*`. Volt files reference these via `bg-surface-0 dark:bg-surface-900`.
+`--color-p-surface-0…950` is the **authored** surface ramp for Volt-vendored components — a fixed light→dark scale (defaults to `slate-*`, re-emitted tinted by every generated theme). Volt files reference it via `bg-surface-0 dark:bg-surface-900` etc.
+
+Three traps to know (the reason custom themes used to leave modals grey — the "surface seam", fixed in Track A A1a):
+
+1. `tailwindcss-primeui` inlines `var(--p-surface-N)` (single `p`) at each Volt use site (`@theme inline`), so the **only** runtime lever on a Volt surface is `--p-surface-N`. `main.css` bridges it to the authored ramp: `--p-surface-N: var(--color-p-surface-N)`. Editing `--color-p-surface-N` (what the generator emits) recolors Volt; editing the app's `--color-surface-*` does not.
+2. There are **two** `--color-surface-*` families: the app's 4-rung semantic ladder (`base/raised/overlay/sunken`, inline-overridable) and PrimeUI's numeric `--color-surface-N` (a `@theme inline` alias of `--p-surface-N`, **not** inline-overridable — never put it in a theme manifest).
+3. Inside a floating panel, `dockview.css` zeroes the four app surface tokens to `transparent` (so the panel shows the glass). The `--p-surface-*` ramp is deliberately exempt, so Volt modals/menus opened from a float stay opaque.
 
 ### Spacing
 

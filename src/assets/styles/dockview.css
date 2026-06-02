@@ -49,8 +49,11 @@
   --dv-inactivegroup-hiddenpanel-tab-color: var(--color-muted);
 
   --dv-separator-border: var(--color-border);
-  --dv-paneview-active-outline-color: var(--color-accent-500);
-  --dv-drag-over-background-color: color-mix(in srgb, var(--color-accent-500) 15%, transparent);
+  /* Active-panel outline + drag-over highlight follow the THEME's semantic
+     interactive accent (Track A A1a) rather than the raw `--color-accent-500`
+     primitive, so a custom theme recolors them with everything else. */
+  --dv-paneview-active-outline-color: var(--color-interactive);
+  --dv-drag-over-background-color: color-mix(in srgb, var(--color-interactive) 15%, transparent);
   --dv-drag-over-border-color: var(--color-accent-500);
 
   --dv-icon-hover-background-color: var(--color-surface-sunken);
@@ -89,7 +92,12 @@
      panel's own `bg-surface*` shows that glass (and whatever is behind the float)
      instead of an opaque fill — without stacking a second tint layer. Foreground
      tokens (text / icon / border colors) are untouched, so content stays fully
-     legible. */
+     legible.
+     NOTE (Track A A1a): this block zeroes ONLY these four app surface tokens. Volt
+     surfaces (Dialog / Menu / inputs) paint via the separate `--p-surface-*` ramp,
+     which is intentionally NOT listed here — so a Volt modal/menu opened from
+     inside a floating panel keeps an opaque, theme-colored background. Do not add
+     `--p-surface-*` / `--color-p-surface-*` to this list. */
   --color-surface: transparent;
   --color-surface-base: transparent;
   --color-surface-sunken: transparent;
