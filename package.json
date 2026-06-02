@@ -72,7 +72,7 @@
     "@orbat-mapper/convert-symbology": "latest",
     "@primevue/icons": "^4.5.5",
     "@tanstack/vue-table": "^8.21.3",
-    "@tanstack/vue-virtual": "^3.13.25",
+    "@tanstack/vue-virtual": "^3.13.27",
     "@turf/area": "^7.0.0",
     "@turf/bbox": "^7.0.0",
     "@turf/bearing": "^7.0.0",
