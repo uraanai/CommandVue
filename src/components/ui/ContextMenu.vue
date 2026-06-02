@@ -29,6 +29,12 @@ interface PtSlot {
 interface Props {
   model: MenuItem[];
   pt?: Record<string, PtSlot>;
+  /**
+   * Where PrimeVue mounts the overlay (default `body`). Pass another window's
+   * `document.body` to render the menu inside a dockview pop-out window instead of
+   * teleporting it to the opener's monitor (Track B Phase 6c).
+   */
+  appendTo?: HTMLElement | "body" | "self";
 }
 
 const props = defineProps<Props>();
@@ -86,7 +92,7 @@ const mergedPt = computed(() => {
 </script>
 
 <template>
-  <PvContextMenu ref="cm" :model="model" unstyled :pt="mergedPt">
+  <PvContextMenu ref="cm" :model="model" unstyled :pt="mergedPt" :append-to="appendTo">
     <template v-if="$slots.item" #item="slotProps">
       <slot name="item" v-bind="slotProps" />
     </template>

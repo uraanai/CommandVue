@@ -1,267 +1,38 @@
 <script setup lang="ts">
-import type { DockviewApi, IDockviewPanel } from "dockview-vue";
-import type { MenuItem } from "primevue/menuitem";
+import type { DockviewApi } from "dockview-vue";
 
-import {
-  ChevronRight,
-  Columns2,
-  ExternalLink,
-  Maximize2,
-  Minimize,
-  Minimize2,
-  Minus,
-  PanelTop,
-  PanelTopClose,
-  PictureInPicture2,
-  PinOff,
-  SquareArrowOutUpRight,
-  X,
-} from "@lucide/vue";
-import { onUnmounted, ref, watch, type Component } from "vue";
+import { onUnmounted, ref, watch } from "vue";
 
-import ContextMenu from "@/components/ui/ContextMenu.vue";
-import { useMinimizedStore } from "@/stores/minimized";
-import { useSessionStore } from "@/stores/session";
-
-import { cleanPaneControls } from "./cleanPaneControls";
-import { floatPaneControl } from "./floatPaneControls";
-import { tabbedPaneControls } from "./tabbedPaneControls";
+import DockMenu from "./DockMenu.vue";
+import { useDockMenuModel, type DockMenuItem } from "./useDockMenuModel";
 
 /**
- * Right-click context menu for BOTH dock pane types.
+ * Right-click context menu for BOTH dock pane types, in the MAIN window.
  *
  * CUSTOM by necessity: dockview exposes no slot to inject per-group chrome on
  * a header-hidden group, and the maintainer wants ZERO persistent chrome over
  * the map. So instead of an always-mounted overlay we attach a single
  * `contextmenu` listener to the dock root (supplied via the `root` PROP -
- * `DockviewApi` itself has no `.element`) and open a PrimeVue `ContextMenu`
- * at the cursor with a model that depends on the right-clicked group's mode:
+ * `DockviewApi` itself has no `.element`) and open the shared `DockMenu` at the
+ * cursor with a model that depends on the right-clicked group's mode.
  *
- * Both menus share consistent anchors - the header toggle is always first,
- * Maximize is always the item just before the separator, and Close is always
- * last - so those never move between right-clicks. The tabbed menu carries one
- * extra state-specific item (Close others); the clean menu has none:
+ * The model itself (clean vs tabbed, the Float / Pop out / Maximize / Minimize /
+ * Close items, the always-first header toggle + always-last Close anchors) lives
+ * in `useDockMenuModel` so the per-pop-out-window menu (`DockPopoutContextMenu`,
+ * Track B Phase 6c) renders from the SAME definition. The model is rebuilt on
+ * every right-click, so live labels (Maximize/Restore from `isMaximized()`) are
+ * always fresh and no `onDidMaximizedGroupChange` subscription is needed.
  *
- *  - CLEAN group (`header.hidden === true`): Show header / Maximize / -- /
- *    Close. There is deliberately NO "Split" item: adding a neighbor is done
- *    via the Add-Component menu / command palette + dockview's native
- *    drag-tab-to-edge split. A Split submenu would not scale to a large
- *    component catalog (hundreds of types in a long, unsearchable list).
- *  - TABBED group (`header.hidden === false`): Hide header / Close others /
- *    Maximize / -- / Close. "Hide header" routes through the same
- *    `session.toggleHeaderless`, completing the clean<->tabbed round-trip.
- *
- * The Maximize/Restore label is always read fresh from `panel.api.isMaximized()`
- * at menu-open time, and the model is rebuilt on every right-click - so we do
- * NOT subscribe to `api.onDidMaximizedGroupChange`. There is no persistent
- * always-mounted control whose label could go stale; a subscription would be
- * dead weight. (The event is still modeled as a no-op in the test fake.)
- *
- * Pure label/disabled logic lives in `cleanPaneControls.ts` /
- * `tabbedPaneControls.ts` (unit-tested); iteration + maximize logic lives in
- * unit-tested session actions (`closeOthersInGroup`, `toggleMaximize`). This
- * component is Stage-1 Playwright-verified per the CommandVue verification
- * protocol - no unit test.
+ * Stage-1 Playwright-verified per the CommandVue verification protocol - no unit
+ * test (the pure label/disabled logic in `*PaneControls.ts` is unit-tested).
  */
 const props = defineProps<{ api: DockviewApi | null; root: HTMLElement | null }>();
-const session = useSessionStore();
-const minimized = useMinimizedStore();
 
-/** Menu item shape with the Lucide component attached for the `#item` slot. */
-type DockMenuItem = MenuItem & { lucide?: Component };
+const { buildModelForGroup } = useDockMenuModel();
 
-const contextMenuRef = ref<InstanceType<typeof ContextMenu> | null>(null);
+const menuRef = ref<InstanceType<typeof DockMenu> | null>(null);
 const model = ref<DockMenuItem[]>([]);
 const disposers: Array<() => void> = [];
-
-/**
- * Maximize/Restore item shared by both menus. Label + icon flip on the LIVE state,
- * read fresh on each right-click (the menu model is rebuilt on open), so no
- * subscription is needed:
- *  - **grid** group → dockview's native group maximize (`session.toggleMaximize`,
- *    state from `panel.api.isMaximized()`).
- *  - **floating** group → the custom fill-the-dock ⇄ restore (Track B Phase 4b,
- *    `session.toggleFloatMaximize`, state from `session.getFloatMaximized()`) — the
- *    SAME action as the float header's maximize icon, so the two surfaces agree.
- *  - **pop-out / edge** group → disabled (no maximize concept).
- */
-function maximizeItem(panel: IDockviewPanel): DockMenuItem {
-  const location = panel.api.location.type;
-  if (location === "floating") {
-    const maximized = session.getFloatMaximized(panel.id);
-    return {
-      label: maximized ? "Restore" : "Maximize",
-      lucide: maximized ? Minimize2 : Maximize2,
-      command: () => void session.toggleFloatMaximize(panel.id),
-    };
-  }
-  const maximized = panel.api.isMaximized();
-  return {
-    label: maximized ? "Restore" : "Maximize",
-    lucide: maximized ? Minimize2 : Maximize2,
-    disabled: location !== "grid",
-    command: () => void session.toggleMaximize(panel.id),
-  };
-}
-
-/**
- * Float / Dock-back item shared by both menus. On a grid pane it reads "Float
- * window" (disabled off-grid, mirroring maximizeItem); on a floating pane it
- * reads "Dock back". Group-location op, so it sits just before maximizeItem.
- */
-function floatItem(panel: IDockviewPanel): DockMenuItem {
-  const control = floatPaneControl({ location: panel.api.location.type });
-  return {
-    label: control.label,
-    lucide: control.icon === "PinOff" ? PinOff : PictureInPicture2,
-    disabled: control.disabled,
-    command: () =>
-      void (control.id === "dock-back" ? session.dockBack(panel.id) : session.floatPanel(panel.id)),
-  };
-}
-
-/**
- * Pop-out item(s) shared by both menus (Track B Phase 6a). Mirrors `minimizeItems`:
- * a multi-tab group offers BOTH "Pop out tab" (just the active panel → its own
- * window; the group keeps the rest) and "Pop out group" (every tab → one window);
- * a single-panel group collapses the two into one "Pop out to window". Each opens a
- * SEPARATE browser window (`session.popOutPanel` / `popOutGroup` →
- * `addPopoutGroup`) with the theme mirrored in; closing that window re-docks the
- * content. Group/panel-location op, so it sits beside Float.
- */
-function popOutItems(panel: IDockviewPanel, panelsInGroup: number): DockMenuItem[] {
-  if (panelsInGroup > 1) {
-    return [
-      {
-        label: "Pop out tab",
-        lucide: ExternalLink,
-        command: () => void session.popOutPanel(panel.id),
-      },
-      {
-        label: "Pop out group",
-        lucide: SquareArrowOutUpRight,
-        command: () => void session.popOutGroup(panel.id),
-      },
-    ];
-  }
-  return [
-    {
-      label: "Pop out to window",
-      lucide: ExternalLink,
-      command: () => void session.popOutGroup(panel.id),
-    },
-  ];
-}
-
-/**
- * Minimize item(s) shared by both menus (Track B Phase 4c). For a multi-tab group
- * it offers BOTH "Minimize tab" (just the active panel — re-joins its group on
- * restore) and "Minimize group" (every tab → one tray bar); for a single-panel
- * group the two coincide, so it offers one "Minimize". Each collapses to the
- * bottom-left tray and works from a grid OR float source (popout/edge are skipped
- * by the store actions). Sits between Maximize and the separator/Close.
- */
-function minimizeItems(panel: IDockviewPanel, panelsInGroup: number): DockMenuItem[] {
-  if (panelsInGroup > 1) {
-    return [
-      {
-        label: "Minimize tab",
-        lucide: Minus,
-        command: () => void minimized.minimizePanel(panel.id),
-      },
-      {
-        label: "Minimize group",
-        lucide: Minimize,
-        command: () => void minimized.minimizeGroup(panel.id),
-      },
-    ];
-  }
-  return [
-    { label: "Minimize", lucide: Minus, command: () => void minimized.minimizeGroup(panel.id) },
-  ];
-}
-
-/**
- * CLEAN pane menu (group.header.hidden === true). Show header / Maximize / -- /
- * Close - sharing the header-toggle-first, Maximize-then-Close anchors with
- * buildTabbedModel. No Split item by design: adding a neighbor is done from the
- * Add-Component menu + dockview drag-to-split (a Split submenu would not scale
- * to a large component catalog). `totalPanels` drives the Close empty-workspace
- * guard; the group is always clean here, so Show-header is derived with
- * `isHeaderless: true`.
- */
-function buildCleanModel(panel: IDockviewPanel, totalPanels: number): DockMenuItem[] {
-  const controls = cleanPaneControls({ isHeaderless: true, totalPanels });
-  const showHeader = controls.find((c) => c.id === "toggle-header");
-  const close = controls.find((c) => c.id === "close");
-
-  return [
-    {
-      label: showHeader?.label ?? "Show header",
-      lucide: PanelTop,
-      command: () => void session.toggleHeaderless(panel.id),
-    },
-    floatItem(panel),
-    // Clean pane is a single visible pane → one "Pop out to window" (whole group).
-    ...popOutItems(panel, 1),
-    maximizeItem(panel),
-    // Clean pane is a single visible pane → one "Minimize" (whole group).
-    ...minimizeItems(panel, 1),
-    { separator: true },
-    {
-      label: "Close",
-      lucide: X,
-      disabled: close?.disabled ?? false,
-      command: () => void session.removePanelGuarded(panel.id),
-    },
-  ];
-}
-
-/**
- * TABBED pane menu (group.header.hidden === false). Mirrors buildCleanModel's
- * skeleton: Hide header / Close others / Maximize / -- / Close. `panelsInGroup`
- * drives the Close-others guard; `totalPanels` drives the Close empty-workspace
- * guard.
- */
-function buildTabbedModel(
-  panel: IDockviewPanel,
-  panelsInGroup: number,
-  totalPanels: number,
-): DockMenuItem[] {
-  const controls = tabbedPaneControls({
-    totalPanels,
-    panelsInGroup,
-  });
-  const close = controls.find((c) => c.id === "close")!;
-  const closeOthers = controls.find((c) => c.id === "close-others")!;
-
-  return [
-    {
-      label: "Hide header",
-      lucide: PanelTopClose,
-      command: () => void session.toggleHeaderless(panel.id),
-    },
-    {
-      label: closeOthers.label,
-      lucide: Columns2,
-      disabled: closeOthers.disabled,
-      command: () => void session.closeOthersInGroup(panel.id),
-    },
-    floatItem(panel),
-    // Multi-tab group → "Pop out tab" + "Pop out group"; single → one "Pop out".
-    ...popOutItems(panel, panelsInGroup),
-    maximizeItem(panel),
-    // Multi-tab group → "Minimize tab" + "Minimize group"; single → one "Minimize".
-    ...minimizeItems(panel, panelsInGroup),
-    { separator: true },
-    {
-      label: close.label,
-      lucide: X,
-      disabled: close.disabled,
-      command: () => void session.removePanelGuarded(panel.id),
-    },
-  ];
-}
 
 function onContextMenu(event: MouseEvent): void {
   const api = props.api;
@@ -271,15 +42,13 @@ function onContextMenu(event: MouseEvent): void {
   // Over a gutter or no group at all: do nothing, let the event bubble.
   if (!group) return;
 
-  const panel = group.activePanel ?? group.panels[0];
-  if (!panel) return;
+  const next = buildModelForGroup(group, api.panels.length);
+  if (next.length === 0) return;
 
   event.preventDefault();
   event.stopPropagation();
-  model.value = group.header.hidden
-    ? buildCleanModel(panel, api.panels.length)
-    : buildTabbedModel(panel, group.panels.length, api.panels.length);
-  contextMenuRef.value?.show(event);
+  model.value = next;
+  menuRef.value?.show(event);
 }
 
 watch(
@@ -299,23 +68,5 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <ContextMenu ref="contextMenuRef" :model="model" data-testid="dock-context-menu">
-    <template #item="{ item, props: itemProps, hasSubmenu }">
-      <a
-        v-bind="itemProps.action"
-        :class="[
-          'flex w-full items-center gap-2 text-[length:var(--density-font-size)]',
-          (item as DockMenuItem).disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer',
-        ]"
-      >
-        <component
-          :is="(item as DockMenuItem).lucide"
-          v-if="(item as DockMenuItem).lucide"
-          class="text-muted size-3.5"
-        />
-        <span class="flex-1">{{ item.label }}</span>
-        <ChevronRight v-if="hasSubmenu" class="text-faint size-3.5" />
-      </a>
-    </template>
-  </ContextMenu>
+  <DockMenu ref="menuRef" :model="model" />
 </template>

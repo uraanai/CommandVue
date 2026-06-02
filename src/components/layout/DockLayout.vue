@@ -11,10 +11,12 @@ import {
 } from "dockview-vue";
 import { onUnmounted, provide, ref, shallowRef } from "vue";
 
+import { usePopoutWindows } from "@/composables/usePopoutWindows";
 import { useLayoutStore } from "@/stores/layout";
 import { useSessionStore } from "@/stores/session";
 
 import DockContextMenu from "./dock/DockContextMenu.vue";
+import DockPopoutContextMenu from "./dock/DockPopoutContextMenu.vue";
 import { resetLayoutKey } from "./keys";
 
 // Dock-root element for the clean-pane context menu (DockviewApi has no
@@ -22,6 +24,10 @@ import { resetLayoutKey } from "./keys";
 // its `contextmenu` listener once dockview is ready.
 const rootEl = ref<HTMLElement | null>(null);
 const boundApi = shallowRef<DockviewApi | null>(null);
+
+// Open pop-out windows — each gets its own context-menu host so right-clicking
+// inside a pop-out shows our menu, not the browser's native one (Phase 6c).
+const popoutWindows = usePopoutWindows();
 
 // Panel components are registered globally in `main.ts` via `app.component()`
 // because dockview-vue 6 dropped the v4 `:components` prop and instead resolves
@@ -99,5 +105,13 @@ maybePromptUnload(session.getDockviewApi());
       @ready="onReady"
     />
     <DockContextMenu :api="boundApi" :root="rootEl" />
+    <template v-if="boundApi">
+      <DockPopoutContextMenu
+        v-for="entry in popoutWindows"
+        :key="entry.id"
+        :api="boundApi"
+        :win="entry.win"
+      />
+    </template>
   </div>
 </template>

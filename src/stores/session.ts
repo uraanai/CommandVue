@@ -5,7 +5,7 @@ import { nanoid } from "nanoid";
 import { defineStore } from "pinia";
 import { ref, shallowRef } from "vue";
 
-import { registerPopoutWindow, unregisterPopoutWindow } from "@/composables/usePopoutThemeSync";
+import { trackPopoutWindow, untrackPopoutWindow } from "@/composables/usePopoutWindows";
 import {
   type FloatBox,
   floatWasHeaderless,
@@ -330,7 +330,11 @@ export const useSessionStore = defineStore("session", () => {
       let group = panel.api.group;
       const makingClean = !group.header.hidden;
       if (makingClean && group.panels.length > 1) {
-        // A clean pane is single-panel — split this panel to its own group.
+        // A clean pane is single-panel — split this panel to its own group. A
+        // pop-out window hosts ONE group with nowhere to split, so `api.addGroup()`
+        // would land in the MAIN grid and yank the tab out of the pop-out (the
+        // "vanishing tabs" bug). Refuse the split there; the menu disables it too.
+        if (group.api.location.type === "popout") return;
         panel.api.moveTo({ group: api.addGroup(), skipSetActive: true });
         group = panel.api.group;
       }
@@ -654,8 +658,8 @@ export const useSessionStore = defineStore("session", () => {
           height: Math.max(360, Math.round(rect.height)),
         },
         popoutUrl: "/popout.html",
-        onDidOpen: ({ window: win }) => registerPopoutWindow(win),
-        onWillClose: ({ window: win }) => unregisterPopoutWindow(win),
+        onDidOpen: ({ window: win }) => trackPopoutWindow(win),
+        onWillClose: ({ window: win }) => untrackPopoutWindow(win),
       });
     } finally {
       setRestoring(false);

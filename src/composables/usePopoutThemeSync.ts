@@ -16,8 +16,9 @@
  * have to hook either function. Registered windows are mirrored immediately
  * on open and on every subsequent change; closed windows are pruned.
  *
- * Module-level singletons (like `useTheme`) so the session pop-out actions'
- * `onDidOpen` / `onWillClose` and `AppShell`'s init share one observer + window set.
+ * Module-level singletons (like `useTheme`) so `usePopoutWindows` (which fans the
+ * pop-out `onDidOpen` / `onWillClose` lifecycle here) and `AppShell`'s init share
+ * one observer + window set.
  */
 
 const MIRRORED_ATTRS = ["data-theme", "data-theme-id", "data-density"] as const;
