@@ -612,29 +612,37 @@ export const useSessionStore = defineStore("session", () => {
   }
 
   /**
-   * Pop a group out into a SEPARATE browser window (Track B Phase 6a). dockview's
-   * `addPopoutGroup` relocates the group's LIVE DOM (appendChild — panel handles
-   * stay valid, no re-instantiation) into a child window opened at `/popout.html`
-   * (a same-origin blank page; dockview rejects cross-origin/data/blob URLs) and
-   * copies the opener's stylesheets in. The inline theme TOKENS aren't in those
-   * sheets, so each pop-out is registered with `usePopoutThemeSync`, which mirrors
+   * Pop content out into a SEPARATE browser window (Track B Phase 6a). dockview's
+   * `addPopoutGroup` relocates LIVE DOM (appendChild — panel handles stay valid, no
+   * re-instantiation) into a child window opened at `/popout.html` (a same-origin
+   * blank page; dockview rejects cross-origin/data/blob URLs) and copies the
+   * opener's stylesheets in. The inline theme TOKENS aren't in those sheets, so
+   * each pop-out is registered with `usePopoutThemeSync`, which mirrors
    * `data-theme`/`-id`/`-density` + the inline `--*` props and keeps them live on
    * theme changes. MUST fire from a real user gesture; returns false when the
    * browser blocks the window. Marks dirty (pop-outs are in `toJSON`).
    *
+   * `item` is the thing relocated — a single PANEL pops just that tab (its group
+   * keeps the rest), a whole GROUP pops every tab; `rectFrom` is the on-screen group
+   * whose bounds seed the new window's position. dockview opens each pop-out under a
+   * window name unique per target group (`${dockviewId}-${groupId}`), so concurrent
+   * pop-outs that all load `/popout.html` still land in SEPARATE windows — the URL
+   * is just the blank template, the window NAME is what disambiguates them.
+   *
    * NOTE: map panels' WebGL context can drop on the cross-document move; its
    * re-init is Phase 6b. Closing the pop-out window re-docks the content natively.
    */
-  async function popOut(panelId: Ulid): Promise<boolean> {
+  async function doPopOut(
+    item: IDockviewPanel | DockviewGroupPanel,
+    rectFrom: DockviewGroupPanel,
+  ): Promise<boolean> {
     const api = dockviewApi.value;
     if (!api) throw new Error("Dockview API not bound");
-    const panel = api.getPanel(panelId);
-    if (!panel) return false;
-    const rect = panel.api.group.element.getBoundingClientRect();
+    const rect = rectFrom.element.getBoundingClientRect();
     setRestoring(true);
     let opened = false;
     try {
-      opened = await api.addPopoutGroup(panel.api.group, {
+      opened = await api.addPopoutGroup(item, {
         // `position` is VIEWPORT-relative: dockview adds `window.screenX/screenY`
         // itself when opening the window (its own default path uses
         // `getBoundingClientRect()`), so adding it here too would double the offset
@@ -654,6 +662,29 @@ export const useSessionStore = defineStore("session", () => {
     }
     if (opened) markDirty();
     return opened;
+  }
+
+  /** Pop out the WHOLE group that holds `panelId` (every tab → one window). */
+  async function popOutGroup(panelId: Ulid): Promise<boolean> {
+    const api = dockviewApi.value;
+    if (!api) throw new Error("Dockview API not bound");
+    const panel = api.getPanel(panelId);
+    if (!panel) return false;
+    return doPopOut(panel.api.group, panel.api.group);
+  }
+
+  /**
+   * Pop out ONLY panel `panelId` (one tab); its group keeps the rest docked. Mirrors
+   * `floatPanel` / `minimizePanel`: passing the panel (not its group) to
+   * `addPopoutGroup` relocates just that tab into a fresh pop-out group. When the
+   * panel is its group's sole tab this is equivalent to `popOutGroup`.
+   */
+  async function popOutPanel(panelId: Ulid): Promise<boolean> {
+    const api = dockviewApi.value;
+    if (!api) throw new Error("Dockview API not bound");
+    const panel = api.getPanel(panelId);
+    if (!panel) return false;
+    return doPopOut(panel, panel.api.group);
   }
 
   /**
@@ -1174,7 +1205,8 @@ export const useSessionStore = defineStore("session", () => {
     toggleMaximize,
     floatPanel,
     dockBack,
-    popOut,
+    popOutGroup,
+    popOutPanel,
     setFloatAlpha,
     syncActiveFloatAlpha,
     getFloatAlpha,
