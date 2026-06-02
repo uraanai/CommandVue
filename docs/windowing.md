@@ -8,6 +8,8 @@ For the bigger picture of workspaces, layouts, and presets, read the
 [User guide](/user-guide) and [Concepts](/concepts). For building new panel
 types, see [Panels](/panels).
 
+![The CommandVue dock — a tabbed data group beside a clean 3D-globe pane](./public/windowing/01-overview.webp)
+
 ## The dock — mental model
 
 Everything between the menu bar and the status bar is the **dock**. The dock
@@ -82,6 +84,8 @@ a [pop-out window](#pop-out-to-a-separate-browser-window) the same menu opens (n
 the browser's native one), with the window items collapsed to a single **Dock
 back**.
 
+![The dock right-click menu open on a tab](./public/windowing/02-context-menu.webp)
+
 The items you may see:
 
 | Item                                  | What it does                                                                                                                                                       |
@@ -100,6 +104,8 @@ The items you may see:
 
 A normal group shows a tab strip across its top. For a map or globe you often
 want that space back — every pixel for the content.
+
+![A clean (header-less) 3D-globe pane beside a tabbed group](./public/windowing/03-clean-pane.webp)
 
 - **Hide the header** — right-click the pane → **Hide header**. The tab strip
   disappears and the panel content fills the whole pane. This is a **clean pane**.
@@ -121,6 +127,8 @@ Notes:
 Maximize blows one group up to fill the entire dock area, hiding the rest — handy
 when you want to focus on the map or read a dense table.
 
+![A panel maximized to fill the dock](./public/windowing/04-maximize.webp)
+
 - **Maximize** — right-click the pane → **Maximize**. The group fills the dock.
 - **Restore** — right-click → **Restore** (the same item, relabeled), or press
   **Esc**. The grid returns to exactly how it was.
@@ -134,6 +142,8 @@ have their own maximize — see below.
 A **floating window** is a panel lifted out of the tiled grid into a draggable
 window that sits on top of the dock — perfect for a tactical overlay that hovers
 above the map.
+
+![A floating window with its background opacity lowered, the dock showing through the glass](./public/windowing/05-float.webp)
 
 - **Float a pane** — right-click → **Float window**. The group lifts off the grid
   into a floating window you can **drag** by its header and **resize** from its
@@ -164,6 +174,8 @@ A floating window's header carries its own row of controls, from left to right:
 Minimizing tucks a panel or group away without closing it, so you can clear space
 and bring it back later exactly where it was.
 
+![Minimized panels as bars in the bottom-left tray](./public/windowing/06-minimize-tray.webp)
+
 - **Minimize a group** — right-click → **Minimize group** (or **Minimize** for a
   single-tab group), or click the **Minimize** button in the group header. The
   whole group collapses into a single labelled **bar**.
@@ -193,6 +205,8 @@ Pop-out moves a panel or group into a **separate browser window** — drag it to
 second monitor, or run the map full-screen on one display while the rest of the
 dashboard stays on another.
 
+![The 3D globe popped out into its own separate browser window](./public/windowing/07-popout.webp)
+
 - **Pop out a tab** — right-click → **Pop out tab**. Just that one tab opens in a
   new window; its group keeps the rest.
 - **Pop out a group** — right-click → **Pop out group** (or **Pop out** for a
@@ -218,6 +232,8 @@ What to expect:
 
 Once you have one or more pop-outs open, you can shuffle a panel between windows
 without docking it back first.
+
+![The "Send to window" submenu listing the open pop-out as a destination](./public/windowing/08-send-to-window.webp)
 
 - Right-click the panel → **Send to window ▸**, then choose a destination:
   - **Main window** — when the panel is currently in a pop-out.
