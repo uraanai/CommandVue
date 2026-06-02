@@ -692,6 +692,50 @@ export const useSessionStore = defineStore("session", () => {
   }
 
   /**
+   * Cross-window relocation (Track B Phase 7). Move a SINGLE panel's live DOM into
+   * another window's group via dockview's cross-document `moveTo` — "Send to
+   * window" from the menu. `targetGroupId` is a concrete pop-out group id, or
+   * `null` for the MAIN window (re-use a grid group, or create one if every group
+   * is currently popped/floated).
+   *
+   * The destination group is re-resolved by id at call time (never cached — a
+   * pop-out may have closed since the menu opened; §7.3) and the move is
+   * restoring-guarded so the deferred `onDidLayoutChange` doesn't double-fire.
+   *
+   * NOTE: dockview relocates the live DOM (appendChild — panel handles stay valid),
+   * and in Chromium the WebGL context of a Cesium / MapLibre canvas SURVIVES the
+   * cross-document move (camera/zoom preserved too), so no viewer re-init is needed
+   * — runtime-verified for both the pop-out and this cross-window move. Marks dirty.
+   */
+  function sendPanelToWindow(panelId: Ulid, targetGroupId: string | null): boolean {
+    const api = dockviewApi.value;
+    if (!api) throw new Error("Dockview API not bound");
+    const panel = api.getPanel(panelId);
+    if (!panel) return false;
+
+    // Re-resolve the destination from the LIVE group list by id (never cache — a
+    // pop-out may have closed since the menu opened). `api.groups` are concrete
+    // `DockviewGroupPanel`s (what `moveTo` wants); `api.getGroup` returns the
+    // narrower interface, hence the find.
+    const dest: DockviewGroupPanel | undefined =
+      targetGroupId === null
+        ? (api.groups.find((g) => g.api.location.type === "grid" && g !== panel.api.group) ??
+          api.addGroup())
+        : api.groups.find((g) => g.id === targetGroupId);
+    // Stale / closed target, or it's already the panel's group → nothing to do.
+    if (!dest || dest === panel.api.group) return false;
+
+    setRestoring(true);
+    try {
+      panel.api.moveTo({ group: dest });
+    } finally {
+      setRestoring(false);
+    }
+    markDirty();
+    return true;
+  }
+
+  /**
    * Set a floating GROUP's see-through opacity (the background alpha of its glass;
    * 0 = fully transparent so only the content shows over the map, 1 = solid).
    *
@@ -1211,6 +1255,7 @@ export const useSessionStore = defineStore("session", () => {
     dockBack,
     popOutGroup,
     popOutPanel,
+    sendPanelToWindow,
     setFloatAlpha,
     syncActiveFloatAlpha,
     getFloatAlpha,

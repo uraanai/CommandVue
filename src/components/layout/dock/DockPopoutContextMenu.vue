@@ -42,9 +42,9 @@ function onContextMenu(event: MouseEvent): void {
   // No dock group under the cursor: do nothing, let the native menu show.
   if (!group) return;
 
-  // In a pop-out the "Pop out…" item(s) are replaced by "Dock back to main window"
-  // — closing THIS window, which dockview re-docks into the opener.
-  const next = buildModelForGroup(group, props.api.panels.length, {
+  // In a pop-out the "Pop out…" item(s) are replaced by "Dock back" — closing THIS
+  // window, which dockview re-docks into the opener.
+  const next = buildModelForGroup(group, props.api, {
     onDockBack: () => props.win.close(),
   });
   if (next.length === 0) return;
