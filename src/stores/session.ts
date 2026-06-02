@@ -889,13 +889,14 @@ export const useSessionStore = defineStore("session", () => {
     if (location !== "grid" && location !== "floating") return null; // popout/edge: skip
     const sibling = group.panels.find((p) => p.id !== panelId);
     if (!sibling) return minimizeGroup(panelId); // sole member → whole-group minimize
+    const index = group.panels.findIndex((p) => p.id === panelId); // restore in place
 
     const captured = capturePanel(panel);
     const def = captured.panelType ? panelRegistry.get(captured.panelType) : undefined;
     const entry: MinimizedEntry = {
       id: nanoid(),
       location: "grid", // re-joins via the within-anchor — lands wherever the sibling is
-      originAnchor: { referencePanelId: sibling.id, direction: "within" },
+      originAnchor: { referencePanelId: sibling.id, direction: "within", index },
       panels: [captured],
       activePanelId: panel.id,
       title: panel.title ?? def?.title ?? "Window",
@@ -944,6 +945,9 @@ export const useSessionStore = defineStore("session", () => {
               position: {
                 referenceGroup: refPanel.api.group,
                 direction: entry.originAnchor.direction,
+                // Per-tab restore: re-insert at the original tab index (undefined for
+                // a whole-group restore → appended, as before). dockview clamps.
+                index: entry.originAnchor.index,
               },
             }
           : {}),

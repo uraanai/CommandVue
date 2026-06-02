@@ -12,6 +12,7 @@ import { useTheme } from "@/composables/useTheme";
 import { newId } from "@/modules/storage/ids";
 import { useChromeStore } from "@/stores/chrome";
 import { useLayoutStore } from "@/stores/layout";
+import { useMinimizedStore } from "@/stores/minimized";
 import { usePanelStateStore } from "@/stores/panelState";
 import { useSessionStore } from "@/stores/session";
 import { useToolsStore } from "@/stores/tools";
@@ -28,6 +29,7 @@ const session = useSessionStore();
 const layoutStore = useLayoutStore();
 const panelStateStore = usePanelStateStore();
 const chrome = useChromeStore();
+const minimized = useMinimizedStore();
 
 const saveAsOpen = ref(false);
 
@@ -96,6 +98,10 @@ useKeyboardShortcuts({
     }
     if (action === "view.toggleComponents") {
       toggleComponentsPanel();
+      return;
+    }
+    if (action === "view.toggleMinimizedTray") {
+      minimized.toggleCollapsed();
       return;
     }
     if (action.startsWith("tool.")) {
