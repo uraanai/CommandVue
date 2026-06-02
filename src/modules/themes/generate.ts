@@ -294,8 +294,10 @@ export function generateTheme(input: ThemeGenerationInput): ThemeGenerationResul
   // Volt components (Dialog, Menu, Checkbox, InputText, Slider, DataView,
   // Fieldset, SecondaryButton) consume Tailwind utilities like
   // `bg-surface-0 dark:bg-surface-900`, `border-surface-200`,
-  // `text-surface-700` etc., which resolve to `--color-p-surface-*`.
-  // `tokens.css` aliases that scale to `--color-slate-*` by default — so
+  // `text-surface-700` etc. Those inline `var(--p-surface-N)` at the use site;
+  // `main.css` bridges `--p-surface-N: var(--color-p-surface-N)` (Track A A1a),
+  // so emitting this ramp recolors every Volt surface with the theme.
+  // `tokens.css` aliases the scale to `--color-slate-*` by default — so
   // without this override every Volt-rendered surface (dialog backgrounds,
   // the workspace-switcher menu, the customizer's own dialog chrome) stays
   // slate regardless of the generated theme.
