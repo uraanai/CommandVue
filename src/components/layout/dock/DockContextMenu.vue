@@ -5,6 +5,7 @@ import type { MenuItem } from "primevue/menuitem";
 import {
   ChevronRight,
   Columns2,
+  ExternalLink,
   Maximize2,
   Minimize,
   Minimize2,
@@ -119,6 +120,20 @@ function floatItem(panel: IDockviewPanel): DockMenuItem {
 }
 
 /**
+ * Pop-out item shared by both menus (Track B Phase 6a). Opens the group in a
+ * SEPARATE browser window (`session.popOut` → dockview `addPopoutGroup`); the
+ * theme is mirrored into the child window. Closing that window re-docks the
+ * content. Group-location op, so it sits beside Float.
+ */
+function popOutItem(panel: IDockviewPanel): DockMenuItem {
+  return {
+    label: "Pop out to window",
+    lucide: ExternalLink,
+    command: () => void session.popOut(panel.id),
+  };
+}
+
+/**
  * Minimize item(s) shared by both menus (Track B Phase 4c). For a multi-tab group
  * it offers BOTH "Minimize tab" (just the active panel — re-joins its group on
  * restore) and "Minimize group" (every tab → one tray bar); for a single-panel
@@ -167,6 +182,7 @@ function buildCleanModel(panel: IDockviewPanel, totalPanels: number): DockMenuIt
       command: () => void session.toggleHeaderless(panel.id),
     },
     floatItem(panel),
+    popOutItem(panel),
     maximizeItem(panel),
     // Clean pane is a single visible pane → one "Minimize" (whole group).
     ...minimizeItems(panel, 1),
@@ -211,6 +227,7 @@ function buildTabbedModel(
       command: () => void session.closeOthersInGroup(panel.id),
     },
     floatItem(panel),
+    popOutItem(panel),
     maximizeItem(panel),
     // Multi-tab group → "Minimize tab" + "Minimize group"; single → one "Minimize".
     ...minimizeItems(panel, panelsInGroup),

@@ -5,6 +5,7 @@ import { nanoid } from "nanoid";
 import { defineStore } from "pinia";
 import { ref, shallowRef } from "vue";
 
+import { registerPopoutWindow, unregisterPopoutWindow } from "@/composables/usePopoutThemeSync";
 import {
   type FloatBox,
   floatWasHeaderless,
@@ -611,6 +612,47 @@ export const useSessionStore = defineStore("session", () => {
   }
 
   /**
+   * Pop a group out into a SEPARATE browser window (Track B Phase 6a). dockview's
+   * `addPopoutGroup` relocates the group's LIVE DOM (appendChild — panel handles
+   * stay valid, no re-instantiation) into a child window opened at `/popout.html`
+   * (a same-origin blank page; dockview rejects cross-origin/data/blob URLs) and
+   * copies the opener's stylesheets in. The inline theme TOKENS aren't in those
+   * sheets, so each pop-out is registered with `usePopoutThemeSync`, which mirrors
+   * `data-theme`/`-id`/`-density` + the inline `--*` props and keeps them live on
+   * theme changes. MUST fire from a real user gesture; returns false when the
+   * browser blocks the window. Marks dirty (pop-outs are in `toJSON`).
+   *
+   * NOTE: map panels' WebGL context can drop on the cross-document move; its
+   * re-init is Phase 6b. Closing the pop-out window re-docks the content natively.
+   */
+  async function popOut(panelId: Ulid): Promise<boolean> {
+    const api = dockviewApi.value;
+    if (!api) throw new Error("Dockview API not bound");
+    const panel = api.getPanel(panelId);
+    if (!panel) return false;
+    const rect = panel.api.group.element.getBoundingClientRect();
+    setRestoring(true);
+    let opened = false;
+    try {
+      opened = await api.addPopoutGroup(panel.api.group, {
+        position: {
+          left: window.screenX + Math.max(0, Math.round(rect.left)) + 40,
+          top: window.screenY + Math.max(0, Math.round(rect.top)) + 80,
+          width: Math.max(480, Math.round(rect.width)),
+          height: Math.max(360, Math.round(rect.height)),
+        },
+        popoutUrl: "/popout.html",
+        onDidOpen: ({ window: win }) => registerPopoutWindow(win),
+        onWillClose: ({ window: win }) => unregisterPopoutWindow(win),
+      });
+    } finally {
+      setRestoring(false);
+    }
+    if (opened) markDirty();
+    return opened;
+  }
+
+  /**
    * Set a floating GROUP's see-through opacity (the background alpha of its glass;
    * 0 = fully transparent so only the content shows over the map, 1 = solid).
    *
@@ -1128,6 +1170,7 @@ export const useSessionStore = defineStore("session", () => {
     toggleMaximize,
     floatPanel,
     dockBack,
+    popOut,
     setFloatAlpha,
     syncActiveFloatAlpha,
     getFloatAlpha,
