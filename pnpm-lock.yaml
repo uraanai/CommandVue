@@ -36,8 +36,8 @@ importers:
         specifier: ^8.21.3
         version: 8.21.3(vue@3.5.35(typescript@6.0.3))
       '@tanstack/vue-virtual':
-        specifier: ^3.13.25
-        version: 3.13.25(vue@3.5.35(typescript@6.0.3))
+        specifier: ^3.13.27
+        version: 3.13.27(vue@3.5.35(typescript@6.0.3))
       '@turf/area':
         specifier: ^7.0.0
         version: 7.3.5
@@ -1681,8 +1681,8 @@ packages:
     resolution: {integrity: sha512-ldZXEhOBb8Is7xLs01fR3YEc3DERiz5silj8tnGkFZytt1abEvl/GhUmCE0PMLaMPTa3Jk4HbKmRlHmu+gCftg==}
     engines: {node: '>=12'}
 
-  '@tanstack/virtual-core@3.15.0':
-    resolution: {integrity: sha512-0AwPGx0I8QxPYjAxShT/+z+ZOe9u8mW5rsXvivCTjRfRmz9a43+3mRyi4wwlyoUqOC56q/jatKa0Bh9M99BEHQ==}
+  '@tanstack/virtual-core@3.16.1':
+    resolution: {integrity: sha512-br4gmJ3eI2IXth0fAAVWNdi/Iqb5ZDIUG9409Q17qnXegeHHc9vPEeMsSwpGf29GqayfmqFPtv9S4rxcZOub3Q==}
 
   '@tanstack/vue-table@8.21.3':
     resolution: {integrity: sha512-rusRyd77c5tDPloPskctMyPLFEQUeBzxdQ+2Eow4F7gDPlPOB1UnnhzfpdvqZ8ZyX2rRNGmqNnQWm87OI2OQPw==}
@@ -1690,8 +1690,8 @@ packages:
     peerDependencies:
       vue: '>=3.2'
 
-  '@tanstack/vue-virtual@3.13.25':
-    resolution: {integrity: sha512-/ez+t68a5O4CgVysvk7Bav0XbSYSYufOVHZveXF+DYO9hvtg2UheYzR0YkniCeUtXmMjDne1dDqwBMkOmEUOow==}
+  '@tanstack/vue-virtual@3.13.27':
+    resolution: {integrity: sha512-zSFeq8LBs1xEn84+nhu1N4EALPxTLxn0C1hsKTAfmAIgzyPK4RmtupHFNBxx+e5/3Oub2pLmwWjcf9Jmo//Mgg==}
     peerDependencies:
       vue: ^2.7.0 || ^3.0.0
 
@@ -5347,16 +5347,16 @@ snapshots:
 
   '@tanstack/table-core@8.21.3': {}
 
-  '@tanstack/virtual-core@3.15.0': {}
+  '@tanstack/virtual-core@3.16.1': {}
 
   '@tanstack/vue-table@8.21.3(vue@3.5.35(typescript@6.0.3))':
     dependencies:
       '@tanstack/table-core': 8.21.3
       vue: 3.5.35(typescript@6.0.3)
 
-  '@tanstack/vue-virtual@3.13.25(vue@3.5.35(typescript@6.0.3))':
+  '@tanstack/vue-virtual@3.13.27(vue@3.5.35(typescript@6.0.3))':
     dependencies:
-      '@tanstack/virtual-core': 3.15.0
+      '@tanstack/virtual-core': 3.16.1
       vue: 3.5.35(typescript@6.0.3)
 
   '@tsconfig/node22@22.0.5': {}
