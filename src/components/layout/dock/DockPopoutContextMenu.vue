@@ -42,7 +42,11 @@ function onContextMenu(event: MouseEvent): void {
   // No dock group under the cursor: do nothing, let the native menu show.
   if (!group) return;
 
-  const next = buildModelForGroup(group, props.api.panels.length);
+  // In a pop-out the "Pop out…" item(s) are replaced by "Dock back to main window"
+  // — closing THIS window, which dockview re-docks into the opener.
+  const next = buildModelForGroup(group, props.api.panels.length, {
+    onDockBack: () => props.win.close(),
+  });
   if (next.length === 0) return;
 
   event.preventDefault();
@@ -63,14 +67,30 @@ function onContextMenu(event: MouseEvent): void {
  * main-window menu does — would attach to the dead `about:blank` doc and silently
  * never fire. `appendTo` is set to the live `<body>` at the same moment so the
  * overlay renders in THIS window, not the opener's.
+ *
+ * We also bind a capture-phase `click` listener here: PrimeVue's own
+ * outside-click dismissal is registered on the OPENER's `document`
+ * (`contextmenu/index.mjs`), so a left-click inside the pop-out never reaches it
+ * and the menu would stay open. Closing it ourselves on any click outside the
+ * overlay restores the expected behavior. Capture phase runs before dock/panel
+ * handlers can `stopPropagation`, and `click` (left-button only) leaves
+ * right-click reposition to `onContextMenu`.
  */
 function bindWhenReady(win: Window): () => void {
   let detach: (() => void) | null = null;
   const bind = (): void => {
     const doc = win.document;
+    const dismissOnOutsideClick = (e: MouseEvent): void => {
+      const overlay = doc.querySelector('[data-testid="dock-context-menu"]');
+      if (overlay && !overlay.contains(e.target as Node)) menuRef.value?.hide();
+    };
     doc.addEventListener("contextmenu", onContextMenu);
+    doc.addEventListener("click", dismissOnOutsideClick, true);
     appendTo.value = doc.body;
-    detach = () => doc.removeEventListener("contextmenu", onContextMenu);
+    detach = () => {
+      doc.removeEventListener("contextmenu", onContextMenu);
+      doc.removeEventListener("click", dismissOnOutsideClick, true);
+    };
   };
 
   if (win.document.getElementById("dv-popout-window")) {

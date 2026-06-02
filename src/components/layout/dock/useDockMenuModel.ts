@@ -27,6 +27,17 @@ import { tabbedPaneControls } from "./tabbedPaneControls";
 /** Menu item shape with a Lucide component attached for the shared `#item` slot. */
 export type DockMenuItem = MenuItem & { lucide?: Component };
 
+/** Per-surface tweaks for the dock menu. */
+export interface DockMenuModelOptions {
+  /**
+   * Supplied only by the pop-out-window menu. When set, the window action becomes
+   * a single "Dock back to main window" (wired to this callback — closing the
+   * pop-out window, which dockview natively re-docks into the opener) instead of
+   * the "Pop out…" item(s), which are meaningless once already in a pop-out.
+   */
+  onDockBack?: () => void;
+}
+
 /**
  * Builds the dock context-menu model for a right-clicked group. Extracted from
  * `DockContextMenu.vue` so the SAME model drives two surfaces (Track B Phase 6c):
@@ -44,7 +55,11 @@ export type DockMenuItem = MenuItem & { lucide?: Component };
  * actions. Stage-1 Playwright-verified at the component level (no unit test).
  */
 export function useDockMenuModel(): {
-  buildModelForGroup: (group: DockviewGroupPanel, totalPanels: number) => DockMenuItem[];
+  buildModelForGroup: (
+    group: DockviewGroupPanel,
+    totalPanels: number,
+    opts?: DockMenuModelOptions,
+  ) => DockMenuItem[];
 } {
   const session = useSessionStore();
   const minimized = useMinimizedStore();
@@ -123,6 +138,24 @@ export function useDockMenuModel(): {
   }
 
   /**
+   * The window-management item(s) for a group. In the MAIN window these are the
+   * "Pop out…" item(s); INSIDE a pop-out (`opts.onDockBack` set) they collapse to a
+   * single "Dock back to main window" — popping a pop-out out again is meaningless,
+   * and the relevant move is back to the opener. `onDockBack` closes the pop-out
+   * window, which dockview re-docks into the original location.
+   */
+  function windowItems(
+    panel: IDockviewPanel,
+    panelsInGroup: number,
+    opts?: DockMenuModelOptions,
+  ): DockMenuItem[] {
+    if (opts?.onDockBack) {
+      return [{ label: "Dock back to main window", lucide: PinOff, command: opts.onDockBack }];
+    }
+    return popOutItems(panel, panelsInGroup);
+  }
+
+  /**
    * Minimize item(s) (Track B Phase 4c). A multi-tab group offers "Minimize tab"
    * + "Minimize group"; a single-panel group offers one "Minimize". The tray is a
    * MAIN-window surface and the store actions only minimize grid/float groups, so
@@ -164,7 +197,11 @@ export function useDockMenuModel(): {
    * dockview drag-to-split cover it). A clean pane is a single visible pane, so the
    * Pop-out / Minimize items use the single-item ("whole group") form.
    */
-  function buildCleanModel(panel: IDockviewPanel, totalPanels: number): DockMenuItem[] {
+  function buildCleanModel(
+    panel: IDockviewPanel,
+    totalPanels: number,
+    opts?: DockMenuModelOptions,
+  ): DockMenuItem[] {
     const controls = cleanPaneControls({ isHeaderless: true, totalPanels });
     const showHeader = controls.find((c) => c.id === "toggle-header");
     const close = controls.find((c) => c.id === "close");
@@ -176,7 +213,7 @@ export function useDockMenuModel(): {
         command: () => void session.toggleHeaderless(panel.id),
       },
       floatItem(panel),
-      ...popOutItems(panel, 1),
+      ...windowItems(panel, 1, opts),
       maximizeItem(panel),
       ...minimizeItems(panel, 1),
       { separator: true },
@@ -197,6 +234,7 @@ export function useDockMenuModel(): {
     panel: IDockviewPanel,
     panelsInGroup: number,
     totalPanels: number,
+    opts?: DockMenuModelOptions,
   ): DockMenuItem[] {
     const controls = tabbedPaneControls({ totalPanels, panelsInGroup });
     const close = controls.find((c) => c.id === "close")!;
@@ -215,7 +253,7 @@ export function useDockMenuModel(): {
         command: () => void session.closeOthersInGroup(panel.id),
       },
       floatItem(panel),
-      ...popOutItems(panel, panelsInGroup),
+      ...windowItems(panel, panelsInGroup, opts),
       maximizeItem(panel),
       ...minimizeItems(panel, panelsInGroup),
       { separator: true },
@@ -233,12 +271,16 @@ export function useDockMenuModel(): {
    * `totalPanels` (`api.panels.length`) drives the Close empty-workspace guard.
    * Returns `[]` when the group has no panels (caller should not open a menu).
    */
-  function buildModelForGroup(group: DockviewGroupPanel, totalPanels: number): DockMenuItem[] {
+  function buildModelForGroup(
+    group: DockviewGroupPanel,
+    totalPanels: number,
+    opts?: DockMenuModelOptions,
+  ): DockMenuItem[] {
     const panel = group.activePanel ?? group.panels[0];
     if (!panel) return [];
     return group.header.hidden
-      ? buildCleanModel(panel, totalPanels)
-      : buildTabbedModel(panel, group.panels.length, totalPanels);
+      ? buildCleanModel(panel, totalPanels, opts)
+      : buildTabbedModel(panel, group.panels.length, totalPanels, opts);
   }
 
   return { buildModelForGroup };
