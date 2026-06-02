@@ -1,6 +1,8 @@
 # Track A — Theming Overhaul: Design & Execution Specification
 
-> Status: Draft for maintainer review · Owner: Lead Architect · Depends on: Track B (pop-out + theme-mirroring, shipped) · Schema target: `THEME_SCHEMA_VERSION` 1 → 2 · DB target: `DB_VERSION` 2 → 3 (`src/modules/storage/db.ts`)
+> Status: Draft for maintainer review (the **authoritative execution plan** for Track A) · Owner: Lead Architect · Depends on: Track B (pop-out + theme-mirroring, shipped) · Schema target: `THEME_SCHEMA_VERSION` 1 → 2 · DB target: `DB_VERSION` 2 → 3 (`src/modules/storage/db.ts`)
+>
+> **Architecture externally validated & SETTLED (2026-06-02 — do not re-evaluate).** This plan's approach — **Option C**: the custom `--color-*` namespace is the single source of truth, PrimeVue/Volt is a derived consumer — was pressure-tested against PrimeVue-native theming and mature single-source systems (Material 3, MUI, Ant Design, Chakra, Mantine) in the research archive [`track-a-theming-single-source.md`](./track-a-theming-single-source.md) and **confirmed correct; adopting PrimeVue 4's native preset (Option B) was rejected on verified grounds.** Future sessions: that question is closed — do not re-run the research. Four net-new additions from the single-source edition are **adopted into execution**: a CI single-source guard (literal/unknown-token), `docs/decisions/0003-theme-single-source-of-truth.md`, the `--cv-float-tint`/`--dv-*` re-chain (in A1a), and on-color status pairing (`--color-status-*-fg`/`-border`) via a central severity variant resolver (in A1b). The §7 open decisions still need maintainer sign-off before execution.
 
 ---
 
