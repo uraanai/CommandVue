@@ -60,14 +60,30 @@ When you add `WeatherRadarPanel.vue`:
 
 Pick the closest match; don't invent new ones without updating the type union in `src/modules/panels/types.ts`.
 
-| Category     | Examples                             |
-| ------------ | ------------------------------------ |
-| `maps`       | Cesium, MapLibre                     |
-| `data`       | EntityList, table views              |
-| `charts`     | ECharts panels                       |
-| `docs`       | Markdown briefing, ComponentsBrowser |
-| `monitoring` | Live telemetry, log tails            |
-| `tools`      | Symbology reference, calculators     |
+| Category     | Examples                                                 |
+| ------------ | -------------------------------------------------------- |
+| `maps`       | Cesium, MapLibre                                         |
+| `data`       | EntityList, table views                                  |
+| `charts`     | ECharts panels                                           |
+| `docs`       | Markdown briefing, ComponentsBrowser, Component Showcase |
+| `monitoring` | Live telemetry, log tails                                |
+| `tools`      | Symbology reference, calculators                         |
+
+## Component Showcase
+
+`Component Showcase` (id `showcase`, category `docs`, singleton) is a built-in
+panel that renders a live gallery of every `ui/*` and `volt/*` primitive —
+buttons, inputs, tags, overlays, and a toast trigger matrix. It doubles as
+living documentation and a **theming smoke test**: because it uses the real
+wrappers, a token change (Track A) recolors the whole panel in one scroll. Open
+it from **View → Add Component → Docs → Component Showcase**.
+
+Coverage is enforced. `src/components/showcase/registry.ts` lists every
+showcased primitive (`SHOWCASE_PRIMITIVES`) and every deliberate exclusion
+(`SHOWCASE_EXCLUDE`, e.g. `DataTable`); the drift test
+`tests/unit/components/showcase/registry.spec.ts` fails CI if a `ui/`/`volt/`
+primitive is added without an entry, or if a stale entry outlives its file. Add
+a new primitive → add a registry entry **and** a `ShowcasePanel.vue` section.
 
 ## Lifecycle
 
