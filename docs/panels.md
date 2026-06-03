@@ -82,7 +82,7 @@ Sections are grouped into ten tabs (`SHOWCASE_TABS`):
 
 - **Form Inputs** — text / number / mask / OTP / password, `DatePicker` (date,
   range, time), `Slider`, `Knob`, float / in-field labels, icon fields, input
-  groups, colour & file pickers.
+  groups, color & file pickers.
 - **Selection** — select, multiselect, autocomplete, checkbox, radio, segmented
   button, toggle button/switch, listbox, rating.
 - **Forms** — composed surfaces: a labelled form with validation roll-up and a
