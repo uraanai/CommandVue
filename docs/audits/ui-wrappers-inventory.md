@@ -14,7 +14,7 @@ The `DataTable.vue` wrapper is intentionally excluded: it is TanStack-based per 
 | `Select.vue`     | `primevue/select`                                              | 73  | (none)                   | `modelValue` (string\|number\|null), `options` (`{label,value,disabled}[]`), `placeholder`, `disabled`, `showClear` | **yes** — `npx volt-vue add Select`                      | Project pre-bakes `optionLabel="label"`/`optionValue="value"`; Volt's defaults differ                                 |
 | `Tabs.vue`       | `primevue/tabs` + `tablist` + `tab` + `tabpanel` + `tabpanels` | 70  | default (per-active-tab) | `modelValue`, `tabs` (`{id,label,disabled}[]`)                                                                      | **yes** — `npx volt-vue add Tabs` (plus sibling files)   | Project exposes a flat-tabs API that masks the 5-component composition                                                |
 | `Dialog.vue`     | `primevue/dialog`                                              | 69  | header, default, footer  | `visible`, `header`, `modal`, `closable`, `dismissableMask`, `width`, plus attrs                                    | **yes** — `npx volt-vue add Dialog`                      | Used by manage-X dialogs and the panel-create flow                                                                    |
-| `Toast.vue`      | `primevue/toast`                                               | 41  | (none — service-driven)  | `position`, `group`                                                                                                 | **yes** — `npx volt-vue add Toast`                       | Backed by PrimeVue's `useToast` service from `primevue/usetoast`                                                      |
+| `Toast.vue`      | `primevue/toast`                                               | 41  | (none — service-driven)  | `position`, `group`, `baseZIndex`, `autoZIndex`                                                                     | **yes** — `npx volt-vue add Toast`                       | Backed by PrimeVue's `useToast` service from `primevue/usetoast`; fired via `useNotify()`                             |
 | `Tooltip.vue`    | (none — native `title`)                                        | 20  | default                  | `label`                                                                                                             | **yes** — `npx volt-vue add Tooltip`                     | Placeholder per the file's docstring; was always planned to move to a floating-ui-backed impl                         |
 
 ## Tally
@@ -65,8 +65,11 @@ The `DataTable.vue` wrapper is intentionally excluded: it is TanStack-based per 
 
 ### `Toast.vue`
 
-- Position default `top-right`
-- Group prop for scoped toast queues
+- Position default `bottom-right`
+- `group` prop routes to a scoped outlet; `baseZIndex` (9000) + `autoZIndex`
+  float toasts above modal overlays + Dockview popouts
+- Not mounted directly — `NotificationOutlets.vue` (in `AppShell`) renders one
+  outlet per position; producers fire via the `useNotify()` composable
 
 ### `Tooltip.vue`
 

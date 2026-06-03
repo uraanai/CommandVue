@@ -91,6 +91,7 @@ export default defineConfigWithVueTs(
               // valve which already fires its more specific named rule above:
               //   - menuitem      → types only (MenuItem interface)
               //   - config / api  → app bootstrap singleton + util constants
+              //   - toastservice  → bootstrap service plugin (app.use in main.ts)
               //   - usetoast / useconfirm → composables consumed by wrappers
               //   - datatable / column → governed by ADR 0001 (named rule above)
               group: [
@@ -98,6 +99,7 @@ export default defineConfigWithVueTs(
                 "!primevue/menuitem",
                 "!primevue/config",
                 "!primevue/api",
+                "!primevue/toastservice",
                 "!primevue/usetoast",
                 "!primevue/useconfirm",
                 "!primevue/datatable",

@@ -15,8 +15,36 @@
  * severity — falls back to the neutral toast surface.
  */
 
-/** Shared shape: rounded card, subtle full border, thicker left accent stripe. */
-const BASE = "rounded-md border border-l-4 shadow-lg px-3 py-2 text-sm";
+/**
+ * The project-facing severity vocabulary (`success | info | warning | danger`)
+ * and the PrimeVue Toast vocabulary (`success | info | warn | error`). They
+ * differ on two names; this module is the SINGLE source of the bridge so both
+ * the styling (`toastMessageClass`) and the producer (`useNotify`) agree.
+ */
+export type NotifySeverity = "danger" | "info" | "success" | "warning";
+export type ToastSeverity = "error" | "info" | "success" | "warn";
+
+/** The seven canonical PrimeVue Toast positions (no arbitrary placement). */
+export type ToastPosition =
+  | "bottom-center"
+  | "bottom-left"
+  | "bottom-right"
+  | "center"
+  | "top-center"
+  | "top-left"
+  | "top-right";
+
+/** Map a project severity onto the PrimeVue severity `Toast.add` expects. */
+export function toPrimeSeverity(severity: NotifySeverity): ToastSeverity {
+  if (severity === "warning") return "warn";
+  if (severity === "danger") return "error";
+  return severity;
+}
+
+/** Shared shape: rounded card, subtle full border, thicker left accent stripe.
+ *  `pointer-events-auto` re-enables clicks on the message itself — the outlet
+ *  root is `pointer-events-none` so its empty region never blocks the page. */
+const BASE = "pointer-events-auto rounded-md border border-l-4 shadow-lg px-3 py-2 text-sm";
 
 /** Neutral (default / secondary / contrast) — surface-raised card, no accent. */
 const NEUTRAL =

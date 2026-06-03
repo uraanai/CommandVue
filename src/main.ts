@@ -5,6 +5,7 @@ import "@/assets/styles/main.css";
 import { LUCIDE_CONTEXT } from "@lucide/vue";
 import { createPinia } from "pinia";
 import PrimeVue from "primevue/config";
+import ToastService from "primevue/toastservice";
 import { createApp, defineAsyncComponent } from "vue";
 
 import { initializeTheme } from "@/composables/useTheme";
@@ -91,6 +92,10 @@ app.use(router);
 // the wrappers in `@/components/ui/*` using Tailwind classes via the
 // passthrough (pt) API.
 app.use(PrimeVue, { unstyled: true });
+
+// Toast service — powers `useNotify()`; the outlets mount in AppShell via
+// `NotificationOutlets`. Must register before any component calls `useToast()`.
+app.use(ToastService);
 
 // Dockview-vue 6 looks up panel components by string name via Vue's local +
 // global registry (it walks the parent chain looking at `instance.components`

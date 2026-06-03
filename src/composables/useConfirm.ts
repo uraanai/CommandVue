@@ -3,8 +3,9 @@ import { ref, type Ref } from "vue";
 /**
  * App-wide confirmation prompt.
  *
- * One `ConfirmDialog` host is mounted once at the app root (`App.vue`) and
- * reads the module-level singleton below; any component, anywhere, triggers a
+ * One `ConfirmDialog` host is mounted once in `AppShell.vue` (alongside the
+ * toast `NotificationOutlets`) and reads the module-level singleton below; any
+ * component, anywhere, triggers a
  * prompt by calling `useConfirm().confirm({ … })` and awaiting a boolean.
  * There is no per-call-site dialog state to leak — a closed prompt always
  * resolves and clears, so re-opening a list / dialog can never show a stale
