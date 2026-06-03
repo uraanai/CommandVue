@@ -31,7 +31,10 @@ defineEmits<{
 function tabClass(tab: Tab) {
   const isActive = tab.id === props.modelValue;
   return cn(
-    "inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition-colors",
+    // `-mb-px` pulls the tab's 2px bottom border onto the tablist's 1px baseline
+    // so the active accent line sits exactly on the bar (and inactive tabs let
+    // the baseline show through) — a proper tab-bar look.
+    "-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition-colors",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2",
     isActive
       ? "border-accent-500 text-foreground"
@@ -42,15 +45,17 @@ function tabClass(tab: Tab) {
 </script>
 
 <template>
-  <PvTabs
-    :value="modelValue"
-    :pt="{
-      tablist: { class: 'flex items-center gap-1 border-b border-border' },
-      activeBar: { class: 'hidden' },
-    }"
-    @update:value="(v) => $emit('update:modelValue', String(v))"
-  >
-    <PvTabList>
+  <PvTabs :value="modelValue" @update:value="(v) => $emit('update:modelValue', String(v))">
+    <!-- The baseline underline lives on the TabList root (the `tablist` key on
+         the Tabs pt does NOT reach it). `content` lays the tabs in a row; the
+         native sliding active-bar is hidden in favour of the per-tab border. -->
+    <PvTabList
+      :pt="{
+        root: { class: 'border-b border-border' },
+        content: { class: 'flex items-center gap-1' },
+        activeBar: { class: 'hidden' },
+      }"
+    >
       <PvTab
         v-for="tab in tabs"
         :key="tab.id"

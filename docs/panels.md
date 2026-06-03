@@ -72,18 +72,40 @@ Pick the closest match; don't invent new ones without updating the type union in
 ## Component Showcase
 
 `Component Showcase` (id `showcase`, category `docs`, singleton) is a built-in
-panel that renders a live gallery of every `ui/*` and `volt/*` primitive —
-buttons, inputs, tags, overlays, and a toast trigger matrix. It doubles as
-living documentation and a **theming smoke test**: because it uses the real
-wrappers, a token change (Track A) recolors the whole panel in one scroll. Open
-it from **View → Add Component → Docs → Component Showcase**.
+panel that renders a live, admin-grade gallery of every `ui/*` and `volt/*`
+primitive. It doubles as living documentation and a **theming smoke test**:
+because it uses the real wrappers, a token change (Track A) recolors the whole
+panel in one scroll. Open it from **View → Add Component → Docs → Component
+Showcase**.
+
+Sections are grouped into ten tabs (`SHOWCASE_TABS`):
+
+- **Form Inputs** — text / number / mask / OTP / password, `DatePicker` (date,
+  range, time), `Slider`, `Knob`, float / in-field labels, icon fields, input
+  groups, colour & file pickers.
+- **Selection** — select, multiselect, autocomplete, checkbox, radio, segmented
+  button, toggle button/switch, listbox, rating.
+- **Forms** — composed surfaces: a labelled form with validation roll-up and a
+  linear multi-step `Stepper` wizard.
+- **Buttons** — variants, sizes, icon buttons, split button, menu button.
+- **Data Display** — the TanStack `DataTable`, `DataView` grid, tags, chips,
+  avatars, badges, timeline, tree, meter group, click-to-edit `Inplace`.
+- **Feedback & Status** — messages, progress bar/spinner, skeletons, `BlockUI`,
+  empty state.
+- **Overlays** — dialog, confirm dialog/popup, drawer, popover, tooltip, context
+  menu, popup menu.
+- **Panels & Layout** — fieldset, panel, card, divider, accordion, toolbar.
+- **Navigation** — tabs, menubar, breadcrumb, paginator, stepper.
+- **Notifications** — the toast trigger matrix (severities, positions, sticky,
+  coalescing).
 
 Coverage is enforced. `src/components/showcase/registry.ts` lists every
 showcased primitive (`SHOWCASE_PRIMITIVES`) and every deliberate exclusion
-(`SHOWCASE_EXCLUDE`, e.g. `DataTable`); the drift test
-`tests/unit/components/showcase/registry.spec.ts` fails CI if a `ui/`/`volt/`
-primitive is added without an entry, or if a stale entry outlives its file. Add
-a new primitive → add a registry entry **and** a `ShowcasePanel.vue` section.
+(`SHOWCASE_EXCLUDE`, e.g. multi-part sub-components demoed via their parent); the
+drift test `tests/unit/components/showcase/registry.spec.ts` fails CI if a
+`ui/`/`volt/` primitive is added without an entry, or if a stale entry outlives
+its file. Add a new primitive → add a registry entry **and** a demo section in
+the matching `src/components/showcase/tabs/*Tab.vue` file.
 
 ## Lifecycle
 
