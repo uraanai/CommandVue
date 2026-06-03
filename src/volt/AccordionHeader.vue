@@ -35,6 +35,6 @@ const theme = ref<AccordionHeaderPassThroughOptions>({
         hover:text-surface-700 dark:hover:text-surface-0
         p-active:text-surface-700 dark:p-active:text-surface-0
         transition-colors duration-200
-        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-1px] focus-visible:outline-primary`,
+        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-1px] focus-visible:outline-[color:var(--color-focus-ring)]`,
 });
 </script>

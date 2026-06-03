@@ -34,7 +34,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const variantClass: Record<Variant, string> = {
   primary: "bg-accent-600 text-white hover:bg-accent-500 active:bg-accent-700",
-  secondary: "bg-surface-raised text-foreground border border-border hover:bg-surface-sunken",
+  secondary: "bg-surface-raised text-foreground border-border hover:bg-surface-sunken",
   ghost: "bg-transparent text-foreground hover:bg-surface-raised",
   danger: "bg-danger text-white hover:opacity-90 active:opacity-80",
 };
@@ -51,9 +51,12 @@ const sizeClass: Record<Size, string> = {
 
 const rootClass = computed(() =>
   cn(
-    "inline-flex items-center justify-center gap-1.5 rounded-md font-medium",
+    // A 1px transparent border on every variant so the bordered `secondary`
+    // isn't 2px taller than the others (auto-height + border-box adds a real
+    // border's height; the transparent border equalizes it).
+    "inline-flex items-center justify-center gap-1.5 rounded-md border border-transparent font-medium",
     "transition-colors duration-150 ease-out",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-focus-ring)] focus-visible:ring-offset-2",
     "disabled:cursor-not-allowed disabled:opacity-50",
     variantClass[props.variant],
     sizeClass[props.size],

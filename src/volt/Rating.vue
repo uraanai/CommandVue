@@ -6,16 +6,15 @@
       mergeProps: ptViewMerge,
     }"
   >
-    <template #onicon="{ toggleCallback }">
-      <StarFillIcon
-        class="text-primary h-4 w-4 text-base transition-colors duration-200"
-        @click="toggleCallback"
-      />
+    <!-- No @click on the icons: PrimeVue's option element owns the click, and a
+         second handler on the icon double-toggled (so a real star click
+         appeared to do nothing). The slots are visual only. -->
+    <template #onicon>
+      <StarFillIcon class="text-primary h-4 w-4 transition-colors duration-200" />
     </template>
-    <template #officon="{ toggleCallback }">
+    <template #officon>
       <StarIcon
-        class="text-surface-500 dark:text-surface-400 h-4 w-4 text-base transition-colors duration-200"
-        @click="toggleCallback"
+        class="text-surface-500 dark:text-surface-400 h-4 w-4 transition-colors duration-200"
       />
     </template>
     <template v-for="(_, slotName) in $slots" #[slotName]="slotProps">
@@ -38,6 +37,6 @@ defineProps<Props>();
 const theme = ref<RatingPassThroughOptions>({
   root: `relative flex items-center gap-1 p-disabled:opacity-60 p-disabled:pointer-events-none p-readonly:pointer-events-none`,
   option: `inline-flex items-center cursor-pointer rounded-full
-        p-focus-visible:outline p-focus-visible:outline-1 p-focus-visible:outline-offset-2 p-focus-visible:outline-primary`,
+        p-focus-visible:outline p-focus-visible:outline-1 p-focus-visible:outline-offset-2 p-focus-visible:outline-[color:var(--color-focus-ring)]`,
 });
 </script>

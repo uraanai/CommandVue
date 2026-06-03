@@ -6,8 +6,11 @@
       mergeProps: ptViewMerge,
     }"
   >
+    <!-- Squared (rounded-md) toggle, not a circular one — the round `rounded`
+         hover puck read as off-theme. A future theme token could make the
+         affordance shape (square / rounded / circle) configurable. -->
     <template #togglebutton="{ collapsed, toggleCallback, keydownCallback }">
-      <SecondaryButton variant="text" rounded @click="toggleCallback" @keydown="keydownCallback">
+      <SecondaryButton variant="text" @click="toggleCallback" @keydown="keydownCallback">
         <template #icon>
           <PlusIcon v-if="collapsed" />
           <MinusIcon v-else />

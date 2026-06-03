@@ -71,7 +71,7 @@ const theme = ref<AutoCompletePassThroughOptions>({
     label: ``,
     removeIcon: `cursor-pointer text-base w-4 h-4 rounded-full
             text-surface-800 dark:text-surface-0
-            focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-primary`,
+            focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]`,
   },
   chipIcon: ``,
   inputChip: `flex-auto inline-flex py-1 max-w-30`,
@@ -84,7 +84,7 @@ const theme = ref<AutoCompletePassThroughOptions>({
         text-surface-600 enabled:hover:text-surface-700 enabled:hover:active:text-surface-800
         dark:bg-surface-800 dark:enabled:hover:bg-surface-700 dark:enabled:active:bg-surface-600
         dark:text-surface-300 dark:enabled:hover:text-surface-200 dark:enabled:active:text-surface-100
-        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-primary
+        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]
         transition-colors duration-200`,
   dropdownIcon: ``,
   overlay: `p-portal-self:min-w-full absolute top-0 left-0 rounded-md

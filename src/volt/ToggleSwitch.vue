@@ -35,7 +35,7 @@ const theme = ref<ToggleSwitchPassThroughOptions>({
         p-checked:bg-primary peer-enabled:peer-hover:p-checked:bg-primary-emphasis
         p-invalid:border-[var(--color-status-danger)]
         p-disabled:bg-surface-200 dark:p-disabled:bg-surface-600
-        peer-focus-visible:outline peer-focus-visible:outline-1 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary`,
+        peer-focus-visible:outline peer-focus-visible:outline-1 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[color:var(--color-focus-ring)]`,
   handle: `absolute top-1/2 flex justify-center items-center
         bg-surface-0 dark:bg-surface-400
         text-surface-500 dark:text-surface-900

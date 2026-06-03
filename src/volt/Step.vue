@@ -25,7 +25,7 @@ const theme = ref<StepPassThroughOptions>({
   root: `relative flex flex-auto items-center gap-4 p-2 last-of-type:flex-initial p-vertical:flex-initial`,
   header: `order-none inline-flex items-center no-underline cursor-pointer p-readonly:cursor-auto p-active:cursor-auto
         transition-colors duration-200 rounded-md bg-transparent p-0 gap-2
-        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-primary`,
+        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]`,
   number: `flex items-center justify-center text-surface-500 dark:text-surface-400
         bg-surface-0 dark:bg-surface-900 border-2 border-surface-200 dark:border-surface-700
         min-w-8 h-8 leading-8 text-lg font-medium rounded-full z-10 relative

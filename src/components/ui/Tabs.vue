@@ -35,7 +35,7 @@ function tabClass(tab: Tab) {
     // so the active accent line sits exactly on the bar (and inactive tabs let
     // the baseline show through) — a proper tab-bar look.
     "-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition-colors",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-focus-ring)] focus-visible:ring-offset-2",
     isActive
       ? "border-accent-500 text-foreground"
       : "border-transparent text-muted hover:text-foreground hover:bg-surface-raised",

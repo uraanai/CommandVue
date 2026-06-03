@@ -97,6 +97,17 @@
   --p-primary-hover-color: var(--color-interactive-hover);
   --p-primary-active-color: var(--color-interactive-active);
   --p-primary-contrast-color: var(--color-on-interactive);
+
+  /* Highlight — the "selected option" row in Listbox / AutoComplete panel /
+   * Tree / DataView / Paginator. tailwindcss-primeui's `bg-highlight` /
+   * `text-highlight` utilities read these vars, but PrimeVue leaves them
+   * undefined in unstyled mode, so a selected row rendered with no visible
+   * background. Define them as a translucent primary tint that reads on any
+   * surface in both light and dark, following the active accent token. */
+  --p-highlight-background: color-mix(in oklch, var(--p-primary-color) 12%, transparent);
+  --p-highlight-color: var(--p-primary-color);
+  --p-highlight-focus-background: color-mix(in oklch, var(--p-primary-color) 22%, transparent);
+  --p-highlight-focus-color: var(--p-primary-color);
 }
 
 /*

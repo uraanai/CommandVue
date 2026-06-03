@@ -55,7 +55,7 @@ const theme = ref<TreePassThroughOptions>({
   },
   wrapper: `overflow-auto p-scrollable:flex-1`,
   rootChildren: `flex flex-col list-none m-0 gap-[4px] pt-[2px] pb-0 px-0`,
-  node: `p-0 outline-none focus-visible:*:first:outline focus-visible:*:first:-outline-offset-1 focus-visible:*:first:outline-primary`,
+  node: `p-0 outline-none focus-visible:*:first:outline focus-visible:*:first:-outline-offset-1 focus-visible:*:first:outline-[color:var(--color-focus-ring)]`,
   nodeContent: `group rounded-md px-2 py-1 flex items-center text-surface-700 dark:text-surface-0 gap-1 transition-colors duration-200
         hover:p-selectable:not-p-selected:bg-surface-100 hover:p-selectable:not-p-selected:text-surface-700 
         dark:hover:p-selectable:not-p-selected:bg-surface-800 dark:hover:p-selectable:not-p-selected:text-surface-0

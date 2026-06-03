@@ -58,9 +58,8 @@ const theme = ref<ListboxPassThroughOptions>({
   optionGroup: `m-0 px-3 py-2 text-surface-500 dark:text-surface-400 font-semibold`,
   option: `flex items-center cursor-pointer relative overflow-hidden px-[var(--density-cell-padding-x)] py-[var(--density-cell-padding-y)] text-[length:var(--density-font-size)] border-none rounded-sm
         text-surface-700 dark:text-surface-0
-        hover:not-p-selected:bg-surface-100 dark:hover:not-p-selected:bg-surface-800 hover:not-p-selected:text-surface-800 dark:hover:not-p-selected:text-surface-0
-        p-focus:not-p-selected:bg-surface-100 dark:p-focus:not-p-selected:bg-surface-800 p-focus:not-p-selected:text-surface-800 dark:p-focus:not-p-selected:text-surface-0
-        p-selected:bg-highlight p-selected:p-focus:bg-highlight-emphasis
+        hover:bg-surface-100 dark:hover:bg-surface-800 hover:text-surface-800 dark:hover:text-surface-0
+        p-focus:bg-surface-100 dark:p-focus:bg-surface-800
         group-p-disabled:text-surface-500 dark:group-p-disabled:text-surface-400 group-p-disabled:pointer-events-none
         p-disabled:opacity-60 p-disabled:pointer-events-none
         transition-colors duration-200`,
@@ -69,3 +68,19 @@ const theme = ref<ListboxPassThroughOptions>({
   emptyMessage: `px-3 py-2`,
 });
 </script>
+
+<style>
+/* Selected-row highlight. PrimeVue's unstyled Listbox marks the chosen option
+   only with `aria-selected="true"` (no `data-p="selected"`), and Tailwind would
+   not generate the `aria-selected:` / `p-selected:bg-highlight` utilities for
+   this row, so the selection was invisible. Drive it from real CSS keyed off the
+   reliable aria attribute, using the primary-tint highlight tokens (they flip
+   with the theme). The hover selector keeps the tint while hovering a selected
+   row. */
+[data-pc-name="listbox"] [aria-selected="true"],
+[data-pc-name="listbox"] [aria-selected="true"]:hover {
+  background: var(--p-highlight-background);
+  color: var(--p-highlight-color);
+  font-weight: 500;
+}
+</style>

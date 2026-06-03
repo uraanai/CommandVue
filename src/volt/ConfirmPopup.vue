@@ -67,7 +67,7 @@ const theme = ref<ConfirmPopupPassThroughOptions>({
             px-3 py-2 gap-2 rounded-md transition-colors duration-200
             bg-primary enabled:hover:bg-primary-emphasis text-primary-contrast
             border border-primary enabled:hover:border-primary-emphasis
-            focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-primary`,
+            focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]`,
   },
   pcRejectButton: {
     root: `inline-flex cursor-pointer select-none items-center justify-center

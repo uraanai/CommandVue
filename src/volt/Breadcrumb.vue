@@ -6,6 +6,11 @@
       mergeProps: ptViewMerge,
     }"
   >
+    <!-- PrimeVue renders no separator in unstyled mode, so the crumbs ran
+         together. Supply a chevron between items (overridable by the consumer). -->
+    <template #separator>
+      <ChevronRightIcon class="h-3.5 w-3.5" />
+    </template>
     <template v-for="(_, slotName) in $slots" #[slotName]="slotProps">
       <slot :name="slotName" v-bind="slotProps ?? {}" />
     </template>
@@ -13,6 +18,7 @@
 </template>
 
 <script setup lang="ts">
+import ChevronRightIcon from "@primevue/icons/chevronright";
 import Breadcrumb, {
   type BreadcrumbPassThroughOptions,
   type BreadcrumbProps,
@@ -30,7 +36,7 @@ const theme = ref<BreadcrumbPassThroughOptions>({
   item: ``,
   itemLink: `no-underline flex items-center gap-2 transition-colors duration-200 rounded-md
         text-surface-500 dark:text-surface-400 hover:text-surface-700 dark:hover:text-surface-0
-        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-primary`,
+        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]`,
   itemIcon: ``,
   itemLabel: ``,
   separator: `flex items-center text-surface-400 dark:text-surface-500`,

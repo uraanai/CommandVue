@@ -37,7 +37,7 @@ const theme = ref<SplitButtonPassThroughOptions>({
             disabled:pointer-events-none disabled:opacity-60
             bg-primary enabled:hover:bg-primary-emphasis text-primary-contrast
             border border-primary enabled:hover:border-primary-emphasis
-            focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-primary`,
+            focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]`,
   },
   pcDropdown: {
     root: `inline-flex cursor-pointer select-none items-center justify-center overflow-hidden relative
@@ -45,7 +45,7 @@ const theme = ref<SplitButtonPassThroughOptions>({
             disabled:pointer-events-none disabled:opacity-60
             bg-primary enabled:hover:bg-primary-emphasis text-primary-contrast
             border border-primary enabled:hover:border-primary-emphasis border-s border-s-primary-emphasis
-            focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-primary`,
+            focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]`,
   },
   pcMenu: {
     root: `min-w-48 py-1 rounded-md shadow-lg

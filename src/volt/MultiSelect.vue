@@ -87,7 +87,7 @@ const theme = ref<MultiSelectPassThroughOptions>({
             peer-enabled:peer-hover:border-surface-400 dark:peer-enabled:peer-hover:border-surface-600
             p-checked:border-primary p-checked:bg-primary p-checked:text-primary-contrast
             peer-enabled:peer-hover:p-checked:bg-primary-emphasis peer-enabled:peer-hover:p-checked:border-primary-emphasis
-            peer-focus-visible:outline-1 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary peer-focus-visible:outline 
+            peer-focus-visible:outline-1 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[color:var(--color-focus-ring)] peer-focus-visible:outline 
             p-disabled:bg-surface-200 dark:p-disabled:bg-surface-400 p-disabled:border-surface-300 dark:p-disabled:border-surface-700 p-disabled:text-surface-700 dark:p-disabled:text-surface-400
             shadow-[0_1px_2px_0_rgba(18,18,23,0.05)] transition-colors duration-200`,
     icon: `text-sm w-[0.875rem] h-[0.875rem] transition-none`,
@@ -132,7 +132,7 @@ const theme = ref<MultiSelectPassThroughOptions>({
             peer-enabled:peer-hover:border-surface-400 dark:peer-enabled:peer-hover:border-surface-600
             p-checked:border-primary p-checked:bg-primary p-checked:text-primary-contrast
             peer-enabled:peer-hover:p-checked:bg-primary-emphasis peer-enabled:peer-hover:p-checked:border-primary-emphasis
-            peer-focus-visible:outline-1 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary peer-focus-visible:outline 
+            peer-focus-visible:outline-1 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[color:var(--color-focus-ring)] peer-focus-visible:outline 
             p-disabled:bg-surface-200 dark:p-disabled:bg-surface-400 p-disabled:border-surface-300 dark:p-disabled:border-surface-700 p-disabled:text-surface-700 dark:p-disabled:text-surface-400
             shadow-[0_1px_2px_0_rgba(18,18,23,0.05)] transition-colors duration-200`,
     icon: `text-sm w-[0.875rem] h-[0.875rem] transition-none`,

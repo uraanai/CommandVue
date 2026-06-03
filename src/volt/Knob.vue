@@ -34,10 +34,10 @@ const theme = ref<KnobPassThroughOptions>({
   // `select-none` stops the drag from selecting surrounding text (which made the
   // page look "disoriented"); `touch-none` keeps touch drags on the dial.
   root: `inline-flex items-center justify-center select-none
-        p-focus-visible:outline p-focus-visible:outline-1 p-focus-visible:outline-offset-2 p-focus-visible:outline-primary
+        p-focus-visible:outline p-focus-visible:outline-1 p-focus-visible:outline-offset-2 p-focus-visible:outline-[color:var(--color-focus-ring)]
         p-disabled:opacity-60 p-disabled:pointer-events-none`,
   svg: `rounded-full cursor-pointer touch-none
-        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-primary`,
+        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]`,
   // No CSS transition on the arc — PrimeVue redraws the stroke every pointer
   // move, and an interpolating `transition-all` made the arc lag the pointer and
   // overshoot its bounds mid-drag.

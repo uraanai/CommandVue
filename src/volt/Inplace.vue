@@ -30,7 +30,7 @@ const theme = ref<InplacePassThroughOptions>({
   display: `inline-flex items-center cursor-pointer rounded-md px-2 py-1
         text-surface-700 dark:text-surface-0
         hover:bg-surface-100 dark:hover:bg-surface-800
-        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-primary
+        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]
         transition-colors duration-200`,
   content: `flex items-center gap-2`,
 });

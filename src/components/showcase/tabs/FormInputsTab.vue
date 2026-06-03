@@ -196,7 +196,8 @@ const fileLabel = ref<string>("no file chosen");
     <Fieldset legend="Knob">
       <div class="flex items-center gap-3">
         <Knob v-model="knobVal" :min="0" :max="100" />
-        <span class="text-muted text-sm tabular-nums">{{ knobVal }} / 100</span>
+        <!-- fixed-width echo: a free-width number reflows the row on every drag tick -->
+        <span class="text-muted inline-block w-16 text-sm tabular-nums">{{ knobVal }} / 100</span>
       </div>
     </Fieldset>
 

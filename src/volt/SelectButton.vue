@@ -35,7 +35,7 @@ const theme = ref<SelectButtonPassThroughOptions>({
             text-surface-500 dark:text-surface-400
             p-checked:text-surface-700 dark:p-checked:text-surface-0
             text-[length:var(--density-font-size)] font-medium
-            focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-primary focus-visible:relative focus-visible:z-10
+            focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)] focus-visible:relative focus-visible:z-10
             disabled:cursor-default
             disabled:bg-surface-200 disabled:border-surface-200 disabled:text-surface-500
             disabled:dark:bg-surface-700 disabled:dark:border-surface-700 disabled:dark:text-surface-400

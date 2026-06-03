@@ -151,10 +151,10 @@ const theme = ref<DatePickerPassThroughOptions>({
         text-surface-600 enabled:hover:text-surface-700 enabled:hover:active:text-surface-800
         dark:bg-surface-800 dark:enabled:hover:bg-surface-700 dark:enabled:active:bg-surface-600
         dark:text-surface-300 dark:enabled:hover:text-surface-200 dark:enabled:active:text-surface-100
-        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-primary
+        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]
         transition-colors duration-200`,
   inputIconContainer: `cursor-pointer absolute top-1/2 end-3 -mt-2 text-surface-400 leading-none p-small:*:size-[0.875rem] p-large:*:size-[1.125rem]`,
-  panel: `p-portal-self:min-w-full w-auto p-3 rounded-md
+  panel: `w-auto p-3 rounded-md
         p-inline:inline-block p-inline:overflow-x-auto p-inline:shadow-none
         border border-surface-200 dark:border-surface-700
         bg-surface-0 dark:bg-surface-900
@@ -172,12 +172,12 @@ const theme = ref<DatePickerPassThroughOptions>({
         py-1 px-2 rounded-md text-surface-700 dark:text-surface-0
         enabled:hover:bg-surface-100 enabled:hover:text-surface-800
         dark:enabled:hover:bg-surface-800 dark:enabled:hover:text-surface-0
-        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-primary`,
+        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]`,
   selectYear: `border-none bg-transparent m-0 cursor-pointer font-medium transition-colors duration-200
         py-1 px-2 rounded-md text-surface-700 dark:text-surface-0
         enabled:hover:bg-surface-100 enabled:hover:text-surface-800
         dark:enabled:hover:bg-surface-800 dark:enabled:hover:text-surface-0
-        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-primary`,
+        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]`,
   decade: `white-space-nowrap`,
   dayView: `w-full border-collapse text-base mt-2 mx-0 mb-0`,
   tableHeader: ``,
@@ -193,7 +193,7 @@ const theme = ref<DatePickerPassThroughOptions>({
   dayCell: `p-1`,
   day: `flex items-center justify-center cursor-pointer my-0 mx-auto overflow-hidden relative w-8 h-8
         rounded-full p-1 transition-colors duration-200 border border-transparent text-surface-700 dark:text-surface-0
-        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-primary
+        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]
         p-disabled:opacity-60 p-disabled:pointer-events-none
         hover:bg-surface-100 hover:text-surface-800 dark:hover:bg-surface-800 dark:hover:text-surface-0
         p-selected:bg-primary p-selected:text-primary-contrast
@@ -203,13 +203,13 @@ const theme = ref<DatePickerPassThroughOptions>({
   monthView: `mt-2 mb-0 mx-0`,
   month: `w-1/3 inline-flex items-center justify-center cursor-pointer overflow-hidden relative
         p-[0.375rem] transition-colors duration-200 rounded-md text-surface-700 dark:text-surface-0
-        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-primary
+        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]
         hover:bg-surface-100 hover:text-surface-800 dark:hover:bg-surface-800 dark:hover:text-surface-0
         p-selected:bg-primary p-selected:text-primary-contrast`,
   yearView: `mt-2 mb-0 mx-0`,
   year: `w-1/2 inline-flex items-center justify-center cursor-pointer overflow-hidden relative
         p-[0.375rem] transition-colors duration-200 rounded-md text-surface-700 dark:text-surface-0
-        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-primary
+        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]
         hover:bg-surface-100 hover:text-surface-800 dark:hover:bg-surface-800 dark:hover:text-surface-0
         p-selected:bg-primary p-selected:text-primary-contrast`,
   timePicker: `flex items-center justify-center border-t border-surface-200 dark:border-surface-700 p-0 gap-2
