@@ -52,6 +52,27 @@ export const SEMANTIC_TOKEN_NAMES = [
   "--color-status-danger-subtle",
   "--color-status-info",
   "--color-status-info-subtle",
+  // Status borders (Track A A1b) — tag/toast left-stripe + outline. Chain off
+  // the status solids in tokens.css; the generator re-emits them on a status
+  // override.
+  "--color-status-success-border",
+  "--color-status-warning-border",
+  "--color-status-danger-border",
+  "--color-status-info-border",
+  // Toast (Track A A1b) — neutral + per-severity bg/fg. Chain off the status +
+  // surface tokens in tokens.css; the generator re-emits them on a status
+  // override so a re-pointed hue carries through.
+  "--color-toast-bg",
+  "--color-toast-fg",
+  "--color-toast-border",
+  "--color-toast-success-bg",
+  "--color-toast-success-fg",
+  "--color-toast-info-bg",
+  "--color-toast-info-fg",
+  "--color-toast-warning-bg",
+  "--color-toast-warning-fg",
+  "--color-toast-danger-bg",
+  "--color-toast-danger-fg",
   // Focus
   "--color-focus-ring",
   "--shadow-focus-ring",

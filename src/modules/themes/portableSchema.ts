@@ -43,6 +43,14 @@ export const TokenNameSchema = z.string().refine((n) => isKnownToken(n), {
   error: (issue) => `Unknown token name: ${String(issue.input)}`,
 });
 
+/** Per-family status override (Track A A1b). Tier 1 = `hue`; `color`/`subtle`
+ *  are reserved for Tier 2 (A2b) and carried so persisted themes round-trip. */
+const StatusFamilyOverrideSchema = z.object({
+  hue: z.number().min(0).max(360).optional(),
+  color: z.string().min(1).max(100).optional(),
+  subtle: z.string().min(1).max(100).optional(),
+});
+
 /** Generation metadata captured when a theme is produced by the engine. */
 const GenerationMetaSchema = z.object({
   schemaVersion: z.literal(1),
@@ -50,6 +58,14 @@ const GenerationMetaSchema = z.object({
   accentColor: z.string().min(1),
   contrast: z.number().min(30).max(100),
   paired: z.string().optional(),
+  statusOverrides: z
+    .object({
+      success: StatusFamilyOverrideSchema.optional(),
+      warning: StatusFamilyOverrideSchema.optional(),
+      danger: StatusFamilyOverrideSchema.optional(),
+      info: StatusFamilyOverrideSchema.optional(),
+    })
+    .optional(),
 });
 
 /** Inner Theme object. `source` is validated here; the importer additionally

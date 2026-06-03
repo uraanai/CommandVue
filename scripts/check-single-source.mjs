@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Single-source-of-truth guard (Track A — ADR-0003).
+ * Single-source-of-truth guard (Track A — ADR-0004).
  *
  * CommandVue's theme system has ONE authored source of color truth: the
  * `--color-*` / `--p-*` CSS-variable namespace, emitted by the theme generator
@@ -80,29 +80,12 @@ const RULES = [
  * Known, intentional exceptions. A flagged line is allowed only if an entry
  * matches its file AND its text. KEEP THIS SMALL and tagged with the phase that
  * removes it.
+ *
+ * Empty as of Track A A1b: the Tag severity palette and the Checkbox/InputText/
+ * Textarea invalid-state red literals were converted to `--color-status-*`
+ * tokens, so the primitive layer is now fully token-driven with no exceptions.
  */
-const ALLOWLIST = [
-  {
-    file: "src/volt/Tag.vue",
-    line: /p-(?:success|info|warn|danger):/,
-    reason: "severity palette → `--color-status-*` tokens (Track A A1b)",
-  },
-  {
-    file: "src/volt/Checkbox.vue",
-    line: /p-invalid:/,
-    reason: "invalid-state red → `--color-status-danger` (Track A A1b)",
-  },
-  {
-    file: "src/volt/InputText.vue",
-    line: /p-invalid:/,
-    reason: "invalid-state red → `--color-status-danger` (Track A A1b)",
-  },
-  {
-    file: "src/volt/Textarea.vue",
-    line: /p-invalid:/,
-    reason: "invalid-state red → `--color-status-danger` (Track A A1b)",
-  },
-];
+const ALLOWLIST = [];
 
 /** Recursively collect `.vue` / `.ts` files under a directory. */
 function collect(dir, out) {
@@ -165,7 +148,7 @@ if (staleAllowlist.length > 0) {
 if (violations.length > 0) {
   console.error(
     `✖ single-source guard: ${violations.length} raw color literal(s) in the UI-primitive layer.\n` +
-      `  These must paint from theme tokens so a theme recolors them (ADR-0003).\n`,
+      `  These must paint from theme tokens so a theme recolors them (ADR-0004).\n`,
   );
   for (const v of violations) {
     console.error(`  ${v.rel}:${v.line}  [${v.rule}]  "${v.matched}"\n      → ${v.msg}`);
@@ -179,5 +162,5 @@ if (violations.length > 0) {
 
 console.log(
   `✓ single-source guard: ${files.length} UI-primitive files clean ` +
-    `(${ALLOWLIST.length} allowlisted exception${ALLOWLIST.length === 1 ? "" : "s"}, pending A1b).`,
+    `(${ALLOWLIST.length} allowlisted exception${ALLOWLIST.length === 1 ? "" : "s"}).`,
 );

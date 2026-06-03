@@ -225,4 +225,114 @@ describe("generatePairedVariant", () => {
     const builtIn = generatedTheme({ source: "built-in", generation: undefined });
     expect(() => generatePairedVariant(builtIn)).toThrow();
   });
+
+  it("carries status overrides into the paired variant (symmetric coverage)", () => {
+    const light = generatedTheme({
+      mode: "light",
+      tokens: generateTheme(input({ statusOverrides: { danger: { hue: 12 } } })).tokens,
+      generation: {
+        schemaVersion: 1,
+        baseColor: "oklch(0.98 0.005 250)",
+        accentColor: "oklch(0.55 0.18 250)",
+        contrast: 50,
+        statusOverrides: { danger: { hue: 12 } },
+      },
+    });
+    const { tokens } = generatePairedVariant(light);
+    // The paired variant re-points danger to ~12° too…
+    expect(toOklch(tokens["--color-status-danger"])?.h ?? 0).toBeGreaterThan(0);
+    expect(toOklch(tokens["--color-status-danger"])?.h ?? 99).toBeLessThan(20);
+    // …and emits the same additive key set, so coverage stays symmetric.
+    expect(Object.keys(tokens).sort()).toEqual(Object.keys(light.tokens).sort());
+    expect(tokens["--color-toast-danger-fg"]).toBeDefined();
+  });
+});
+
+describe("generateTheme — status overrides (A1b)", () => {
+  const STATUS_KEYS = [
+    "--color-status-success",
+    "--color-status-success-subtle",
+    "--color-status-warning",
+    "--color-status-warning-subtle",
+    "--color-status-danger",
+    "--color-status-danger-subtle",
+    "--color-status-info",
+    "--color-status-info-subtle",
+    "--color-success",
+    "--color-warning",
+    "--color-danger",
+    "--color-info",
+  ] as const;
+
+  const ADDITIVE_KEYS = [
+    "--color-status-success-border",
+    "--color-status-warning-border",
+    "--color-status-danger-border",
+    "--color-status-info-border",
+    "--color-toast-bg",
+    "--color-toast-fg",
+    "--color-toast-border",
+    "--color-toast-success-bg",
+    "--color-toast-success-fg",
+    "--color-toast-info-bg",
+    "--color-toast-info-fg",
+    "--color-toast-warning-bg",
+    "--color-toast-warning-fg",
+    "--color-toast-danger-bg",
+    "--color-toast-danger-fg",
+  ] as const;
+
+  it("produces byte-identical output for no / empty / undefined overrides", () => {
+    const base = generateTheme(input()).tokens;
+    const empty = generateTheme(input({ statusOverrides: {} })).tokens;
+    const undef = generateTheme(input({ statusOverrides: undefined })).tokens;
+    // Full token dictionary identical — not just the status subset.
+    expect(empty).toEqual(base);
+    expect(undef).toEqual(base);
+  });
+
+  it("emits NO border/toast keys when no override is present", () => {
+    const { tokens } = generateTheme(input());
+    for (const key of ADDITIVE_KEYS) {
+      expect(tokens[key], `${key} should be absent without an override`).toBeUndefined();
+    }
+  });
+
+  it("re-points only the overridden family's hue and leaves the rest", () => {
+    const { tokens } = generateTheme(input({ statusOverrides: { danger: { hue: 12 } } }));
+    const hueOf = (key: string) => toOklch(tokens[key])?.h ?? 0;
+    // danger re-pointed to ~12° (rose), out of its default ~27° red.
+    expect(hueOf("--color-status-danger")).toBeGreaterThan(5);
+    expect(hueOf("--color-status-danger")).toBeLessThan(20);
+    // success stays in its green family (~145°) — untouched.
+    expect(hueOf("--color-status-success")).toBeGreaterThan(120);
+    expect(hueOf("--color-status-success")).toBeLessThan(170);
+    // The compat alias tracks the same resolved value (no desync).
+    expect(tokens["--color-danger"]).toBe(tokens["--color-status-danger"]);
+  });
+
+  it("emits border + toast keys pinned to the resolved status values on override", () => {
+    const { tokens } = generateTheme(input({ statusOverrides: { danger: { hue: 12 } } }));
+    for (const key of ADDITIVE_KEYS) {
+      expect(tokens[key], `${key} should be emitted on override`).toBeDefined();
+    }
+    // border = the solid, toast -fg = the solid, toast -bg = the subtle.
+    expect(tokens["--color-status-danger-border"]).toBe(tokens["--color-status-danger"]);
+    expect(tokens["--color-toast-danger-fg"]).toBe(tokens["--color-status-danger"]);
+    expect(tokens["--color-toast-danger-bg"]).toBe(tokens["--color-status-danger-subtle"]);
+    // Neutral toast tokens chain off the generated surface/text/border.
+    expect(tokens["--color-toast-bg"]).toBe(tokens["--color-surface-raised"]);
+    expect(tokens["--color-toast-fg"]).toBe(tokens["--color-text-primary"]);
+    expect(tokens["--color-toast-border"]).toBe(tokens["--color-border-default"]);
+  });
+
+  it("keeps every override-path key inside the known-token allowlist", () => {
+    const { tokens } = generateTheme(
+      input({ statusOverrides: { success: { hue: 162 }, danger: { hue: 12 } } }),
+    );
+    const unknown = Object.keys(tokens).filter((k) => !KNOWN.has(k));
+    expect(unknown).toEqual([]);
+    // sanity: status keys themselves are still present + valid OKLCH
+    for (const key of STATUS_KEYS) expect(tokens[key]).toBeDefined();
+  });
 });
