@@ -46,6 +46,40 @@ const SEVERITY_ICON: Record<string, Component> = {
 };
 const iconFor = (severity: string | undefined): Component => SEVERITY_ICON[severity ?? ""] ?? Info;
 
+/** Per-position exit keyframe (defined in main.css). Enter is a mount animation
+ *  on the card; exit can't use Vue's transition classes (they don't advance in
+ *  the Portal), so a JS leave hook applies these and defers removal. */
+const LEAVE_ANIM: Record<string, string> = {
+  "top-right": "cv-toast-out-right",
+  "bottom-right": "cv-toast-out-right",
+  "top-left": "cv-toast-out-left",
+  "bottom-left": "cv-toast-out-left",
+  "top-center": "cv-toast-out-top",
+  "bottom-center": "cv-toast-out-bottom",
+  center: "cv-toast-out-scale",
+};
+
+/** Vue `onLeave` hook: play the position's exit animation, then resolve so
+ *  PrimeVue removes the element. Honors reduced-motion (removes instantly). */
+function animateLeave(el: Element, done: () => void): void {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    done();
+    return;
+  }
+  const pos =
+    el.closest("[data-cv-toast-pos]")?.getAttribute("data-cv-toast-pos") ?? "bottom-right";
+  const node = el as HTMLElement;
+  let settled = false;
+  const finish = (): void => {
+    if (settled) return;
+    settled = true;
+    done();
+  };
+  node.style.animation = `${LEAVE_ANIM[pos] ?? "cv-toast-out-bottom"} 150ms ease-in forwards`;
+  node.addEventListener("animationend", finish, { once: true });
+  window.setTimeout(finish, 260); // fallback if animationend doesn't fire
+}
+
 const pt: ToastPassThroughOptions = {
   // Position-aware outlet container. `pointer-events-none` so empty regions
   // never block clicks; the message re-enables them. The translate centers the
@@ -56,6 +90,8 @@ const pt: ToastPassThroughOptions = {
       props.position === "center" && "-translate-x-1/2 -translate-y-1/2",
       (props.position === "top-center" || props.position === "bottom-center") && "-translate-x-1/2",
     ),
+    // Drives the position-aware enter/leave animation (CSS in main.css).
+    "data-cv-toast-pos": props.position,
   }),
   // The card.
   message: {
@@ -74,11 +110,13 @@ const pt: ToastPassThroughOptions = {
     ),
   },
   closeIcon: { class: "size-4" },
-  // `css:false` — unstyled Portal + TransitionGroup never advances enter-from,
-  // so make appear/dismiss instant. The stacking gap between toasts lives on the
-  // TransitionGroup wrapper (the root's only child); PrimeVue types that pt as
-  // `TransitionProps` (no `class`), so it's set via CSS in `main.css`.
-  transition: { css: false },
+  // `css:false` — inside PrimeVue's Portal, Vue's TransitionGroup never advances
+  // its enter/leave *classes* (the message would stick invisible and never get
+  // removed). So ENTER is a browser-native CSS animation on the message card
+  // (main.css, plays on mount) and EXIT is the `onLeave` JS hook below, which
+  // plays the out-animation and defers removal until it ends. Both keyed off
+  // `data-cv-toast-pos`.
+  transition: { css: false, onLeave: animateLeave },
 };
 </script>
 
