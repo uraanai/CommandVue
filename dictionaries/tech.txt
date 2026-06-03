@@ -246,3 +246,9 @@ inlines
 inlined
 Chakra
 primeuix
+popouts
+toastservice
+unkeyed
+coalesce
+coalescing
+WAAPI

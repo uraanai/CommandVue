@@ -4,6 +4,7 @@ import { RouterView } from "vue-router";
 
 import ChromeBar from "@/components/chrome/ChromeBar.vue";
 import EditModeOverlay from "@/components/chrome/EditModeOverlay.vue";
+import NotificationOutlets from "@/components/common/NotificationOutlets.vue";
 import ConfirmDialog from "@/components/dialogs/ConfirmDialog.vue";
 import SaveLayoutAsDialog from "@/components/dialogs/SaveLayoutAsDialog.vue";
 import MinimizedDock from "@/components/layout/MinimizedDock.vue";
@@ -128,6 +129,9 @@ useKeyboardShortcuts({
     <!-- App-wide confirmation host. Driven by useConfirm(); mounted once here
          so any component can `await useConfirm().confirm({ … })`. -->
     <ConfirmDialog />
+    <!-- App-wide toast outlets (7 positions). Driven by useNotify(); installs
+         the producer handle so any component/store can fire notifications. -->
+    <NotificationOutlets />
     <SaveLayoutAsDialog
       v-model:visible="saveAsOpen"
       :default-name="(layoutStore.currentLayout?.name ?? '') + ' (saved)'"

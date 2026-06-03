@@ -67,9 +67,13 @@ deferred" decisions. File an issue if you want to take any of them on.
 - **Command palette: entities + drawings as result categories** — they
   appear in the data model but aren't wired into the palette's search
   yet. The `category` field on `CommandItem` is the extension point.
-- **Toast notifications** — the `Toast.vue` wrapper is in place but no
-  `ToastService` is registered with PrimeVue. A producer-side composable
-  (`useNotify`) on top of PrimeVue's `useToast` would finish the loop.
+- **Toast notifications** — ✅ done. `ToastService` is registered,
+  `NotificationOutlets` mounts the seven position outlets in `AppShell`, and
+  `useNotify()` is the producer-side composable (typed severities, multi-
+  position, keyed `replace`/`drop` coalescing). A **notification center** (a
+  history bell with an unread badge) is still future — the `useNotificationStore`
+  ring-buffer seam (record shape + dismiss reconciliation) is already in place
+  for it.
 
 ## Theming
 

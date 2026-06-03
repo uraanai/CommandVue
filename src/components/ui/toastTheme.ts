@@ -1,41 +1,54 @@
 /**
- * Severity → message-class mapping for the {@link Toast} outlet (Track A A1b).
+ * Severity vocabulary bridge + accent mapping for the {@link Toast} outlet.
  *
- * Pure token references only — every color comes from the `--color-toast-*` /
- * `--color-status-*` theme tokens (defined in `tokens.css`, re-emitted by the
- * generator on a status override), so a theme recolors every toast with no code
- * edit. That is also why this lives in its own module: keeping the class strings
- * here makes them unit-testable AND keeps the single-source guard
- * (`scripts/check-single-source.mjs`) satisfied — there are no raw color
- * literals, only `var(--…)` token lookups.
+ * The project-facing severity names (`success | info | warning | danger`) and
+ * the PrimeVue Toast names (`success | info | warn | error`) differ on two
+ * entries; this module is the SINGLE source of that bridge so the producer
+ * (`useNotify`) and the outlet styling agree.
  *
- * PrimeVue toast severities are `success | info | warn | error | secondary |
- * contrast` (note `warn`/`error`, which map onto our `warning`/`danger` token
- * families). Anything unrecognized — `secondary`, `contrast`, or an absent
- * severity — falls back to the neutral toast surface.
+ * Toast visuals (Track A A-Toast): a neutral surface card (`--color-toast-*`)
+ * with a small severity-colored icon — the modern admin pattern (Sonner /
+ * Linear / shadcn) rather than a colored bar. Severity is conveyed by the icon
+ * shape + its `--color-status-*` tint, both themeable. The icon colors live here
+ * (a single source) so the slot template stays declarative.
  */
+export type NotifySeverity = "danger" | "info" | "success" | "warning";
+export type ToastSeverity = "error" | "info" | "success" | "warn";
 
-/** Shared shape: rounded card, subtle full border, thicker left accent stripe. */
-const BASE = "rounded-md border border-l-4 shadow-lg px-3 py-2 text-sm";
+/** The seven canonical PrimeVue Toast positions (no arbitrary placement). */
+export type ToastPosition =
+  | "bottom-center"
+  | "bottom-left"
+  | "bottom-right"
+  | "center"
+  | "top-center"
+  | "top-left"
+  | "top-right";
 
-/** Neutral (default / secondary / contrast) — surface-raised card, no accent. */
-const NEUTRAL =
-  "border-[var(--color-toast-border)] border-l-[color:var(--color-toast-border)] bg-[var(--color-toast-bg)] text-[var(--color-toast-fg)]";
-
-/** Per-severity: subtle family fill, solid family text, family-colored stripe. */
-const BY_SEVERITY: Record<string, string> = {
-  success:
-    "border-[var(--color-toast-border)] border-l-[color:var(--color-status-success-border)] bg-[var(--color-toast-success-bg)] text-[var(--color-toast-success-fg)]",
-  info: "border-[var(--color-toast-border)] border-l-[color:var(--color-status-info-border)] bg-[var(--color-toast-info-bg)] text-[var(--color-toast-info-fg)]",
-  warn: "border-[var(--color-toast-border)] border-l-[color:var(--color-status-warning-border)] bg-[var(--color-toast-warning-bg)] text-[var(--color-toast-warning-fg)]",
-  error:
-    "border-[var(--color-toast-border)] border-l-[color:var(--color-status-danger-border)] bg-[var(--color-toast-danger-bg)] text-[var(--color-toast-danger-fg)]",
-};
+/** Map a project severity onto the PrimeVue severity `Toast.add` expects. */
+export function toPrimeSeverity(severity: NotifySeverity): ToastSeverity {
+  if (severity === "warning") return "warn";
+  if (severity === "danger") return "error";
+  return severity;
+}
 
 /**
- * Resolve the class string for one toast message from its PrimeVue severity.
- * Unknown / absent severities resolve to the neutral surface.
+ * Tailwind class for a toast's severity icon color, keyed by the PrimeVue
+ * severity carried on the message (`warn`/`error`, not `warning`/`danger`).
+ * Resolves to a `--color-status-*` token so it follows the active theme;
+ * `secondary` / `contrast` / unknown fall back to the neutral toast foreground.
  */
-export function toastMessageClass(severity?: string): string {
-  return `${BASE} ${BY_SEVERITY[severity ?? ""] ?? NEUTRAL}`;
+export function severityAccentClass(severity: string | undefined): string {
+  switch (severity) {
+    case "success":
+      return "text-[var(--color-status-success)]";
+    case "warn":
+      return "text-[var(--color-status-warning)]";
+    case "error":
+      return "text-[var(--color-status-danger)]";
+    case "info":
+      return "text-[var(--color-status-info)]";
+    default:
+      return "text-[var(--color-toast-fg)]";
+  }
 }
