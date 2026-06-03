@@ -238,3 +238,18 @@ button:not(:disabled),
 [data-pc-name="contextmenu"] [data-pc-section="item"] {
   position: relative;
 }
+
+/*
+ * Toast stacking gap. PrimeVue renders the messages inside an inner
+ * `<TransitionGroup tag="div">` — the toast outlet root's ONLY child — so the
+ * vertical gap between toasts stacked at the same position must live on that
+ * wrapper, not the root (a gap on the root has only one child to space). The
+ * `class` passthrough can't reach it (PrimeVue types the transition pt as
+ * `TransitionProps`, which omits `class`), so it's set here. 0.625rem == the
+ * design's `gap-2.5` (10px).
+ */
+[data-pc-name="toast"] > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}

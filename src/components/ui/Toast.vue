@@ -52,7 +52,7 @@ const pt: ToastPassThroughOptions = {
   // center / *-center outlets (unstyled mode drops PrimeVue's transform).
   root: ({ props }) => ({
     class: cn(
-      "pointer-events-none fixed z-[9000] flex w-[380px] max-w-[calc(100vw-2rem)] flex-col gap-2.5 p-4",
+      "pointer-events-none fixed z-[9000] w-[380px] max-w-[calc(100vw-2rem)] p-4",
       props.position === "center" && "-translate-x-1/2 -translate-y-1/2",
       (props.position === "top-center" || props.position === "bottom-center") && "-translate-x-1/2",
     ),
@@ -74,7 +74,10 @@ const pt: ToastPassThroughOptions = {
     ),
   },
   closeIcon: { class: "size-4" },
-  // Unstyled Portal + TransitionGroup never advances enter-from → make it instant.
+  // `css:false` — unstyled Portal + TransitionGroup never advances enter-from,
+  // so make appear/dismiss instant. The stacking gap between toasts lives on the
+  // TransitionGroup wrapper (the root's only child); PrimeVue types that pt as
+  // `TransitionProps` (no `class`), so it's set via CSS in `main.css`.
   transition: { css: false },
 };
 </script>
