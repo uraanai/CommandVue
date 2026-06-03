@@ -31,7 +31,7 @@
     "color-status-danger-subtle": "var(--color-red-950)",
     "color-status-info": "var(--color-teal-300)",
     "color-status-info-subtle": "var(--color-teal-950)",
-    "color-focus-ring": "var(--color-teal-400)",
+    "color-focus-ring": "var(--color-interactive)",
     "color-surface": "var(--color-slate-950)",
     "color-foreground": "var(--color-slate-50)",
     "color-muted": "var(--color-slate-300)",

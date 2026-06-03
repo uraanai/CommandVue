@@ -98,6 +98,7 @@ export const SHOWCASE_PRIMITIVES: readonly ShowcaseEntry[] = [
   { source: "volt", id: "SecondaryButton", label: "SecondaryButton", tab: "buttons" },
   { source: "volt", id: "SplitButton", label: "SplitButton", tab: "buttons" },
   // --- Data Display --------------------------------------------------------
+  { source: "ui", id: "StatCard", label: "StatCard (KPI tile)", tab: "data-display" },
   { source: "ui", id: "DataTable", label: "DataTable (TanStack)", tab: "data-display" },
   { source: "volt", id: "DataView", label: "DataView (grid)", tab: "data-display" },
   { source: "volt", id: "Tag", label: "Tag", tab: "data-display" },

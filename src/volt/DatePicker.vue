@@ -154,7 +154,7 @@ const theme = ref<DatePickerPassThroughOptions>({
         focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]
         transition-colors duration-200`,
   inputIconContainer: `cursor-pointer absolute top-1/2 end-3 -mt-2 text-surface-400 leading-none p-small:*:size-[0.875rem] p-large:*:size-[1.125rem]`,
-  panel: `w-auto p-3 rounded-md
+  panel: `w-auto !min-w-0 p-3 rounded-md
         p-inline:inline-block p-inline:overflow-x-auto p-inline:shadow-none
         border border-surface-200 dark:border-surface-700
         bg-surface-0 dark:bg-surface-900

@@ -385,8 +385,11 @@ export function generateTheme(input: ThemeGenerationInput): ThemeGenerationResul
     "--color-status-danger-subtle": statusFamilies.danger.subtle,
     "--color-status-info": statusFamilies.info.solid,
     "--color-status-info-subtle": statusFamilies.info.subtle,
-    // Focus
-    "--color-focus-ring": css(focusRing),
+    // Focus — emitted as a live reference to the interactive token (not a baked
+    // literal) so the focus outline always tracks the accent. `focusRing` (=
+    // interactive) is still used for the WCAG contrast check below; only the
+    // emitted value is a reference so recoloring the accent recolors focus too.
+    "--color-focus-ring": "var(--color-interactive)",
     // Accent scale 50–900 — overrides the `tokens.css` blue aliases so every
     // UI primitive that reads `bg-accent-500` / `var(--color-accent-*)` (Button,
     // Input, Select, Tabs, Menubar, DataTable, dockview, …) follows the user's

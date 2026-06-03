@@ -7,6 +7,7 @@ import { Bell } from "@lucide/vue";
 import { ref } from "vue";
 
 import DataTable from "@/components/ui/DataTable.vue";
+import StatCard from "@/components/ui/StatCard.vue";
 import Avatar from "@/volt/Avatar.vue";
 import AvatarGroup from "@/volt/AvatarGroup.vue";
 import Badge from "@/volt/Badge.vue";
@@ -126,48 +127,63 @@ const meterValue = ref<MeterItem[]>([
 // --- Inplace ---------------------------------------------------------------
 const inplaceText = ref<string>("Sector Bravo");
 
-// --- Stat cards (color-coded KPI tiles) ------------------------------------
-// The dashboard "metric card" pattern: a status-colored accent + big value +
-// trend delta. Colors come from the `--color-status-*` theme tokens so the
-// tiles recolor with the theme. `status` drives both the accent and the delta.
-interface StatCard {
+// --- Stat cards (configurable KPI tiles) -----------------------------------
+// Driven by the reusable <StatCard> primitive — every color treatment is a
+// prop, so the same component covers all the dashboard card styles. One tile
+// per `variant` here so every option is visible at a glance.
+interface StatTile {
   label: string;
   value: string;
   delta: string;
   trend: "up" | "down";
-  status: "success" | "info" | "warning" | "danger";
+  status: "success" | "info" | "warning" | "danger" | "neutral";
+  variant: "accent-left" | "accent-top" | "accent-bottom" | "border" | "filled" | "plain";
 }
-const STAT_CARDS: StatCard[] = [
-  { label: "Active units", value: "128", delta: "+12%", trend: "up", status: "success" },
-  { label: "Open alerts", value: "7", delta: "+3", trend: "up", status: "danger" },
-  { label: "Avg. uptime", value: "99.9%", delta: "+0.2%", trend: "up", status: "info" },
-  { label: "Pending tasks", value: "24", delta: "-5", trend: "down", status: "warning" },
+const STAT_CARDS: StatTile[] = [
+  { label: "Active units · accent-left", value: "128", delta: "+12%", trend: "up", status: "success", variant: "accent-left" }, // prettier-ignore
+  {
+    label: "Open alerts · filled",
+    value: "7",
+    delta: "+3",
+    trend: "up",
+    status: "danger",
+    variant: "filled",
+  },
+  {
+    label: "Avg. uptime · border",
+    value: "99.9%",
+    delta: "+0.2%",
+    trend: "up",
+    status: "info",
+    variant: "border",
+  },
+  { label: "Latency · accent-top", value: "42ms", delta: "-8ms", trend: "down", status: "info", variant: "accent-top" }, // prettier-ignore
+  { label: "Pending · accent-bottom", value: "24", delta: "-5", trend: "down", status: "warning", variant: "accent-bottom" }, // prettier-ignore
+  {
+    label: "Signal · plain",
+    value: "98%",
+    delta: "+1%",
+    trend: "up",
+    status: "success",
+    variant: "plain",
+  },
 ];
 </script>
 
 <template>
   <div class="flex flex-col gap-4">
-    <Fieldset legend="Stat cards (color-coded)">
-      <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <div
+    <Fieldset legend="Stat cards (configurable variants)">
+      <div class="grid grid-cols-2 gap-3 lg:grid-cols-3">
+        <StatCard
           v-for="s in STAT_CARDS"
           :key="s.label"
-          class="border-border bg-surface relative overflow-hidden rounded-lg border p-3 ps-4"
-        >
-          <span
-            class="absolute inset-y-0 start-0 w-1"
-            :style="{ background: `var(--color-status-${s.status})` }"
-          />
-          <div class="text-muted text-xs">{{ s.label }}</div>
-          <div class="text-foreground mt-1 text-2xl font-semibold tabular-nums">{{ s.value }}</div>
-          <div
-            class="mt-1 inline-flex items-center gap-1 text-xs font-medium tabular-nums"
-            :style="{ color: `var(--color-status-${s.status})` }"
-          >
-            <span>{{ s.trend === "up" ? "▲" : "▼" }}</span
-            >{{ s.delta }}
-          </div>
-        </div>
+          :label="s.label"
+          :value="s.value"
+          :delta="s.delta"
+          :trend="s.trend"
+          :status="s.status"
+          :variant="s.variant"
+        />
       </div>
     </Fieldset>
 

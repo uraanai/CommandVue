@@ -32,8 +32,14 @@ defineProps<Props>();
 const theme = ref<SplitButtonPassThroughOptions>({
   root: `inline-flex rounded-md`,
   pcButton: {
+    // Default size matches ui/Button md; the `size` prop ("small" | "large")
+    // flips the p-small / p-large variants so the split button has the same
+    // three sizes as the rest of the button family.
     root: `inline-flex cursor-pointer select-none items-center justify-center overflow-hidden relative
-            px-3 py-2 gap-2 rounded-s-md rounded-e-none transition-colors duration-200
+            gap-2 rounded-s-md rounded-e-none transition-colors duration-200
+            px-3.5 py-1.5 text-sm
+            p-small:px-2.5 p-small:py-1 p-small:text-xs
+            p-large:px-4 p-large:py-2 p-large:text-base
             disabled:pointer-events-none disabled:opacity-60
             bg-primary enabled:hover:bg-primary-emphasis text-primary-contrast
             border border-primary enabled:hover:border-primary-emphasis
@@ -41,7 +47,8 @@ const theme = ref<SplitButtonPassThroughOptions>({
   },
   pcDropdown: {
     root: `inline-flex cursor-pointer select-none items-center justify-center overflow-hidden relative
-            w-10 px-0 py-2 rounded-e-md rounded-s-none transition-colors duration-200
+            w-9 px-0 py-1.5 rounded-e-md rounded-s-none transition-colors duration-200
+            p-small:w-8 p-small:py-1 p-large:w-11 p-large:py-2
             disabled:pointer-events-none disabled:opacity-60
             bg-primary enabled:hover:bg-primary-emphasis text-primary-contrast
             border border-primary enabled:hover:border-primary-emphasis border-s border-s-primary-emphasis

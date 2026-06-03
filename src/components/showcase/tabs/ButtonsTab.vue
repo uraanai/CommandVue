@@ -73,8 +73,23 @@ const popupMenu = ref<InstanceType<typeof Menu> | null>(null);
     </Fieldset>
 
     <Fieldset legend="SplitButton">
-      <div class="flex flex-wrap items-center gap-3">
-        <SplitButton label="Save" :model="SPLIT_MODEL" @click="lastAction = 'Save (main action)'" />
+      <div class="flex flex-col gap-3">
+        <div class="flex flex-wrap items-center gap-3">
+          <SplitButton
+            label="Save"
+            size="small"
+            :model="SPLIT_MODEL"
+            @click="lastAction = 'Save (small)'"
+          />
+          <SplitButton label="Save" :model="SPLIT_MODEL" @click="lastAction = 'Save (medium)'" />
+          <SplitButton
+            label="Save"
+            size="large"
+            :model="SPLIT_MODEL"
+            @click="lastAction = 'Save (large)'"
+          />
+          <span class="text-faint text-xs">small · medium · large</span>
+        </div>
         <span class="text-muted text-sm">
           Last action:
           <span class="text-foreground font-mono tabular-nums">{{ lastAction }}</span>

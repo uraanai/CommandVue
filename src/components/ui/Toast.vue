@@ -139,7 +139,7 @@ const pt: ToastPassThroughOptions = {
   // center / *-center outlets (unstyled mode drops PrimeVue's transform).
   root: ({ props }) => ({
     class: cn(
-      "pointer-events-none fixed z-[9000] w-[380px] max-w-[calc(100vw-2rem)] p-4",
+      "pointer-events-none fixed z-[9000] w-[368px] max-w-[calc(100vw-1.5rem)] p-3",
       props.position === "center" && "-translate-x-1/2 -translate-y-1/2",
       (props.position === "top-center" || props.position === "bottom-center") && "-translate-x-1/2",
     ),
