@@ -38,7 +38,7 @@ Workspaces persist locally in IndexedDB. The Supabase-migration path under `docs
 
 ## 2. Layouts
 
-A **layout** is one specific arrangement of panels inside a workspace. Drag tabs to split the dock; that's a layout. Save it; that's a named layout.
+A **layout** is one specific arrangement of panels inside a workspace. Drag tabs to split the dock; that's a layout. Save it; that's a named layout. The full set of dock gestures — splitting, clean panes, floating windows, minimize/maximize, and pop-out — is covered in [Windowing & dock panels](/windowing).
 
 Each workspace contains one or more layouts. The seeded "Default" layout has all seven panels arranged in a fixed grid. Save your own arrangement via:
 

@@ -67,6 +67,14 @@ export default defineConfig({
         ],
       },
       {
+        text: "Using the app",
+        items: [
+          { text: "User guide", link: "/user-guide" },
+          { text: "Windowing & dock panels", link: "/windowing" },
+          { text: "Keyboard shortcuts", link: "/keyboard-shortcuts" },
+        ],
+      },
+      {
         text: "Building",
         items: [
           { text: "Panels", link: "/panels" },

@@ -11,7 +11,7 @@ On first launch the app creates:
 - Seven panels stacked as tabs: **3D Globe**, **2D Map**, **Entity List**, **Telemetry Chart**, **Live Telemetry**, **Briefing**, **Symbology**.
 - One **chrome profile** named **Default** that arranges the menu bar / status bar items.
 
-Drag any tab to split the dock. Drag a tab outside the dock to float it. Everything saves to your browser's storage; reloading the page brings you back to where you were.
+Drag any tab to split the dock. Drag a tab outside the dock to float it. For the full set of windowing gestures — clean panes, floating windows, minimize, maximize, and pop-out to a separate browser window — see [Windowing & dock panels](/windowing). Everything saves to your browser's storage; reloading the page brings you back to where you were.
 
 ## Workspaces and layouts — the mental model
 
@@ -127,15 +127,16 @@ Panel components that the importing build doesn't recognize render as a **missin
 
 ## Keyboard shortcuts
 
-| Combo            | Action                  |
-| ---------------- | ----------------------- |
-| Cmd/Ctrl+K       | Open command palette    |
-| Cmd/Ctrl+S       | Save Layout             |
-| Cmd/Ctrl+Shift+S | Save Layout As…         |
-| Cmd/Ctrl+B       | Toggle Components Panel |
-| Escape           | Deactivate current tool |
-| M                | Measure distance tool   |
-| P                | Draw polygon tool       |
+| Combo            | Action                   |
+| ---------------- | ------------------------ |
+| Cmd/Ctrl+K       | Open command palette     |
+| Cmd/Ctrl+S       | Save Layout              |
+| Cmd/Ctrl+Shift+S | Save Layout As…          |
+| Cmd/Ctrl+B       | Toggle Components Panel  |
+| Cmd/Ctrl+/       | Show/hide minimized tray |
+| Escape           | Deactivate current tool  |
+| M                | Measure distance tool    |
+| P                | Draw polygon tool        |
 
 See [Keyboard shortcuts](/keyboard-shortcuts) for the full list.
 
