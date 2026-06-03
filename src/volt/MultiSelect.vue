@@ -51,7 +51,7 @@ const theme = ref<MultiSelectPassThroughOptions>({
         shadow-[0_1px_2px_0_rgba(18,18,23,0.05)]
         transition-colors duration-200`,
   labelContainer: `overflow-hidden flex-auto`,
-  label: `flex items-center gap-1 whitespace-nowrap overflow-hidden text-ellipsis px-3 py-2 p-has-chip:py-1 p-has-chip:px-[0.375rem]
+  label: `flex items-center gap-1 whitespace-nowrap overflow-hidden text-ellipsis px-[var(--density-cell-padding-x)] py-[var(--density-cell-padding-y)] text-[length:var(--density-font-size)] p-has-chip:py-1 p-has-chip:px-[0.375rem]
         text-surface-700 dark:text-surface-0 
         p-placeholder:text-surface-500 dark:p-placeholder:text-surface-400
         p-disabled:text-surface-500 dark:p-disabled:text-surface-400

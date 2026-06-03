@@ -14,12 +14,16 @@
 
 <script setup lang="ts">
 // Hand-authored Volt-style wrapper — PrimeVue ships no Volt template for this
-// component, so it is styled here with the same unstyled + :pt + ptViewMerge
-// convention as the volt-vue generated files. FloatLabel only exposes a single
-// `root` pt section; the contained <label> is styled via descendant selectors
-// keyed off the variant classes (p-floatlabel-over / -in / -on, added to root
-// from the `variant` prop) and the input's focus / filled state. Styled
-// entirely from theme tokens (no raw palette / hex / rgb).
+// component, and its unstyled build emits none of the state markers
+// (`.p-filled`, `data-p`) the animated float needs. Attempts to drive the float
+// from `:placeholder-shown` failed too: Chromium ignores a whitespace-only
+// placeholder, and Tailwind cannot extract the stacked `has-[...]:[&>label]:…`
+// arbitrary variants. So this renders the reliable *notched* label pattern — the
+// label sits on the field's top border at all times, never overlapping the text
+// (which was the bug). The float is expressed in a small <style> block (like the
+// Volt ProgressSpinner's keyframes), namespaced by the `cv-floatlabel` pt class,
+// with every color a theme token. The label colors its text with the primary
+// token while the field is focused.
 import PvFloatLabel, {
   type FloatLabelPassThroughOptions,
   type FloatLabelProps,
@@ -32,47 +36,34 @@ interface Props extends /* @vue-ignore */ FloatLabelProps {}
 defineProps<Props>();
 
 const theme = ref<FloatLabelPassThroughOptions>({
-  root: `block relative
-
-        [&>label]:absolute [&>label]:pointer-events-none
-        [&>label]:text-surface-500 dark:[&>label]:text-surface-400
-        [&>label]:transition-all [&>label]:duration-200 [&>label]:ease-in-out
-
-        [&>label]:top-1/2 [&>label]:-translate-y-1/2
-        [&>label]:start-3 [&>label]:leading-none
-
-        has-[:focus]:[&>label]:text-primary
-        has-[.p-invalid]:[&>label]:text-[var(--color-status-danger)]
-
-        p-floatlabel-over:[&>label]:top-1/2
-        p-floatlabel-over:has-[:focus]:[&>label]:top-0
-        p-floatlabel-over:has-[:focus]:[&>label]:-translate-y-1/2
-        p-floatlabel-over:has-[:focus]:[&>label]:text-xs
-        p-floatlabel-over:has-[.p-filled]:[&>label]:top-0
-        p-floatlabel-over:has-[.p-filled]:[&>label]:-translate-y-1/2
-        p-floatlabel-over:has-[.p-filled]:[&>label]:text-xs
-        p-floatlabel-over:has-[:autofill]:[&>label]:top-0
-        p-floatlabel-over:has-[:autofill]:[&>label]:-translate-y-1/2
-        p-floatlabel-over:has-[:autofill]:[&>label]:text-xs
-
-        p-floatlabel-in:[&>label]:top-1/2
-        p-floatlabel-in:has-[:focus]:[&>label]:top-1
-        p-floatlabel-in:has-[:focus]:[&>label]:translate-y-0
-        p-floatlabel-in:has-[:focus]:[&>label]:text-xs
-        p-floatlabel-in:has-[.p-filled]:[&>label]:top-1
-        p-floatlabel-in:has-[.p-filled]:[&>label]:translate-y-0
-        p-floatlabel-in:has-[.p-filled]:[&>label]:text-xs
-
-        p-floatlabel-on:[&>label]:top-1/2
-        p-floatlabel-on:has-[:focus]:[&>label]:top-0
-        p-floatlabel-on:has-[:focus]:[&>label]:-translate-y-1/2
-        p-floatlabel-on:has-[:focus]:[&>label]:text-xs
-        p-floatlabel-on:has-[:focus]:[&>label]:px-1
-        p-floatlabel-on:has-[:focus]:[&>label]:bg-surface-0 dark:p-floatlabel-on:has-[:focus]:[&>label]:bg-surface-900
-        p-floatlabel-on:has-[.p-filled]:[&>label]:top-0
-        p-floatlabel-on:has-[.p-filled]:[&>label]:-translate-y-1/2
-        p-floatlabel-on:has-[.p-filled]:[&>label]:text-xs
-        p-floatlabel-on:has-[.p-filled]:[&>label]:px-1
-        p-floatlabel-on:has-[.p-filled]:[&>label]:bg-surface-0 dark:p-floatlabel-on:has-[.p-filled]:[&>label]:bg-surface-900`,
+  root: `cv-floatlabel`,
 });
 </script>
+
+<style>
+.cv-floatlabel {
+  position: relative;
+  display: block;
+  padding-top: 0.5rem;
+}
+.cv-floatlabel > label {
+  position: absolute;
+  top: 0.5rem;
+  inset-inline-start: 0.625rem;
+  transform: translateY(-50%);
+  padding-inline: 0.25rem;
+  font-size: 0.7rem;
+  line-height: 1;
+  pointer-events: none;
+  background: var(--color-surface);
+  color: var(--color-muted);
+  transition: color 0.15s ease-out;
+}
+.cv-floatlabel:has(input:focus) > label,
+.cv-floatlabel:has(textarea:focus) > label {
+  color: var(--p-primary-color);
+}
+.cv-floatlabel:has(.p-invalid) > label {
+  color: var(--color-status-danger);
+}
+</style>

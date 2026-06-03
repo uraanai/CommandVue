@@ -75,22 +75,24 @@ const ratingVal = ref<number>(3);
 <template>
   <div class="flex flex-col gap-4">
     <Fieldset legend="Select">
-      <div class="flex flex-wrap items-center gap-3">
-        <Select
-          v-model="selectVal"
-          :options="SELECT_OPTIONS"
-          placeholder="Choose a unit…"
-          show-clear
-          class="sm:w-64"
-        />
-        <span class="text-muted font-mono text-xs tabular-nums">{{ selectVal ?? "—" }}</span>
-        <Select
-          model-value="AL"
-          :options="SELECT_OPTIONS"
-          disabled
-          placeholder="Disabled"
-          class="sm:w-48"
-        />
+      <div class="flex flex-col gap-3">
+        <div class="flex flex-wrap items-center gap-3">
+          <Select
+            v-model="selectVal"
+            :options="SELECT_OPTIONS"
+            placeholder="Choose a unit…"
+            show-clear
+            class="sm:w-64"
+          />
+          <span class="text-muted text-xs"
+            >selected:
+            <span class="text-foreground font-mono tabular-nums">{{ selectVal ?? "—" }}</span></span
+          >
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-faint w-20 text-xs">disabled state</span>
+          <Select model-value="AL" :options="SELECT_OPTIONS" disabled class="sm:w-48" />
+        </div>
       </div>
     </Fieldset>
 

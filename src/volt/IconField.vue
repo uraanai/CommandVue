@@ -19,10 +19,11 @@
 // tokens (no raw palette / hex / rgb).
 //
 // IconField is a relative positioning context that overlays an InputIcon on an
-// InputText. Mirrors PrimeVue 4's `.p-iconfield` styled CSS: the wrapped input
-// gets a padding inset on the side the icon sits, so the text never overlaps
-// the icon. Left placement = icon is the first child; right placement = icon is
-// the last child (PrimeVue's first-child / last-child contract).
+// InputText. The wrapped input gets a padding inset on the side the icon sits,
+// so the text never overlaps the icon. The InputIcon is matched by its
+// `data-pc-name="inputicon"` attribute (NOT the `.p-inputicon` class, which is
+// only emitted in styled mode) so the inset applies in unstyled mode. Leading
+// icon = first child → start inset; trailing icon = last child → end inset.
 import PvIconField, {
   type IconFieldPassThroughOptions,
   type IconFieldProps,
@@ -37,7 +38,7 @@ defineProps<Props>();
 const theme = ref<IconFieldPassThroughOptions>({
   root: `relative block
         [&>input]:w-full
-        [&:has(.p-inputicon:first-child)_input]:ps-10
-        [&:has(.p-inputicon:last-child)_input]:pe-10`,
+        [&:has([data-pc-name=inputicon]:first-child)_input]:ps-10
+        [&:has([data-pc-name=inputicon]:last-child)_input]:pe-10`,
 });
 </script>

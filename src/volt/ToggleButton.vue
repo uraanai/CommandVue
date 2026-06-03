@@ -30,7 +30,7 @@ const theme = ref<ToggleButtonPassThroughOptions>({
         bg-surface-100 dark:bg-surface-950
         text-surface-500 dark:text-surface-400
         p-checked:text-surface-700 dark:p-checked:text-surface-0
-        text-base font-medium
+        text-[length:var(--density-font-size)] font-medium
         focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-primary
         disabled:cursor-default
         disabled:bg-surface-200 disabled:border-surface-200 disabled:text-surface-500
@@ -39,7 +39,7 @@ const theme = ref<ToggleButtonPassThroughOptions>({
         transition-colors duration-200
         p-1 p-small:text-sm p-large:text-lg
     `,
-  content: `relative flex-auto inline-flex items-center justify-center gap-2 py-1 px-3
+  content: `relative flex-auto inline-flex items-center justify-center gap-2 py-[var(--density-cell-padding-y)] px-[var(--density-cell-padding-x)]
         rounded-md transition-colors duration-200
         p-checked:bg-surface-0 dark:p-checked:bg-surface-800 p-checked:shadow-[0px_1px_2px_0px_rgba(0,0,0,0.02),0px_1px_2px_0px_rgba(0,0,0,0.04)]`,
   icon: ``,

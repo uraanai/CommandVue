@@ -56,7 +56,7 @@ const theme = ref<ListboxPassThroughOptions>({
   virtualScroller: ``,
   list: `list-none m-0 p-1 outline-none flex flex-col gap-[2px]`,
   optionGroup: `m-0 px-3 py-2 text-surface-500 dark:text-surface-400 font-semibold`,
-  option: `flex items-center cursor-pointer relative overflow-hidden px-3 py-2 border-none rounded-sm
+  option: `flex items-center cursor-pointer relative overflow-hidden px-[var(--density-cell-padding-x)] py-[var(--density-cell-padding-y)] text-[length:var(--density-font-size)] border-none rounded-sm
         text-surface-700 dark:text-surface-0
         hover:not-p-selected:bg-surface-100 dark:hover:not-p-selected:bg-surface-800 hover:not-p-selected:text-surface-800 dark:hover:not-p-selected:text-surface-0
         p-focus:not-p-selected:bg-surface-100 dark:p-focus:not-p-selected:bg-surface-800 p-focus:not-p-selected:text-surface-800 dark:p-focus:not-p-selected:text-surface-0

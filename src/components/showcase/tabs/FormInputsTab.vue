@@ -32,7 +32,7 @@ import Textarea from "@/volt/Textarea.vue";
  */
 
 // --- Text inputs -----------------------------------------------------------
-const inputVal = ref<string>("Tracked");
+const inputVal = ref<string>("");
 const voltInputVal = ref<string>("");
 const textareaVal = ref<string>("");
 
