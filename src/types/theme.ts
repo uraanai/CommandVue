@@ -48,6 +48,31 @@ export type ThemeSource = "built-in" | "user" | "imported" | "generated";
  */
 export type ThemeTokens = Record<string, string>;
 
+/** The four semantic status families. Each anchors a fixed hue by default. */
+export type StatusFamily = "success" | "warning" | "danger" | "info";
+
+/**
+ * Per-family status override (Track A A1b/A2b).
+ *
+ * - **Tier 1 (hue-only, A1b):** set `hue` to re-point just the family hue; the
+ *   engine keeps the mode-tuned lightness/chroma so the result stays in-gamut,
+ *   mode-adaptive, and AA-safe, and the subtle fill auto-derives.
+ * - **Tier 2 (explicit, A2b):** `color` / `subtle` pin exact values; `color`
+ *   takes precedence over `hue`. Carried in the type now so persisted themes
+ *   round-trip, but only `hue` is consumed by the generator until A2b.
+ */
+export interface StatusFamilyOverride {
+  /** 0–360. Re-points the family hue (Tier 1). */
+  hue?: number;
+  /** Explicit color, normalized through the engine (Tier 2 — A2b). */
+  color?: string;
+  /** Explicit subtle fill (Tier 2 — A2b). */
+  subtle?: string;
+}
+
+/** Optional per-family status overrides. Absent families take engine defaults. */
+export type StatusOverrides = Partial<Record<StatusFamily, StatusFamilyOverride>>;
+
 /**
  * Generation parameters captured when a theme is produced by the engine.
  * Present iff `source === "generated"`. Lets the editor pre-fill its inputs
@@ -59,6 +84,8 @@ export interface ThemeGenerationMeta {
   accentColor: string;
   contrast: number; // 30-100
   paired?: ThemeId; // id of the paired light/dark variant, if generated as a pair
+  /** Per-family status hue/color overrides (Track A A1b). Absent → defaults. */
+  statusOverrides?: StatusOverrides;
 }
 
 export interface Theme {

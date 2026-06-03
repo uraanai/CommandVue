@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import type { Theme, ThemeDensity, ThemeId, ThemeMode } from "@/types/theme";
+import type {
+  StatusFamily,
+  StatusOverrides,
+  Theme,
+  ThemeDensity,
+  ThemeId,
+  ThemeMode,
+} from "@/types/theme";
 
 import { computed, ref, watch } from "vue";
 
@@ -13,6 +20,7 @@ import {
   BASE_COLOR_SWATCHES,
   BLANK_DEFAULTS,
   CURATED_FONTS,
+  STATUS_HUE_SWATCHES,
 } from "@/modules/themes/curated-swatches";
 import { generateTheme } from "@/modules/themes/generate";
 import { themeRegistry } from "@/modules/themes/registry";
@@ -65,6 +73,45 @@ const fontFamily = ref<string>(BLANK_DEFAULTS.fontFamily);
 const generatePaired = ref(true);
 const applyAfterSave = ref(true);
 
+// --- Status hues (Track A A1b) -------------------------------------------
+// One representative swatch per family; index 0 of each preset list is the
+// default. The `statusOverrides` computed turns any non-default selection into
+// a `{ hue }` override the generator consumes; an all-default selection yields
+// `undefined` (byte-identical output).
+const STATUS_FAMILIES: readonly StatusFamily[] = ["success", "warning", "danger", "info"];
+const statusSwatch = ref<Record<StatusFamily, string>>({
+  success: STATUS_HUE_SWATCHES.success[0]!.value,
+  warning: STATUS_HUE_SWATCHES.warning[0]!.value,
+  danger: STATUS_HUE_SWATCHES.danger[0]!.value,
+  info: STATUS_HUE_SWATCHES.info[0]!.value,
+});
+const statusOptions = computed<Record<StatusFamily, { label: string; value: string }[]>>(() => ({
+  success: STATUS_HUE_SWATCHES.success.map((s) => ({ label: s.label, value: s.value })),
+  warning: STATUS_HUE_SWATCHES.warning.map((s) => ({ label: s.label, value: s.value })),
+  danger: STATUS_HUE_SWATCHES.danger.map((s) => ({ label: s.label, value: s.value })),
+  info: STATUS_HUE_SWATCHES.info.map((s) => ({ label: s.label, value: s.value })),
+}));
+const statusOverrides = computed<StatusOverrides | undefined>(() => {
+  const out: StatusOverrides = {};
+  for (const fam of STATUS_FAMILIES) {
+    const presets = STATUS_HUE_SWATCHES[fam];
+    const selected = statusSwatch.value[fam];
+    if (selected === presets[0]!.value) continue; // default → no override
+    const match = presets.find((s) => s.value === selected);
+    if (match) out[fam] = { hue: match.hue };
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+});
+/** Drive the swatch refs from a persisted override set (edit / start-from). */
+function applyStatusOverridesToSwatches(over?: StatusOverrides): void {
+  for (const fam of STATUS_FAMILIES) {
+    const presets = STATUS_HUE_SWATCHES[fam];
+    const hue = over?.[fam]?.hue;
+    const match = hue != null ? presets.find((s) => s.hue === hue) : undefined;
+    statusSwatch.value[fam] = (match ?? presets[0]!).value;
+  }
+}
+
 const saveError = ref<string | null>(null);
 const saving = ref(false);
 
@@ -87,6 +134,7 @@ function applyDefaults(): void {
   accentColor.value = BLANK_DEFAULTS.accentColor;
   contrast.value = BLANK_DEFAULTS.contrast;
   fontFamily.value = BLANK_DEFAULTS.fontFamily;
+  applyStatusOverridesToSwatches(undefined); // reset all families to default hue
 }
 
 function loadFromBuiltIn(id: ThemeId): void {
@@ -108,6 +156,7 @@ function loadFromGenerated(id: ThemeId): void {
   contrast.value = t.generation.contrast;
   mode.value = t.mode;
   density.value = t.density;
+  applyStatusOverridesToSwatches(t.generation.statusOverrides);
   // fontFamily isn't persisted in the generation block today — leave at current.
 }
 
@@ -140,6 +189,7 @@ watch(
       contrast.value = t.generation.contrast;
       mode.value = t.mode;
       density.value = t.density;
+      applyStatusOverridesToSwatches(t.generation.statusOverrides);
       generatePaired.value = !!t.generation.paired;
       startFromMode.value = "custom";
       startFromCustomId.value = t.id;
@@ -165,6 +215,7 @@ const generationResult = computed(() => {
       mode: mode.value,
       density: density.value,
       fontFamily: fontFamily.value || undefined,
+      statusOverrides: statusOverrides.value,
     });
   } catch {
     // Bad input shouldn't crash the dialog — show nothing in the preview.
@@ -209,6 +260,7 @@ async function save(): Promise<void> {
       baseColor: baseColor.value,
       accentColor: accentColor.value,
       contrast: contrast.value,
+      ...(statusOverrides.value ? { statusOverrides: statusOverrides.value } : {}),
     };
     const created = await themeRepo.create({
       name: cleanName,
@@ -233,6 +285,7 @@ async function save(): Promise<void> {
         mode: flippedMode,
         density: density.value,
         fontFamily: fontFamily.value || undefined,
+        statusOverrides: statusOverrides.value,
       });
       const paired = await themeRepo.create({
         name: pairedName,
@@ -292,6 +345,7 @@ async function updateExisting(): Promise<void> {
       contrast: contrast.value,
       // Preserve the original paired ref if there was one.
       paired: props.themeToEdit.generation?.paired,
+      ...(statusOverrides.value ? { statusOverrides: statusOverrides.value } : {}),
     };
     const updated = await themeRepo.update(props.themeToEdit.id, {
       name: cleanName,
@@ -427,6 +481,25 @@ const FONT_OPTIONS = CURATED_FONTS.map((f) => ({ label: f.label, value: f.value 
               aria-label="Accent color"
             />
             <span class="text-faint font-mono text-[10px]">{{ accentColor }}</span>
+          </div>
+
+          <!-- Status hues (Track A A1b) — Tier 1, hue-only. Each family keeps
+               its semantic meaning; the picker offers a few hues within it. -->
+          <div class="flex flex-col gap-1.5">
+            <span class="text-foreground font-medium">Status hues</span>
+            <div v-for="fam in STATUS_FAMILIES" :key="fam" class="flex items-center gap-2">
+              <span class="text-muted w-16 shrink-0 text-xs capitalize">{{ fam }}</span>
+              <ColorSwatchPicker
+                v-model="statusSwatch[fam]"
+                :options="statusOptions[fam]"
+                :allow-custom="false"
+                :aria-label="`${fam} hue`"
+              />
+            </div>
+            <span class="text-faint text-[10px]">
+              Each family stays in its semantic lane (independent of the accent); defaults match the
+              built-in palette.
+            </span>
           </div>
 
           <!-- Contrast slider -->
@@ -589,10 +662,12 @@ const FONT_OPTIONS = CURATED_FONTS.map((f) => ({ label: f.label, value: f.value 
                 </div>
               </div>
 
-              <!-- Status badges. Status colors use fixed semantic hue
-                   families (success ≈ 145°, warning ≈ 75°, danger ≈ 27°,
+              <!-- Status badges. Status colors live in semantic hue families
+                   (defaults: success ≈ 145°, warning ≈ 75°, danger ≈ 27°,
                    info ≈ 250°) so meaning is preserved regardless of the
-                   accent — by design. They do shift L/C with Mode. -->
+                   accent. The "Status hues" control re-points a family's hue
+                   within its lane; L/C still shift with Mode. These badges read
+                   `--color-status-*`, so they recolor live as you tune. -->
               <div class="flex flex-col gap-1">
                 <div class="flex flex-wrap items-center gap-2">
                   <span
@@ -626,8 +701,8 @@ const FONT_OPTIONS = CURATED_FONTS.map((f) => ({ label: f.label, value: f.value 
                   </span>
                 </div>
                 <span class="text-[10px] italic" :style="{ color: 'var(--color-text-tertiary)' }">
-                  Status hues are fixed semantic families — independent of the accent so meaning is
-                  preserved.
+                  Status hues stay in their semantic families — independent of the accent so meaning
+                  is preserved. Tune each family's hue on the left.
                 </span>
               </div>
 

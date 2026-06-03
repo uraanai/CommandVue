@@ -87,11 +87,23 @@ the UI accent, or omit and rely on `--color-interactive`):**
 `--color-accent-600`, `--color-accent-700`, `--color-accent-800`,
 `--color-accent-900`
 
-**Status (keep the semantic meaning — green/amber/red/blue):**
+**Status (keep the semantic meaning — green/amber/red/blue; you may shift the
+hue within a family, e.g. red → rose for danger):**
 `--color-status-success` + `--color-status-success-subtle`,
 `--color-status-warning` + `--color-status-warning-subtle`,
 `--color-status-danger` + `--color-status-danger-subtle`,
 `--color-status-info` + `--color-status-info-subtle`
+
+**Status borders (optional — the tag/toast accent stripe; default to the solid
+status color, so you only set these to make the stripe differ):**
+`--color-status-success-border`, `--color-status-warning-border`,
+`--color-status-danger-border`, `--color-status-info-border`
+
+**Toast (optional — notification surfaces; default to the surface + status
+families, so most themes omit them):** neutral `--color-toast-bg`,
+`--color-toast-fg`, `--color-toast-border`, plus per-severity
+`--color-toast-{success,info,warning,danger}-bg` (subtle fill) and `-fg`
+(solid text).
 
 **Typography (optional):** `--font-family-sans`, `--font-family-mono`
 
@@ -119,8 +131,11 @@ inherit from the semantic tokens above. The authoritative allowlist lives in
 3. **Text must contrast its surface:** `--color-text-primary` should clear
    ~4.5:1 against `--color-surface-base` (WCAG AA). `--color-on-interactive`
    must clear ~4.5:1 against `--color-interactive`.
-4. **Status hues stay semantic:** success ≈ 145°, warning ≈ 75°, danger ≈ 27°,
-   info ≈ 250°. Don't recolor these to match the accent.
+4. **Status hues stay in their families:** the defaults are success ≈ 145°,
+   warning ≈ 75°, danger ≈ 27°, info ≈ 250°. You MAY shift a hue within its
+   family (red → rose, blue → indigo) for aesthetic fit, but keep success
+   green-ish, warning amber/orange-ish, danger red-ish, info blue-ish — and
+   never recolor them to match the accent.
 5. Output ONLY the JSON object — no prose, no code fences.
 
 ### Before you output, verify

@@ -354,6 +354,33 @@
   --color-status-info: var(--color-blue-600);
   --color-status-info-subtle: var(--color-blue-50);
 
+  /* Status borders — the left-stripe / outline accent for tags + toasts.
+   * Default to the solid family hue; the generator re-emits these from the
+   * resolved status value when a status override is present (Track A A1b). */
+  --color-status-success-border: var(--color-status-success);
+  --color-status-warning-border: var(--color-status-warning);
+  --color-status-danger-border: var(--color-status-danger);
+  --color-status-info-border: var(--color-status-info);
+
+  /* Toast — neutral defaults + per-severity fills. `-bg` = the family's subtle
+   * fill, `-fg` = the family's solid color. These chain off the status +
+   * surface tokens, so they follow the active theme AND dark mode without a
+   * separate dark block: custom-property references resolve in the current
+   * cascade, picking up whatever `--color-status-*` / surface tokens are live.
+   * Built-ins inherit them for free; a generated theme with a status override
+   * re-emits them pinned to its resolved values (Track A A1b, §3c). */
+  --color-toast-bg: var(--color-surface-raised);
+  --color-toast-fg: var(--color-text-primary);
+  --color-toast-border: var(--color-border-default);
+  --color-toast-success-bg: var(--color-status-success-subtle);
+  --color-toast-success-fg: var(--color-status-success);
+  --color-toast-info-bg: var(--color-status-info-subtle);
+  --color-toast-info-fg: var(--color-status-info);
+  --color-toast-warning-bg: var(--color-status-warning-subtle);
+  --color-toast-warning-fg: var(--color-status-warning);
+  --color-toast-danger-bg: var(--color-status-danger-subtle);
+  --color-toast-danger-fg: var(--color-status-danger);
+
   /* Focus ring */
   --color-focus-ring: var(--color-blue-500);
   --shadow-focus-ring: 0 0 0 2px var(--color-focus-ring);

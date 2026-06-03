@@ -27,7 +27,7 @@
  * the Linear blog post that inspired the approach.
  */
 
-import type { Theme, ThemeDensity, ThemeMode } from "@/types/theme";
+import type { StatusFamily, StatusOverrides, Theme, ThemeDensity, ThemeMode } from "@/types/theme";
 import type { Oklch } from "culori";
 
 import { clampChroma, converter, inGamut, wcagContrast } from "culori";
@@ -48,6 +48,12 @@ export interface ThemeGenerationInput {
   density: ThemeDensity;
   /** Optional font stack; when present, overrides `--font-family-sans/-body`. */
   fontFamily?: string;
+  /**
+   * Per-family status overrides (Track A A1b). Absent → today's fixed hue
+   * families (byte-identical output). A present override re-points the hue and
+   * triggers emission of the additive status-border + toast keys.
+   */
+  statusOverrides?: StatusOverrides;
   name: string;
   description?: string;
 }
@@ -258,6 +264,26 @@ export function generateTheme(input: ThemeGenerationInput): ThemeGenerationResul
   const status = (hue: number) => oklch(statusL, statusC, hue);
   const statusSubtle = (hue: number) => oklch(subtleL, subtleC, hue);
 
+  // Status overrides (Track A A1b). Tier 1 = hue-only: re-point the family hue
+  // and keep the mode-tuned L/C, so the result stays in-gamut + mode-adaptive
+  // (Tier-2 explicit color/subtle defer to A2b). With NO override a family
+  // resolves to EXACTLY today's value — `css(status(STATUS_HUES.x))` — so the
+  // status tokens stay byte-identical (§3c). `hasStatusOverride` gates the
+  // additive border/toast keys below.
+  const overrides = input.statusOverrides;
+  const hueFor = (name: StatusFamily): number => overrides?.[name]?.hue ?? STATUS_HUES[name];
+  const resolveStatusFamily = (name: StatusFamily) => ({
+    solid: css(status(hueFor(name))),
+    subtle: css(statusSubtle(hueFor(name))),
+  });
+  const statusFamilies: Record<StatusFamily, { solid: string; subtle: string }> = {
+    success: resolveStatusFamily("success"),
+    warning: resolveStatusFamily("warning"),
+    danger: resolveStatusFamily("danger"),
+    info: resolveStatusFamily("info"),
+  };
+  const hasStatusOverride = !!overrides && Object.keys(overrides).length > 0;
+
   // --- Accent scale (50–900) ------------------------------------------------
   // The existing UI primitives (Button, IconButton, Input, Select, Tabs,
   // Menubar, DataTable, ColorPicker, dockview borders) consume the
@@ -350,15 +376,15 @@ export function generateTheme(input: ThemeGenerationInput): ThemeGenerationResul
     "--color-interactive-active": css(interactiveActive),
     "--color-interactive-subtle": css(interactiveSubtle),
     "--color-on-interactive": css(onInteractive),
-    // Status
-    "--color-status-success": css(status(STATUS_HUES.success)),
-    "--color-status-success-subtle": css(statusSubtle(STATUS_HUES.success)),
-    "--color-status-warning": css(status(STATUS_HUES.warning)),
-    "--color-status-warning-subtle": css(statusSubtle(STATUS_HUES.warning)),
-    "--color-status-danger": css(status(STATUS_HUES.danger)),
-    "--color-status-danger-subtle": css(statusSubtle(STATUS_HUES.danger)),
-    "--color-status-info": css(status(STATUS_HUES.info)),
-    "--color-status-info-subtle": css(statusSubtle(STATUS_HUES.info)),
+    // Status — resolved per family (byte-identical when no override; §3c).
+    "--color-status-success": statusFamilies.success.solid,
+    "--color-status-success-subtle": statusFamilies.success.subtle,
+    "--color-status-warning": statusFamilies.warning.solid,
+    "--color-status-warning-subtle": statusFamilies.warning.subtle,
+    "--color-status-danger": statusFamilies.danger.solid,
+    "--color-status-danger-subtle": statusFamilies.danger.subtle,
+    "--color-status-info": statusFamilies.info.solid,
+    "--color-status-info-subtle": statusFamilies.info.subtle,
     // Focus
     "--color-focus-ring": css(focusRing),
     // Accent scale 50–900 — overrides the `tokens.css` blue aliases so every
@@ -379,10 +405,12 @@ export function generateTheme(input: ThemeGenerationInput): ThemeGenerationResul
     "--color-muted": css(textSecondary),
     "--color-faint": css(textTertiary),
     "--color-border": css(borderDefault),
-    "--color-success": css(status(STATUS_HUES.success)),
-    "--color-warning": css(status(STATUS_HUES.warning)),
-    "--color-danger": css(status(STATUS_HUES.danger)),
-    "--color-info": css(status(STATUS_HUES.info)),
+    // Regenerated from the SAME resolved value as the status tokens so a
+    // re-pointed hue can't desync the compat aliases (byte-identical when unset).
+    "--color-success": statusFamilies.success.solid,
+    "--color-warning": statusFamilies.warning.solid,
+    "--color-danger": statusFamilies.danger.solid,
+    "--color-info": statusFamilies.info.solid,
     // Component color overrides (sizes/radii cascade from density/primitives).
     "--datatable-header-bg": css(surfaceRaised),
     "--datatable-header-fg": css(textSecondary),
@@ -405,6 +433,33 @@ export function generateTheme(input: ThemeGenerationInput): ThemeGenerationResul
   if (input.fontFamily) {
     tokens["--font-family-sans"] = input.fontFamily;
     tokens["--font-family-body"] = input.fontFamily;
+  }
+
+  // --- Additive status-border + toast keys (only when a status override is
+  // present). Pinned to the resolved status values so a re-pointed hue carries
+  // its border/toast through and the exported theme is self-contained. Without
+  // an override these are OMITTED — `tokens.css` provides them as `var()` chains
+  // off the byte-identical status tokens, so a default generated theme stays
+  // byte-identical and emits no new keys (§3c). -------------------------------
+  if (hasStatusOverride) {
+    const sf = statusFamilies;
+    Object.assign(tokens, {
+      "--color-status-success-border": sf.success.solid,
+      "--color-status-warning-border": sf.warning.solid,
+      "--color-status-danger-border": sf.danger.solid,
+      "--color-status-info-border": sf.info.solid,
+      "--color-toast-bg": tokens["--color-surface-raised"],
+      "--color-toast-fg": tokens["--color-text-primary"],
+      "--color-toast-border": tokens["--color-border-default"],
+      "--color-toast-success-bg": sf.success.subtle,
+      "--color-toast-success-fg": sf.success.solid,
+      "--color-toast-info-bg": sf.info.subtle,
+      "--color-toast-info-fg": sf.info.solid,
+      "--color-toast-warning-bg": sf.warning.subtle,
+      "--color-toast-warning-fg": sf.warning.solid,
+      "--color-toast-danger-bg": sf.danger.subtle,
+      "--color-toast-danger-fg": sf.danger.solid,
+    });
   }
 
   // --- Contrast report. ------------------------------------------------------
@@ -454,6 +509,9 @@ export function generatePairedVariant(theme: Theme): ThemeGenerationResult {
     contrast: theme.generation.contrast,
     mode: flipped,
     density: theme.density,
+    // Carry status overrides so the paired variant re-points the same hues and
+    // emits the same border/toast key set (keeping token coverage symmetric).
+    statusOverrides: theme.generation.statusOverrides,
     name: `${theme.name} (${flipped === "dark" ? "Dark" : "Light"})`,
   });
 }

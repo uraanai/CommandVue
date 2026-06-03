@@ -24,6 +24,8 @@
  * grid stays a single row at typical dialog widths.
  */
 
+import type { StatusFamily } from "@/types/theme";
+
 export interface CuratedSwatch {
   /** Human label surfaced as tooltip + aria-label. */
   label: string;
@@ -92,4 +94,50 @@ export const BLANK_DEFAULTS = {
   accentColor: "oklch(0.55 0.18 250)", // Blue
   contrast: 50,
   fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif", // System UI
+} as const;
+
+/**
+ * Per-family status hue presets surfaced by the customizer's "Status hues" row
+ * (Track A A1b — Tier 1, hue-only). Each family offers a handful of hues that
+ * stay inside its semantic meaning (you can shift "danger" red→rose→orange, but
+ * not make it green). `hue` is what the generator consumes; `value` is the
+ * representative swatch the picker renders.
+ *
+ * INVARIANT: the FIRST entry of each family is the default — its `hue` MUST
+ * equal the generator's `STATUS_HUES` (success 145, warning 75, danger 27, info
+ * 250). Selecting it clears the override (byte-identical output).
+ */
+export interface StatusHueSwatch {
+  label: string;
+  /** 0–360 hue fed to the generator as `statusOverrides[family].hue`. */
+  hue: number;
+  /** Representative OKLCH swatch rendered in the picker. */
+  value: string;
+}
+
+export const STATUS_HUE_SWATCHES: Record<StatusFamily, readonly StatusHueSwatch[]> = {
+  success: [
+    { label: "Green (default)", hue: 145, value: "oklch(0.60 0.16 145)" },
+    { label: "Emerald", hue: 162, value: "oklch(0.60 0.15 162)" },
+    { label: "Teal", hue: 180, value: "oklch(0.60 0.12 180)" },
+    { label: "Lime", hue: 128, value: "oklch(0.62 0.16 128)" },
+  ],
+  warning: [
+    { label: "Amber (default)", hue: 75, value: "oklch(0.70 0.16 75)" },
+    { label: "Orange", hue: 55, value: "oklch(0.67 0.17 55)" },
+    { label: "Yellow", hue: 95, value: "oklch(0.74 0.15 95)" },
+    { label: "Gold", hue: 85, value: "oklch(0.72 0.16 85)" },
+  ],
+  danger: [
+    { label: "Red (default)", hue: 27, value: "oklch(0.58 0.20 27)" },
+    { label: "Rose", hue: 12, value: "oklch(0.58 0.20 12)" },
+    { label: "Crimson", hue: 8, value: "oklch(0.55 0.21 8)" },
+    { label: "Orange-red", hue: 38, value: "oklch(0.61 0.18 38)" },
+  ],
+  info: [
+    { label: "Blue (default)", hue: 250, value: "oklch(0.60 0.16 250)" },
+    { label: "Sky", hue: 230, value: "oklch(0.62 0.14 230)" },
+    { label: "Indigo", hue: 270, value: "oklch(0.55 0.17 270)" },
+    { label: "Cyan", hue: 215, value: "oklch(0.65 0.12 215)" },
+  ],
 } as const;
