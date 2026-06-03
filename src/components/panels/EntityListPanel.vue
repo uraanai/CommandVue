@@ -18,6 +18,7 @@ import { renderSidcToSvg } from "@/modules/symbology/render";
 import { useEntitiesStore, type Entity } from "@/stores/entities";
 import { cn } from "@/utils/cn";
 import { formatLatLon } from "@/utils/format";
+import Tag from "@/volt/Tag.vue";
 
 /**
  * EntityListPanel — sortable, filterable list of tracked entities.
@@ -61,6 +62,24 @@ const affiliationClass: Record<Entity["affiliation"], string> = {
   unknown: "text-yellow-400",
 };
 
+/**
+ * Demo "readiness" status derived from each entity's affiliation. It exists to
+ * exercise the themeable `<Tag>` severities (Track A A1b): friendly units read
+ * nominal (success/green), hostiles a threat (danger/red), unknown a warning
+ * (amber), neutral an info (blue). Because the Tag paints from `--color-status-*`
+ * tokens, these chips recolor live when a theme is applied or its status hues
+ * are tuned — which is the point of having them here.
+ */
+const STATUS_BY_AFFILIATION: Record<
+  Entity["affiliation"],
+  { label: string; severity: "danger" | "info" | "success" | "warn" }
+> = {
+  friend: { label: "Nominal", severity: "success" },
+  neutral: { label: "Monitoring", severity: "info" },
+  unknown: { label: "Unconfirmed", severity: "warn" },
+  hostile: { label: "Threat", severity: "danger" },
+};
+
 function symbolSvg(entity: Entity): string {
   return renderSidcToSvg(entity.sidc, { size: 22 });
 }
@@ -77,6 +96,7 @@ const columns = computed(() => [
   }),
   helper.accessor("name", { id: "name", header: "Callsign", size: 160 }),
   helper.accessor("affiliation", { id: "affiliation", header: "Affiliation", size: 120 }),
+  helper.display({ id: "status", header: "Status", size: 140, enableSorting: false }),
   helper.display({ id: "position", header: "Position", size: 160, enableSorting: false }),
   helper.accessor("altitudeMeters", { id: "altitudeMeters", header: "Alt (m)", size: 100 }),
   helper.accessor("speedKnots", { id: "speedKnots", header: "Speed (kn)", size: 110 }),
@@ -183,6 +203,13 @@ function onDensityChange(value: null | number | string): void {
           <span :class="cn(affiliationClass[(row as Entity).affiliation])">
             {{ (row as Entity).affiliation }}
           </span>
+        </template>
+
+        <template #cell-status="{ row }">
+          <Tag
+            :value="STATUS_BY_AFFILIATION[(row as Entity).affiliation].label"
+            :severity="STATUS_BY_AFFILIATION[(row as Entity).affiliation].severity"
+          />
         </template>
 
         <template #cell-position="{ row }">
