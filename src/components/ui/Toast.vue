@@ -23,10 +23,11 @@ import { cn } from "@/utils/cn";
  *     not the `translate(-50%, -50%)` that styled mode adds, so center / *-center
  *     outlets would sit left-anchored. The position-aware `root` re-adds the
  *     translate.
- *   - **Transitions.** Inside PrimeVue's Portal the message `<TransitionGroup>`
- *     never advances past `enter-from`, so any enter-from styling sticks (toast
- *     renders invisible) and removal lingers. `transition: { css: false }` makes
- *     appear/dismiss instant + reliable; animated transitions are a follow-up.
+ *   - **Animations.** Inside PrimeVue's Portal the message `<TransitionGroup>`
+ *     never advances its enter/leave classes (the message sticks invisible /
+ *     never removes), so `transition: { css: false }` disables them. The pop-in
+ *     is a browser-native CSS animation on the card (main.css); the pop-out is
+ *     the `onLeave` hook below. Both are position-aware via `data-cv-toast-pos`.
  */
 withDefaults(
   defineProps<{
