@@ -23,11 +23,12 @@ import { cn } from "@/utils/cn";
  *     not the `translate(-50%, -50%)` that styled mode adds, so center / *-center
  *     outlets would sit left-anchored. The position-aware `root` re-adds the
  *     translate.
- *   - **Animations.** Inside PrimeVue's Portal the message `<TransitionGroup>`
- *     never advances its enter/leave classes (the message sticks invisible /
- *     never removes), so `transition: { css: false }` disables them. The pop-in
- *     is a browser-native CSS animation on the card (main.css); the pop-out is
- *     the `onLeave` hook below. Both are position-aware via `data-cv-toast-pos`.
+ *   - **Animations.** Inside PrimeVue's Portal Vue's TransitionGroup classes
+ *     never advance (the message sticks invisible / never removes) and its FLIP
+ *     `move` reflow is disabled with them, so `transition: { css: false }` turns
+ *     them off and `animateEnter`/`animateLeave` (Web Animations API) drive the
+ *     slide/fade + a height grow/collapse — the height change is what makes the
+ *     surrounding stack reflow smoothly instead of snapping when a toast closes.
  */
 withDefaults(
   defineProps<{
@@ -47,38 +48,89 @@ const SEVERITY_ICON: Record<string, Component> = {
 };
 const iconFor = (severity: string | undefined): Component => SEVERITY_ICON[severity ?? ""] ?? Info;
 
-/** Per-position exit keyframe (defined in main.css). Enter is a mount animation
- *  on the card; exit can't use Vue's transition classes (they don't advance in
- *  the Portal), so a JS leave hook applies these and defers removal. */
-const LEAVE_ANIM: Record<string, string> = {
-  "top-right": "cv-toast-out-right",
-  "bottom-right": "cv-toast-out-right",
-  "top-left": "cv-toast-out-left",
-  "bottom-left": "cv-toast-out-left",
-  "top-center": "cv-toast-out-top",
-  "bottom-center": "cv-toast-out-bottom",
-  center: "cv-toast-out-scale",
+/**
+ * Enter/leave animations.
+ *
+ * Inside PrimeVue's Portal, Vue's TransitionGroup CSS transitions never advance
+ * (the message sticks invisible / never removes) and its `move` (FLIP) reflow is
+ * disabled with them — so a closing toast's neighbors would SNAP to their new
+ * positions. We drive both via the Web Animations API in JS hooks
+ * (`transition: { css: false, onEnter, onLeave }`), and animate the card's
+ * **height** alongside the slide/fade: as a leaving card collapses to 0 (and a
+ * new card grows from 0), the surrounding stack reflows smoothly rather than
+ * jumping. Direction is per-position (slides toward the docked edge; center
+ * scales) via `data-cv-toast-pos` on the outlet root. Reduced-motion → instant.
+ */
+const GAP = "0.625rem"; // matches the stacking gap in main.css
+
+/** The off-edge transform a toast enters from / leaves toward, per position. */
+const SLIDE: Record<string, string> = {
+  "top-right": "translateX(1rem)",
+  "bottom-right": "translateX(1rem)",
+  "top-left": "translateX(-1rem)",
+  "bottom-left": "translateX(-1rem)",
+  "top-center": "translateY(-0.75rem)",
+  "bottom-center": "translateY(0.75rem)",
+  center: "scale(0.96)",
 };
 
-/** Vue `onLeave` hook: play the position's exit animation, then resolve so
- *  PrimeVue removes the element. Honors reduced-motion (removes instantly). */
-function animateLeave(el: Element, done: () => void): void {
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+const prefersReducedMotion = (): boolean =>
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const slideFor = (el: Element): string => {
+  const pos =
+    el.closest("[data-cv-toast-pos]")?.getAttribute("data-cv-toast-pos") ?? "bottom-right";
+  return SLIDE[pos] ?? "translateY(0.75rem)";
+};
+
+/** Vue `onEnter`: grow height from 0 + slide + fade in. */
+function animateEnter(el: Element, done: () => void): void {
+  if (prefersReducedMotion()) {
     done();
     return;
   }
-  const pos =
-    el.closest("[data-cv-toast-pos]")?.getAttribute("data-cv-toast-pos") ?? "bottom-right";
   const node = el as HTMLElement;
+  const off = slideFor(el);
+  const h = node.offsetHeight;
+  node.style.overflow = "hidden";
+  const anim = node.animate(
+    [
+      { opacity: 0, transform: off, maxHeight: "0px", marginBottom: `-${GAP}` },
+      { opacity: 1, transform: "none", maxHeight: `${h}px`, marginBottom: "0px" },
+    ],
+    { duration: 240, easing: "cubic-bezier(0.21, 1.02, 0.73, 1)", fill: "backwards" },
+  );
   let settled = false;
   const finish = (): void => {
     if (settled) return;
     settled = true;
+    node.style.overflow = "";
+    node.style.maxHeight = "";
     done();
   };
-  node.style.animation = `${LEAVE_ANIM[pos] ?? "cv-toast-out-bottom"} 150ms ease-in forwards`;
-  node.addEventListener("animationend", finish, { once: true });
-  window.setTimeout(finish, 260); // fallback if animationend doesn't fire
+  anim.onfinish = finish;
+  window.setTimeout(finish, 360);
+}
+
+/** Vue `onLeave`: collapse height to 0 + slide + fade out, then remove. The
+ *  height/margin collapse is what makes the rest of the stack reflow smoothly. */
+function animateLeave(el: Element, done: () => void): void {
+  if (prefersReducedMotion()) {
+    done();
+    return;
+  }
+  const node = el as HTMLElement;
+  const off = slideFor(el);
+  const h = node.offsetHeight;
+  node.style.overflow = "hidden";
+  node.animate(
+    [
+      { opacity: 1, transform: "none", maxHeight: `${h}px`, marginBottom: "0px" },
+      { opacity: 0, transform: off, maxHeight: "0px", marginBottom: `-${GAP}` },
+    ],
+    { duration: 200, easing: "cubic-bezier(0.4, 0, 1, 1)", fill: "forwards" },
+  ).onfinish = done;
+  window.setTimeout(done, 340); // fallback if onfinish doesn't fire
 }
 
 const pt: ToastPassThroughOptions = {
@@ -91,7 +143,7 @@ const pt: ToastPassThroughOptions = {
       props.position === "center" && "-translate-x-1/2 -translate-y-1/2",
       (props.position === "top-center" || props.position === "bottom-center") && "-translate-x-1/2",
     ),
-    // Drives the position-aware enter/leave animation (CSS in main.css).
+    // Selects the enter/leave animation direction (WAAPI hooks below).
     "data-cv-toast-pos": props.position,
   }),
   // The card.
@@ -111,13 +163,11 @@ const pt: ToastPassThroughOptions = {
     ),
   },
   closeIcon: { class: "size-4" },
-  // `css:false` — inside PrimeVue's Portal, Vue's TransitionGroup never advances
-  // its enter/leave *classes* (the message would stick invisible and never get
-  // removed). So ENTER is a browser-native CSS animation on the message card
-  // (main.css, plays on mount) and EXIT is the `onLeave` JS hook below, which
-  // plays the out-animation and defers removal until it ends. Both keyed off
-  // `data-cv-toast-pos`.
-  transition: { css: false, onLeave: animateLeave },
+  // `css:false` disables Vue's (Portal-broken) CSS transition + move classes;
+  // `animateEnter`/`animateLeave` drive enter/leave (incl. the height
+  // collapse/grow that makes the stack reflow smoothly) via the Web Animations
+  // API. See the hook definitions above.
+  transition: { css: false, onEnter: animateEnter, onLeave: animateLeave },
 };
 </script>
 

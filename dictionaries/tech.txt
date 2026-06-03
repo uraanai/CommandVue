@@ -251,3 +251,4 @@ toastservice
 unkeyed
 coalesce
 coalescing
+WAAPI
