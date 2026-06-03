@@ -33,6 +33,9 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Single-source guard
+        run: pnpm check:single-source
+
       - name: Type-check
         run: pnpm type-check
 
