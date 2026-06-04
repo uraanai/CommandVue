@@ -388,6 +388,30 @@
   --color-focus-ring: var(--color-interactive);
   --shadow-focus-ring: 0 0 0 2px var(--color-focus-ring);
 
+  /* Depth & accent (Track A A1c) — the "less-flat" palette. All foreground-class
+   * (border / shadow colors, never surface fills) so they survive the
+   * float-transparency override in `dockview.css`. The color defaults chain off
+   * surface / border / interactive, so they auto-adapt to dark mode AND to a
+   * recolored theme without a separate dark block — like the A1b toast/border
+   * chains. A generated theme emits precise per-mode color values; the composed
+   * shadows below are theme-independent and reference whichever colors are live. */
+  --color-surface-bevel-light: color-mix(in oklch, var(--color-surface-raised), white 9%);
+  --color-surface-bevel-dark: color-mix(in oklch, var(--color-surface-raised), black 9%);
+  --color-border-accent: color-mix(
+    in oklch,
+    var(--color-border-default),
+    var(--color-interactive) 35%
+  );
+  --color-interactive-glow: color-mix(in oklch, var(--color-interactive) 32%, transparent);
+  --color-interactive-dim: color-mix(in oklch, var(--color-interactive), black 14%);
+  --shadow-bevel-raised:
+    inset 0 1px 0 0 var(--color-surface-bevel-light),
+    inset 0 -1px 0 0 var(--color-surface-bevel-dark);
+  --shadow-bevel-sunken:
+    inset 0 1px 0 0 var(--color-surface-bevel-dark),
+    inset 0 -1px 0 0 var(--color-surface-bevel-light);
+  --shadow-accent-glow: 0 0 0 3px var(--color-interactive-glow);
+
   /* Semantic spacing — for layout-level usage (panels, forms, sections) */
   --space-panel-padding: var(--space-4);
   --space-panel-gap: var(--space-2);

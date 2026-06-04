@@ -258,6 +258,25 @@ export function generateTheme(input: ThemeGenerationInput): ThemeGenerationResul
     wcagContrast(whiteText, interactive) >= 4.5 ? whiteText : solveDarkText(interactive, accentHue);
   const focusRing = interactive;
 
+  // --- A1c richer palette: bevel highlights, accent border, accent triad. ----
+  // All foreground-class (border/shadow colors, never surface fills) so they
+  // survive the float-transparency override at `dockview.css` (§3d). The shadow
+  // *compositions* that use these live in `tokens.css` (theme-independent var()
+  // chains); the engine emits only the theme-dependent color values.
+  const bevelDelta = dark ? 0.05 : 0.04;
+  const bevelChroma = Math.min(surfChroma, 0.01);
+  const raisedL = surfaceRaised.l ?? baseL;
+  // Two edge colors derived from surface-raised: a lighter top highlight and a
+  // darker bottom line, carrying a whisper of the base hue.
+  const surfaceBevelLight = oklch(raisedL + bevelDelta, bevelChroma, baseHue);
+  const surfaceBevelDark = oklch(raisedL - bevelDelta, bevelChroma, baseHue);
+  // The default border, nudged to the accent hue — for active/selected panels.
+  const borderAccent = oklch(borderDefault.l ?? (dark ? 0.32 : 0.82), 0.04, accentHue);
+  // Translucent accent for focus halos / hover rings / active-tab glow.
+  const interactiveGlow = oklch(interL, interChroma, accentHue, dark ? 0.4 : 0.32);
+  // Desaturated + darkened accent for secondary accent surfaces.
+  const interactiveDim = oklch(dark ? interL - 0.1 : interL - 0.08, interChroma * 0.6, accentHue);
+
   // --- Status: fixed hue families, mode-tuned L/C, each with a subtle. ------
   const statusL = dark ? 0.68 : 0.55;
   const statusC = dark ? 0.15 : 0.16;
@@ -362,10 +381,16 @@ export function generateTheme(input: ThemeGenerationInput): ThemeGenerationResul
     "--color-surface-raised": css(surfaceRaised),
     "--color-surface-overlay": css(surfaceOverlay),
     "--color-surface-sunken": css(surfaceSunken),
+    // Surface bevel (A1c) — top highlight + bottom line for the triple-layer
+    // bevel shadow composed in tokens.css.
+    "--color-surface-bevel-light": css(surfaceBevelLight),
+    "--color-surface-bevel-dark": css(surfaceBevelDark),
     // Borders
     "--color-border-subtle": css(borderSubtle),
     "--color-border-default": css(borderDefault),
     "--color-border-strong": css(borderStrong),
+    // Accent border (A1c) — active/selected panel outline.
+    "--color-border-accent": css(borderAccent),
     // Text
     "--color-text-primary": css(textPrimary),
     "--color-text-secondary": css(textSecondary),
@@ -378,6 +403,10 @@ export function generateTheme(input: ThemeGenerationInput): ThemeGenerationResul
     "--color-interactive-active": css(interactiveActive),
     "--color-interactive-subtle": css(interactiveSubtle),
     "--color-on-interactive": css(onInteractive),
+    // Accent triad (A1c) — translucent glow (focus halos / hover rings) + a
+    // desaturated dim. `interactiveGlow` carries an alpha → `oklch(L C H / a)`.
+    "--color-interactive-glow": css(interactiveGlow),
+    "--color-interactive-dim": css(interactiveDim),
     // Status — resolved per family (byte-identical when no override; §3c).
     "--color-status-success": statusFamilies.success.solid,
     "--color-status-success-subtle": statusFamilies.success.subtle,

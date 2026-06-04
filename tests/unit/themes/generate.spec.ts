@@ -334,3 +334,57 @@ describe("generateTheme — status overrides (A1b)", () => {
     for (const key of STATUS_KEYS) expect(tokens[key]).toBeDefined();
   });
 });
+
+describe("generateTheme — richer palette (A1c)", () => {
+  const A1C_COLOR_KEYS = [
+    "--color-surface-bevel-light",
+    "--color-surface-bevel-dark",
+    "--color-border-accent",
+    "--color-interactive-glow",
+    "--color-interactive-dim",
+  ] as const;
+
+  it("emits the five additive depth/accent color tokens, all known + in-gamut", () => {
+    const { tokens } = generateTheme(input());
+    for (const key of A1C_COLOR_KEYS) {
+      expect(tokens[key], `${key} should be emitted`).toBeDefined();
+      expect(KNOWN.has(key), `${key} should be allowlisted`).toBe(true);
+    }
+    // Every solid (non-alpha) A1c color is a displayable sRGB OKLCH.
+    for (const key of [
+      "--color-surface-bevel-light",
+      "--color-surface-bevel-dark",
+      "--color-border-accent",
+      "--color-interactive-dim",
+    ] as const) {
+      const c = toOklch(tokens[key]);
+      expect(c, `${key} parses`).toBeTruthy();
+      expect(isInSrgb(c!), `${key} in gamut`).toBe(true);
+    }
+  });
+
+  it("emits the glow as a gamut-valid translucent OKLCH (alpha < 1)", () => {
+    const { tokens } = generateTheme(input({ mode: "dark" }));
+    const glow = tokens["--color-interactive-glow"];
+    expect(glow).toMatch(/^oklch\([^)]* \/ 0?\.\d+\)$/); // has an alpha component
+    const c = toOklch(glow);
+    expect(c).toBeTruthy();
+    expect(c!.alpha).toBeLessThan(1);
+    expect(isInSrgb({ ...c!, alpha: 1 })).toBe(true); // chroma/lightness displayable
+  });
+
+  it("bevel-light is lighter than bevel-dark (a real top/bottom edge pair)", () => {
+    const { tokens } = generateTheme(input());
+    const light = toOklch(tokens["--color-surface-bevel-light"]);
+    const dark = toOklch(tokens["--color-surface-bevel-dark"]);
+    expect((light?.l ?? 0) > (dark?.l ?? 1)).toBe(true);
+  });
+
+  it("the depth/accent tokens do not depend on status overrides (byte-identical)", () => {
+    const base = generateTheme(input()).tokens;
+    const withOverride = generateTheme(input({ statusOverrides: { danger: { hue: 12 } } })).tokens;
+    for (const key of A1C_COLOR_KEYS) {
+      expect(withOverride[key]).toBe(base[key]);
+    }
+  });
+});

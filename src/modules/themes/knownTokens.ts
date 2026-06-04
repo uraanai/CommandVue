@@ -27,10 +27,15 @@ export const SEMANTIC_TOKEN_NAMES = [
   "--color-surface-raised",
   "--color-surface-overlay",
   "--color-surface-sunken",
+  // Surface bevel (Track A A1c) — the two edge colors of the triple-layer bevel.
+  "--color-surface-bevel-light",
+  "--color-surface-bevel-dark",
   // Border
   "--color-border-subtle",
   "--color-border-default",
   "--color-border-strong",
+  // Accent border (Track A A1c) — active/selected panel outline.
+  "--color-border-accent",
   // Text
   "--color-text-primary",
   "--color-text-secondary",
@@ -43,6 +48,9 @@ export const SEMANTIC_TOKEN_NAMES = [
   "--color-interactive-active",
   "--color-interactive-subtle",
   "--color-on-interactive",
+  // Accent triad (Track A A1c) — translucent glow + desaturated dim.
+  "--color-interactive-glow",
+  "--color-interactive-dim",
   // Status
   "--color-status-success",
   "--color-status-success-subtle",
@@ -76,6 +84,10 @@ export const SEMANTIC_TOKEN_NAMES = [
   // Focus
   "--color-focus-ring",
   "--shadow-focus-ring",
+  // Depth & accent shadows (Track A A1c) — composed bevel + accent glow.
+  "--shadow-bevel-raised",
+  "--shadow-bevel-sunken",
+  "--shadow-accent-glow",
   // Semantic spacing
   "--space-panel-padding",
   "--space-panel-gap",

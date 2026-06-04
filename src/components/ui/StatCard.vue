@@ -71,7 +71,7 @@ const deltaStyle = computed((): Record<string, string> => ({ color: accent.value
 
 <template>
   <div
-    class="border-border bg-surface relative overflow-hidden rounded-lg border p-3"
+    class="border-border bg-surface relative overflow-hidden rounded-lg border p-3 shadow-[var(--shadow-bevel-raised)]"
     :style="rootStyle"
   >
     <div class="text-muted text-xs">{{ label }}</div>
