@@ -191,15 +191,15 @@ select:focus-visible {
 }
 
 /*
- * Ultra-thin horizontal scrollbar for one-line scrollers — the `scrollable`
- * Tabs strip (ui/Tabs.vue). Overrides the global 10px scrollbar above with a
- * 2px themed bar and removes the native end-arrow increment/decrement buttons.
- * The strip also sets `overflow-y: hidden`, so only this horizontal bar shows.
- * Class specificity (0,1,0) beats the `*` rules (0,0,0), so this wins.
+ * One-line scroller base for the `scrollable` Tabs strip (ui/Tabs.vue).
+ *
+ * `.tab-scroll-thin` carries ONLY the chevron edge-fade mask (always on). The
+ * scrollbar itself is layered on by a modifier so it can be shown/hidden and
+ * recolored per the `scrollbar` / `scrollbarColor` props:
+ *   - `.tab-scroll-nobar` — DEFAULT: no visible bar (scroll via chevrons/wheel/drag).
+ *   - `.tab-scroll-bar`   — a 2px themed bar, thumb color from `--tab-scrollbar-color`.
  */
 .tab-scroll-thin {
-  scrollbar-width: thin; /* Firefox: thin track, no arrow buttons */
-  scrollbar-color: var(--color-border-strong) transparent;
   /*
    * Fade the tabs out under the chevron nav buttons. The buttons sit absolutely
    * over each edge (ui/Tabs.vue), so without this a tab label would show through
@@ -236,48 +236,65 @@ select:focus-visible {
   --tab-fade-r: transparent;
 }
 
+/* Hidden scrollbar — the DEFAULT for the scrollable Tabs strip. `scrollbar-width:
+ * none` hides Chromium's standard bar; the pseudo-element rule covers older
+ * engines. Scrolling still works (chevrons / wheel / drag). */
+.tab-scroll-nobar {
+  scrollbar-width: none;
+}
+
+@supports selector(::-webkit-scrollbar) {
+  .tab-scroll-nobar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /*
- * WebKit / Chromium / Edge — a true 2px scrollbar.
+ * Visible 2px themed scrollbar (opt-in via the `scrollbar` prop).
  *
  * The global `* { scrollbar-width: thin; scrollbar-color: … }` above opts every
  * element into Chromium's STANDARD scrollbar, which disables `::-webkit-scrollbar`
- * (its only sizes are auto/thin/none — no 2px). So here we reset BOTH standard
- * props to `auto` to hand this one element back to the legacy `::-webkit-scrollbar`
- * engine, then size it to 2px and drop the native arrow buttons.
- *
- * Scoped under `@supports selector(::-webkit-scrollbar)` so it runs only where the
- * pseudo-element exists — Firefox skips the block and keeps the `thin` themed bar
- * declared above (Firefox can't render 2px exactly, `thin` is its closest).
+ * (its only sizes are auto/thin/none — no 2px). So under `@supports` we reset BOTH
+ * standard props to `auto` to hand the element back to the legacy engine, then
+ * size it to 2px and drop the native arrow buttons. Firefox skips that block and
+ * keeps the `thin` bar declared here (it can't render 2px exactly). The thumb
+ * color follows `--tab-scrollbar-color` (the `scrollbarColor` prop), falling back
+ * to the theme border so it stays theme-aware by default.
  */
+.tab-scroll-bar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--tab-scrollbar-color, var(--color-border-strong)) transparent;
+}
+
 @supports selector(::-webkit-scrollbar) {
-  .tab-scroll-thin {
+  .tab-scroll-bar {
     scrollbar-width: auto;
     scrollbar-color: auto;
   }
 
-  .tab-scroll-thin::-webkit-scrollbar {
+  .tab-scroll-bar::-webkit-scrollbar {
     height: 2px;
     width: 2px;
   }
 
-  .tab-scroll-thin::-webkit-scrollbar-button {
+  .tab-scroll-bar::-webkit-scrollbar-button {
     display: none; /* drop the native left/right arrow buttons */
     width: 0;
     height: 0;
   }
 
-  .tab-scroll-thin::-webkit-scrollbar-thumb {
-    background-color: var(--color-border-strong);
+  .tab-scroll-bar::-webkit-scrollbar-thumb {
+    background-color: var(--tab-scrollbar-color, var(--color-border-strong));
     border: 0; /* no floating border — the bar is only 2px */
     border-radius: 9999px;
     background-clip: border-box;
   }
 
-  .tab-scroll-thin::-webkit-scrollbar-thumb:hover {
-    background-color: var(--color-text-tertiary);
+  .tab-scroll-bar::-webkit-scrollbar-thumb:hover {
+    background-color: var(--tab-scrollbar-color, var(--color-text-tertiary));
   }
 
-  .tab-scroll-thin::-webkit-scrollbar-track {
+  .tab-scroll-bar::-webkit-scrollbar-track {
     background: transparent;
   }
 }

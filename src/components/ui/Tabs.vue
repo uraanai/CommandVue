@@ -22,11 +22,15 @@ import { cn } from "@/utils/cn";
  * outgrow the available width: the row scrolls horizontally and PrimeVue shows
  * left/right chevron nav buttons (auto-hidden at the extremes) instead of
  * wrapping to multiple lines. The buttons are absolutely positioned over a
- * reserved gutter so the row never jumps when they appear/disappear, and a 2px
- * themed scrollbar (`.tab-scroll-thin`) lets the user drag/wheel-scroll too.
- * This is the single reusable affordance to use anywhere a horizontal
- * tab/segment strip can overflow (the navigation, the Theme Studio, the
- * showcase, …) — just add `scrollable`.
+ * reserved gutter so the row never jumps when they appear/disappear. This is the
+ * single reusable affordance to use anywhere a horizontal tab/segment strip can
+ * overflow (the navigation, the Theme Studio, the showcase, …) — just add
+ * `scrollable`.
+ *
+ * `scrollbar` (default false) shows a thin 2px native scrollbar under the strip;
+ * by default there is none (scroll via chevrons / wheel / drag). `scrollbarColor`
+ * recolors that bar's thumb (any CSS color or `var(--token)`; theme border by
+ * default).
  */
 interface Tab {
   id: string;
@@ -42,9 +46,24 @@ interface Props {
   variant?: TabVariant;
   /** One-line horizontal scroll + chevron nav buttons instead of wrapping. */
   scrollable?: boolean;
+  /**
+   * Show the native (2px) scrollbar under a `scrollable` strip. Default `false`
+   * — the row scrolls via the chevrons / wheel / drag with no visible bar.
+   */
+  scrollbar?: boolean;
+  /**
+   * CSS color for the scrollbar thumb when `scrollbar` is on (any CSS color,
+   * including a `var(--token)`). Defaults to the theme border.
+   */
+  scrollbarColor?: string;
 }
 
-const props = withDefaults(defineProps<Props>(), { variant: "underline", scrollable: false });
+const props = withDefaults(defineProps<Props>(), {
+  variant: "underline",
+  scrollable: false,
+  scrollbar: false,
+  scrollbarColor: "", // empty → theme-default thumb color
+});
 
 defineEmits<{
   "update:modelValue": [value: string];
@@ -116,33 +135,39 @@ const tabListPt = computed(() => {
   // button with `:has()`.
   const navButton =
     "absolute inset-y-0 z-10 flex w-7 items-center justify-center cursor-pointer text-muted transition-colors hover:text-foreground";
-  // The 2px scrollbar must sit flush UNDER the tab line, not overlap it.
-  //   - underline: the baseline is a 1px PSEUDO-line pinned just above the
-  //     scrollbar (`after:bottom-[2px]`), so the active tab's accent underline
-  //     and the baseline share one line (as in the non-scrollable view) and the
-  //     bar runs beneath. A real `border-b` can't be used — it lands under the
-  //     scrollbar, splitting the underline from the baseline.
+  // When the scrollbar is shown it must sit flush UNDER the tab line, not overlap
+  // it; when hidden, the tab line drops to the strip's bottom edge (no bar gutter):
+  //   - underline: the baseline is a 1px PSEUDO-line. A real `border-b` can't be
+  //     used — it lands under the bar, splitting the underline from the baseline.
+  //     Pinned `2px` above the bottom when the bar shows, at the bottom otherwise.
   //   - segmented: drop the sunken track's BOTTOM padding so the bar hugs the
-  //     track's bottom edge with no gap.
+  //     track's bottom edge (no gap); keep symmetric `p-1` when there's no bar.
   // `relative` also anchors the absolute nav buttons; `min-w-0 max-w-full` lets
   // the strip fit the available width instead of its intrinsic (all-tabs) width.
+  const showBar = props.scrollable && props.scrollbar;
   const base = "relative flex w-full min-w-0 max-w-full items-center";
   const scrollRoot =
     props.variant === "segmented"
-      ? cn(base, "rounded-lg bg-surface-sunken px-1 pt-1 pb-0")
+      ? cn(base, "rounded-lg bg-surface-sunken", showBar ? "px-1 pt-1 pb-0" : "p-1")
       : cn(
           base,
-          "after:pointer-events-none after:absolute after:inset-x-0 after:bottom-[2px] after:h-px after:bg-[var(--color-border)] after:content-['']",
+          "after:pointer-events-none after:absolute after:inset-x-0 after:h-px after:bg-[var(--color-border)] after:content-['']",
+          showBar ? "after:bottom-[2px]" : "after:bottom-0",
         );
+  // `overflow-y-hidden` kills the scrollbar-induced vertical scrollbar. The
+  // `tab-scroll-thin` base carries the chevron edge-fade mask; the bar/nobar
+  // modifier shows or hides the 2px bar (hidden by default).
+  const contentClass = cn(
+    "tab-scroll-thin min-w-0 flex-1 overflow-x-auto overflow-y-hidden scroll-smooth",
+    showBar ? "tab-scroll-bar" : "tab-scroll-nobar",
+  );
+  const content =
+    showBar && props.scrollbarColor
+      ? { class: contentClass, style: { "--tab-scrollbar-color": props.scrollbarColor } }
+      : { class: contentClass };
   return {
     root: { class: scrollRoot },
-    // `overflow-y-hidden` kills the scrollbar-induced vertical scrollbar (the
-    // 2px horizontal bar eats a sliver of height, which would otherwise make the
-    // row overflow vertically). `tab-scroll-thin` = 2px themed bar, no arrows,
-    // plus the edge fade-out mask.
-    content: {
-      class: "tab-scroll-thin min-w-0 flex-1 overflow-x-auto overflow-y-hidden scroll-smooth",
-    },
+    content,
     tabList: { class: "flex items-center gap-1" },
     activeBar: { class: "hidden" },
     prevButton: { class: cn(navButton, "left-0") },

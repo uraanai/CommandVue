@@ -329,3 +329,4 @@ unmaskicon
 xlarge
 previcon
 nexticon
+nobar
