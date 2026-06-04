@@ -46,7 +46,9 @@ function tabClass(tab: Tab): string {
     return cn(
       base,
       "rounded-md px-3 py-1.5",
-      isActive ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-foreground",
+      isActive
+        ? "bg-accent-600 text-white shadow-sm"
+        : "text-muted hover:text-foreground hover:bg-surface",
       tab.disabled && "cursor-not-allowed opacity-50",
     );
   }

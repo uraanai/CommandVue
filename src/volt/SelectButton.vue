@@ -33,7 +33,7 @@ const theme = ref<SelectButtonPassThroughOptions>({
             rounded-none first:rounded-s-md last:rounded-e-md
             bg-surface-100 dark:bg-surface-950
             text-surface-500 dark:text-surface-400
-            p-checked:text-surface-700 dark:p-checked:text-surface-0
+            p-checked:text-primary-contrast
             text-[length:var(--density-font-size)] font-medium
             focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)] focus-visible:relative focus-visible:z-10
             disabled:cursor-default
@@ -45,7 +45,7 @@ const theme = ref<SelectButtonPassThroughOptions>({
         `,
     content: `relative flex-auto inline-flex items-center justify-center gap-2 py-[var(--density-cell-padding-y)] px-[var(--density-cell-padding-x)]
             rounded-md transition-colors duration-200
-            p-checked:bg-surface-0 dark:p-checked:bg-surface-800 p-checked:shadow-[0px_1px_2px_0px_rgba(0,0,0,0.02),0px_1px_2px_0px_rgba(0,0,0,0.04)]`,
+            p-checked:bg-primary p-checked:border-primary`,
     icon: ``,
     label: ``,
   },
