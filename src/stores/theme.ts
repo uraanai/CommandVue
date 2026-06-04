@@ -225,6 +225,31 @@ export const useThemeStore = defineStore("theme", () => {
     return saved;
   }
 
+  /**
+   * Generative preview (Theme Studio panel): live-apply a WHOLE freshly-generated
+   * token set to the top root. Additive over the prior preview — the generator
+   * emits a stable key set each pass, so values overwrite in place (no clear-gap
+   * flash) and the change fans out to every pop-out via the mirror observer.
+   */
+  function previewThemeTokens(tokens: Record<string, string>): void {
+    isPreviewing.value = true;
+    previewDraft.value = { ...tokens };
+    applyTokenOverrides(tokens, APP_ROOT);
+  }
+
+  /**
+   * Tear down the generative preview overlay AFTER the committed theme has been
+   * applied (e.g. post-save). Strips only the leftover preview-only keys —
+   * `applyTheme` already reconciled the committed keys out of the preview set, so
+   * this never removes a committed value (no flash). Use {@link cancelPreview} to
+   * discard without a fresh commit.
+   */
+  function endPreview(): void {
+    clearTokenOverrides(APP_ROOT);
+    previewDraft.value = {};
+    isPreviewing.value = false;
+  }
+
   // --- Registry subscription for cache invalidation (Prompt 4 Phase F) -----
   // `themeRepo.delete` clears IDB bindings pointing at the deleted theme
   // (Phase A invariant) and unregisters from `themeRegistry` (Phase C sync).
@@ -270,5 +295,7 @@ export const useThemeStore = defineStore("theme", () => {
     resetPreviewToken,
     cancelPreview,
     commitPreview,
+    previewThemeTokens,
+    endPreview,
   };
 });

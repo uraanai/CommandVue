@@ -67,7 +67,7 @@ Pick the closest match; don't invent new ones without updating the type union in
 | `charts`     | ECharts panels                                           |
 | `docs`       | Markdown briefing, ComponentsBrowser, Component Showcase |
 | `monitoring` | Live telemetry, log tails                                |
-| `tools`      | Symbology reference, calculators                         |
+| `tools`      | Symbology reference, Theme Studio, calculators           |
 
 ## Component Showcase
 
@@ -106,6 +106,25 @@ drift test `tests/unit/components/showcase/registry.spec.ts` fails CI if a
 `ui/`/`volt/` primitive is added without an entry, or if a stale entry outlives
 its file. Add a new primitive → add a registry entry **and** a demo section in
 the matching `src/components/showcase/tabs/*Tab.vue` file.
+
+## Theme Studio
+
+`Theme Studio` (id `theme-studio`, category `tools`, singleton) is the built-in
+authoring surface for themes (Track A A2a). Unlike a modal, it is a dockview
+panel — float it, dock it, or pop it out to a second monitor — and it previews
+**live across every window**: each edit writes the freshly-generated tokens to
+the top window's root via `themeStore.previewThemeTokens`, and the pop-out
+mirror fans the change out to every floating panel and pop-out at once
+(including a popped-out Studio, which targets the captured `APP_ROOT` rather than
+its own child-window `document`). Open it from **View → Theme Studio…**, or
+**View → Edit current theme…** to seed it from the active generated theme.
+
+The panel stays idle until you interact (a restored blank Studio does not recolor
+the app on load); **Save** persists the theme and applies it, **Discard** reverts
+the live preview, and closing the panel discards any uncommitted preview. The
+authoring logic (inputs, generation, save/update) lives in the shared
+`useThemeAuthoring()` composable so the panel and the transitional
+`ThemeCustomizerDialog` don't fork it.
 
 ## Lifecycle
 
