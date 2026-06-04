@@ -111,6 +111,15 @@
 }
 
 /*
+ * Theme-aware text selection. The browser/OS default selection highlight is a
+ * fixed blue that clashes with a recolored theme, so tint it with the
+ * interactive (accent) color — selecting text now matches the active theme.
+ */
+::selection {
+  background-color: color-mix(in oklch, var(--color-interactive) 28%, transparent);
+}
+
+/*
  * ==========================================================================
  * Theme-aware scrollbars.
  *
