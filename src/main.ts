@@ -150,6 +150,10 @@ app.component(
   defineAsyncComponent(() => import("@/components/panels/ShowcasePanel.vue")),
 );
 app.component(
+  "theme-studio",
+  defineAsyncComponent(() => import("@/components/panels/ThemeStudioPanel.vue")),
+);
+app.component(
   UNASSIGNED_PANEL_TYPE,
   defineAsyncComponent(() => import("@/components/panels/UnassignedPanel.vue")),
 );

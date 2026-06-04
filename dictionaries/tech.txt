@@ -17,6 +17,9 @@ unparseable
 desaturated
 paneview
 
+# PrimeVue component module names
+splitterpanel
+
 # Font / typography (Prompt 4 Phase E curated font stacks)
 Segoe
 
