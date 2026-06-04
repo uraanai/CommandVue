@@ -9,7 +9,11 @@ import { themeRegistry } from "@/modules/themes/registry";
 
 import { resetStorage } from "./helpers";
 
-function validInput(overrides: Partial<CreateThemeInput> = {}): CreateThemeInput {
+function validInput(patch: Partial<CreateThemeInput> = {}): CreateThemeInput {
+  const tokens = {
+    "--color-surface-base": "oklch(0.98 0.005 250)",
+    "--color-text-primary": "oklch(0.2 0.04 264)",
+  };
   return {
     name: "My Theme",
     description: "A test theme",
@@ -17,11 +21,9 @@ function validInput(overrides: Partial<CreateThemeInput> = {}): CreateThemeInput
     source: "user",
     mode: "light",
     density: "comfortable",
-    tokens: {
-      "--color-surface-base": "oklch(0.98 0.005 250)",
-      "--color-text-primary": "oklch(0.2 0.04 264)",
-    },
-    ...overrides,
+    base: { kind: "static", tokens },
+    overrides: {},
+    ...patch,
   };
 }
 
@@ -55,20 +57,28 @@ describe("themeRepo", () => {
     expect(imported.source).toBe("imported");
   });
 
-  it("rejects an unknown token name and lists it", async () => {
+  it("rejects an unknown override token name and lists it", async () => {
     const err = await themeRepo
-      .create(validInput({ tokens: { "--color-not-a-token": "#fff" } }))
+      .create(validInput({ overrides: { "--color-not-a-token": "#fff" } }))
       .catch((e: unknown) => e);
     expect(err).toBeInstanceOf(InvariantError);
     expect((err as InvariantError).message).toContain("--color-not-a-token");
   });
 
-  it("rejects a <script> injection in a token value", async () => {
+  it("rejects a <script> injection in an override value", async () => {
     await expect(
       themeRepo.create(
-        validInput({ tokens: { "--color-surface-base": "<script>alert(1)</script>" } }),
+        validInput({ overrides: { "--color-surface-base": "<script>alert(1)</script>" } }),
       ),
     ).rejects.toBeInstanceOf(InvariantError);
+  });
+
+  it("rejects an unknown token name in a static base", async () => {
+    const err = await themeRepo
+      .create(validInput({ base: { kind: "static", tokens: { "--color-not-a-token": "#fff" } } }))
+      .catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(InvariantError);
+    expect((err as InvariantError).message).toContain("--color-not-a-token");
   });
 
   it("rejects source 'built-in'", async () => {
@@ -79,25 +89,49 @@ describe("themeRepo", () => {
     );
   });
 
-  it("rejects a generated theme missing its generation block", async () => {
-    await expect(themeRepo.create(validInput({ source: "generated" }))).rejects.toBeInstanceOf(
-      InvariantError,
-    );
+  it("rejects a generated base with a malformed input (contrast out of range)", async () => {
+    await expect(
+      themeRepo.create(
+        validInput({
+          source: "generated",
+          base: {
+            kind: "generated",
+            input: {
+              schemaVersion: 2,
+              baseColor: "oklch(0.98 0.005 250)",
+              accentColor: "oklch(0.55 0.15 250)",
+              contrast: 999,
+              mode: "light",
+              density: "comfortable",
+            },
+          },
+        }),
+      ),
+    ).rejects.toBeInstanceOf(InvariantError);
   });
 
-  it("accepts a generated theme with a valid generation block", async () => {
+  it("accepts a generated base, deriving tokens + the compat generation block", async () => {
     const theme = await themeRepo.create(
       validInput({
         source: "generated",
-        generation: {
-          schemaVersion: 1,
-          baseColor: "oklch(0.98 0.005 250)",
-          accentColor: "oklch(0.55 0.15 250)",
-          contrast: 50,
+        base: {
+          kind: "generated",
+          input: {
+            schemaVersion: 2,
+            baseColor: "oklch(0.98 0.005 250)",
+            accentColor: "oklch(0.55 0.15 250)",
+            contrast: 50,
+            mode: "light",
+            density: "comfortable",
+          },
         },
       }),
     );
+    // Tokens are resolved from the engine (non-empty cache), and the deprecated
+    // `generation` block is derived from `base.input`.
+    expect(Object.keys(theme.tokens).length).toBeGreaterThan(10);
     expect(theme.generation?.contrast).toBe(50);
+    expect(theme.base.kind).toBe("generated");
   });
 
   it("update touches updatedAt and keeps createdAt", async () => {

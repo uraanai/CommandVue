@@ -19,8 +19,18 @@
  */
 
 /** Bumped when the persisted/portable theme shape changes incompatibly. */
-export const THEME_SCHEMA_VERSION = 1 as const;
+export const THEME_SCHEMA_VERSION = 2 as const;
 export type ThemeSchemaVersion = typeof THEME_SCHEMA_VERSION;
+
+/**
+ * Bumped only when `generateTheme`'s **derivation math** changes (not when keys
+ * are added — those are additive, see the §3i engine-stability contract). The
+ * `resolve()` memo is keyed on this, so a stale generated-base cache is never
+ * served across a math change. Independent of {@link THEME_SCHEMA_VERSION},
+ * which versions the persisted record shape.
+ */
+export const ENGINE_VERSION = 1 as const;
+export type EngineVersion = typeof ENGINE_VERSION;
 
 export type ThemeId = string;
 export type ThemeMode = "light" | "dark";
@@ -74,16 +84,71 @@ export interface StatusFamilyOverride {
 export type StatusOverrides = Partial<Record<StatusFamily, StatusFamilyOverride>>;
 
 /**
- * Generation parameters captured when a theme is produced by the engine.
- * Present iff `source === "generated"`. Lets the editor pre-fill its inputs
- * when editing a generated theme, and lets the toggle find the paired variant.
+ * Per-family status hue pins. Pinned to the engine's `STATUS_HUES` constants on
+ * migration so a generated theme's hues are self-describing in `base.input` and
+ * survive a future engine default change (§3i). The live hue lever today is
+ * {@link StatusFamilyOverride.hue} via {@link StatusOverrides}; the generator
+ * does not yet consume `statusHues` (forward-compat field).
+ */
+export interface StatusHues {
+  success?: number;
+  warning?: number;
+  danger?: number;
+  info?: number;
+}
+
+/**
+ * Inputs to the generation engine, persisted as a generated theme's `base`
+ * (Track A data-model v2). Unlike the legacy {@link ThemeGenerationMeta}, this
+ * is **lossless**: it carries `fontFamily` and the status hue/override inputs so
+ * a generated theme is fully re-derivable from `base.input` alone.
+ */
+export interface GenerationInputV2 {
+  schemaVersion: 2;
+  /** Any CSS color; normalized to OKLCH. Drives surface hue + tint. */
+  baseColor: string;
+  /** Any CSS color; normalized to OKLCH. Drives the interactive scale. */
+  accentColor: string;
+  /** 30–100. Higher → larger text/surface contrast. */
+  contrast: number;
+  mode: ThemeMode;
+  density: ThemeDensity;
+  /** Font stack; OMITTED (not defaulted) when unset, to keep the input honest (§3i). */
+  fontFamily?: string;
+  /** Per-family hue pins (forward-compat; see {@link StatusHues}). */
+  statusHues?: StatusHues;
+  /** Per-family status overrides (A1b live hue lever). */
+  statusOverrides?: StatusOverrides;
+}
+
+/**
+ * Discriminated theme base (data-model v2).
+ *   - `generated` — re-derivable from a {@link GenerationInputV2} via the engine.
+ *   - `static`    — frozen tokens that are NOT derivable (the six built-ins, which
+ *     reference hand-tuned `var(--color-slate-*)` primitives, and hand-authored
+ *     imports). Preserved byte-for-byte.
+ */
+export type ThemeBase =
+  | { kind: "generated"; input: GenerationInputV2 }
+  | { kind: "static"; tokens: ThemeTokens };
+
+/**
+ * Legacy generation metadata. In data-model v2 this is **no longer the source of
+ * truth** — generated themes carry their inputs in {@link ThemeBase} (`base.input`)
+ * and their pairing in {@link Theme.paired}. This block is kept as a
+ * **derived write-through cache** on the runtime `Theme` so the transitional UI
+ * consumers (customizer / picker / menu / workspace-switcher) keep reading
+ * `theme.generation.*` unchanged until they are rewritten as the Theme Studio
+ * panel (A2a). Populated from `base.input`+`paired` on every repo write.
+ *
+ * @deprecated Read `base.input` / `paired` instead. Removed in A2a.
  */
 export interface ThemeGenerationMeta {
   schemaVersion: 1;
   baseColor: string; // OKLCH string, e.g. "oklch(0.15 0.04 270)"
   accentColor: string;
   contrast: number; // 30-100
-  paired?: ThemeId; // id of the paired light/dark variant, if generated as a pair
+  paired?: ThemeId; // mirror of Theme.paired, for the transition
   /** Per-family status hue/color overrides (Track A A1b). Absent → defaults. */
   statusOverrides?: StatusOverrides;
 }
@@ -103,9 +168,31 @@ export interface Theme {
   readonly mode: ThemeMode;
   /** Default density applied with the theme. */
   readonly density: ThemeDensity;
-  /** CSS-variable overrides. See `ThemeTokens`. */
+  /**
+   * Discriminated base (v2): a re-derivable generation input, or frozen static
+   * tokens. The source of truth for what the theme *is*.
+   */
+  readonly base: ThemeBase;
+  /**
+   * Sparse, hand-edited token overrides (A2b). Layered over the resolved base
+   * with CSS-cascade semantics (override wins). `{}` for fresh-generated and
+   * built-in themes.
+   */
+  readonly overrides: ThemeTokens;
+  /**
+   * MANDATORY resolved cache (write-through): `resolve(base) ⊕ overrides`.
+   * Always populated on create/update. Load-bearing for anti-FOUC first paint —
+   * the boot path reads this cache, never `resolve()` (§3h). Consumers
+   * (`apply.ts`, `export.ts`, pop-out mirroring, swatch sampling) keep reading
+   * `theme.tokens` through the v2 transition.
+   */
   readonly tokens: ThemeTokens;
-  /** Generation parameters; present iff `source === "generated"`. */
+  /** Id of the paired light/dark variant, if any. Moved off `generation` (v2). */
+  readonly paired?: ThemeId;
+  /**
+   * Derived write-through cache of `base.input`+`paired` (generated themes only).
+   * @deprecated Not source of truth — read `base.input` / `paired`. Removed in A2a.
+   */
   readonly generation?: ThemeGenerationMeta;
   /** Unix ms timestamp. Aligns with the rest of the storage layer. */
   readonly createdAt: number;
@@ -114,12 +201,16 @@ export interface Theme {
 }
 
 /**
- * Shape of the bundled JSON files under `src/assets/themes/`. Same as `Theme`
- * minus the runtime-derived fields — `source` is forced to `built-in` and the
- * timestamps are filled at load time. Token keys in these files omit the
+ * Shape of the bundled JSON files under `src/assets/themes/`. The JSONs carry
+ * only the authored fields (`id`/`name`/`description`/`author`/`mode`/`density`/
+ * `tokens`); `source`, timestamps, and the v2 `base`/`overrides`/cache are
+ * synthesized at load time (`builtin.ts`). Token keys in these files omit the
  * leading `--` (historical); the loader normalizes them.
  */
-export type ThemeDefinition = Omit<Theme, "source" | "createdAt" | "updatedAt" | "generation">;
+export type ThemeDefinition = Omit<
+  Theme,
+  "source" | "createdAt" | "updatedAt" | "generation" | "base" | "overrides" | "paired"
+>;
 
 /**
  * Export/import envelope. Wraps a single `Theme` with provenance metadata so

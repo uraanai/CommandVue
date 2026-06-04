@@ -1,4 +1,4 @@
-import type { Theme } from "@/types/theme";
+import type { GenerationInputV2, StatusOverrides, Theme } from "@/types/theme";
 
 import { converter, inGamut } from "culori";
 import { describe, expect, it } from "vitest";
@@ -189,8 +189,17 @@ describe("generateTheme", () => {
 });
 
 describe("generatePairedVariant", () => {
-  function generatedTheme(over: Partial<Theme> = {}): Theme {
+  function generatedTheme(over: Partial<Theme> = {}, statusOverrides?: StatusOverrides): Theme {
     const now = Date.now();
+    const baseInput: GenerationInputV2 = {
+      schemaVersion: 2,
+      baseColor: "oklch(0.98 0.005 250)",
+      accentColor: "oklch(0.55 0.18 250)",
+      contrast: 50,
+      mode: "light",
+      density: "comfortable",
+      ...(statusOverrides ? { statusOverrides } : {}),
+    };
     return {
       id: "01HZZZZZZZZZZZZZZZZZZZZZZZZ",
       name: "Ocean",
@@ -199,13 +208,9 @@ describe("generatePairedVariant", () => {
       source: "generated",
       mode: "light",
       density: "comfortable",
-      tokens: generateTheme(input()).tokens,
-      generation: {
-        schemaVersion: 1,
-        baseColor: "oklch(0.98 0.005 250)",
-        accentColor: "oklch(0.55 0.18 250)",
-        contrast: 50,
-      },
+      base: { kind: "generated", input: baseInput },
+      overrides: {},
+      tokens: generateTheme(input(statusOverrides ? { statusOverrides } : {})).tokens,
       createdAt: now,
       updatedAt: now,
       ...over,
@@ -222,22 +227,15 @@ describe("generatePairedVariant", () => {
   });
 
   it("rejects pairing a non-generated theme", () => {
-    const builtIn = generatedTheme({ source: "built-in", generation: undefined });
+    const builtIn = generatedTheme({
+      source: "built-in",
+      base: { kind: "static", tokens: { "--color-surface-base": "#fff" } },
+    });
     expect(() => generatePairedVariant(builtIn)).toThrow();
   });
 
   it("carries status overrides into the paired variant (symmetric coverage)", () => {
-    const light = generatedTheme({
-      mode: "light",
-      tokens: generateTheme(input({ statusOverrides: { danger: { hue: 12 } } })).tokens,
-      generation: {
-        schemaVersion: 1,
-        baseColor: "oklch(0.98 0.005 250)",
-        accentColor: "oklch(0.55 0.18 250)",
-        contrast: 50,
-        statusOverrides: { danger: { hue: 12 } },
-      },
-    });
+    const light = generatedTheme({ mode: "light" }, { danger: { hue: 12 } });
     const { tokens } = generatePairedVariant(light);
     // The paired variant re-points danger to ~12° too…
     expect(toOklch(tokens["--color-status-danger"])?.h ?? 0).toBeGreaterThan(0);

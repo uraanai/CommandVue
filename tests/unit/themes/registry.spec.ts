@@ -7,6 +7,7 @@ import { themeRegistry } from "@/modules/themes/registry";
 
 function makeTheme(overrides: Partial<Theme> = {}): Theme {
   const now = Date.now();
+  const tokens = { "--color-surface-base": "#fff" };
   return {
     id: "test",
     name: "Test",
@@ -15,7 +16,9 @@ function makeTheme(overrides: Partial<Theme> = {}): Theme {
     source: "user",
     mode: "light",
     density: "comfortable",
-    tokens: { "--color-surface-base": "#fff" },
+    base: { kind: "static", tokens },
+    overrides: {},
+    tokens,
     createdAt: now,
     updatedAt: now,
     ...overrides,

@@ -14,6 +14,8 @@ function fixture(id: string, tokens: Record<string, string>): Theme {
     source: "generated",
     mode: "light",
     density: "comfortable",
+    base: { kind: "static", tokens },
+    overrides: {},
     tokens,
     createdAt: now,
     updatedAt: now,

@@ -51,26 +51,61 @@ const StatusFamilyOverrideSchema = z.object({
   subtle: z.string().min(1).max(100).optional(),
 });
 
-/** Generation metadata captured when a theme is produced by the engine. */
+/** Per-family status overrides keyed by family. */
+const StatusOverridesSchema = z.object({
+  success: StatusFamilyOverrideSchema.optional(),
+  warning: StatusFamilyOverrideSchema.optional(),
+  danger: StatusFamilyOverrideSchema.optional(),
+  info: StatusFamilyOverrideSchema.optional(),
+});
+
+/** Per-family status hue pins (forward-compat; pinned on migration). */
+const StatusHuesSchema = z.object({
+  success: z.number().min(0).max(360).optional(),
+  warning: z.number().min(0).max(360).optional(),
+  danger: z.number().min(0).max(360).optional(),
+  info: z.number().min(0).max(360).optional(),
+});
+
+/**
+ * Legacy generation metadata (data-model v1). In v2 this is a **derived** compat
+ * block, re-derived from `base.input` on import; accepted here (optional, lenient)
+ * only so a round-tripped file validates. `base.input` is the source of truth.
+ */
 const GenerationMetaSchema = z.object({
   schemaVersion: z.literal(1),
   baseColor: z.string().min(1),
   accentColor: z.string().min(1),
   contrast: z.number().min(30).max(100),
   paired: z.string().optional(),
-  statusOverrides: z
-    .object({
-      success: StatusFamilyOverrideSchema.optional(),
-      warning: StatusFamilyOverrideSchema.optional(),
-      danger: StatusFamilyOverrideSchema.optional(),
-      info: StatusFamilyOverrideSchema.optional(),
-    })
-    .optional(),
+  statusOverrides: StatusOverridesSchema.optional(),
 });
 
-/** Inner Theme object. `source` is validated here; the importer additionally
+/** The v2 generation input persisted as a `generated` base. Lossless — carries
+ *  fontFamily + status inputs so the theme is fully re-derivable. */
+const GenerationInputV2Schema = z.object({
+  schemaVersion: z.literal(2),
+  baseColor: z.string().min(1),
+  accentColor: z.string().min(1),
+  contrast: z.number().min(30).max(100),
+  mode: z.enum(["light", "dark"]),
+  density: z.enum(["compact", "comfortable", "spacious"]),
+  fontFamily: z.string().min(1).max(200).optional(),
+  statusHues: StatusHuesSchema.optional(),
+  statusOverrides: StatusOverridesSchema.optional(),
+});
+
+/** Discriminated theme base (v2): re-derivable generated input, or frozen tokens. */
+const ThemeBaseSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("generated"), input: GenerationInputV2Schema }),
+  z.object({ kind: z.literal("static"), tokens: z.record(TokenNameSchema, TokenValueSchema) }),
+]);
+
+/** Inner Theme object (v2). `source` is validated here; the importer additionally
  *  *forces* it to `"imported"` after Zod passes, so even an exported `"user"`
- *  theme is re-stamped as imported on the way in. */
+ *  theme is re-stamped as imported on the way in. The `tokens` cache is embedded
+ *  (Open Decision 7) so a fork with a divergent engine can still render the
+ *  original; `generation` is accepted but re-derived from `base.input`. */
 export const ThemeSchema = z.object({
   id: z.string().min(1).max(100),
   name: z.string().min(1).max(100),
@@ -79,7 +114,10 @@ export const ThemeSchema = z.object({
   source: z.enum(["built-in", "user", "imported", "generated"]),
   mode: z.enum(["light", "dark"]),
   density: z.enum(["compact", "comfortable", "spacious"]),
+  base: ThemeBaseSchema,
+  overrides: z.record(TokenNameSchema, TokenValueSchema).optional().default({}),
   tokens: z.record(TokenNameSchema, TokenValueSchema),
+  paired: z.string().optional(),
   generation: GenerationMetaSchema.optional(),
   createdAt: z.number(),
   updatedAt: z.number(),

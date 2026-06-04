@@ -198,6 +198,7 @@ describe("useTheme", () => {
   describe("bridgeVariant", () => {
     function makeTheme(over: Partial<Theme> = {}): Theme {
       const now = Date.now();
+      const tokens = { "--color-surface-base": "oklch(0.98 0.005 250)" };
       return {
         id: "g-light",
         name: "Generated Light",
@@ -206,7 +207,11 @@ describe("useTheme", () => {
         source: "generated",
         mode: "light",
         density: "comfortable",
-        tokens: { "--color-surface-base": "oklch(0.98 0.005 250)" },
+        // A frozen `static` base keeps the bridge fixtures cheap (no engine run);
+        // these tests exercise paired-swap logic, not base resolution.
+        base: { kind: "static", tokens },
+        overrides: {},
+        tokens,
         generation: {
           schemaVersion: 1,
           baseColor: "oklch(0.98 0.005 250)",
