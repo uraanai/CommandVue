@@ -34,26 +34,29 @@ const props = withDefaults(defineProps<Props>(), {
 
 const variantClass: Record<Variant, string> = {
   primary: "bg-accent-600 text-white hover:bg-accent-500 active:bg-accent-700",
-  secondary: "bg-surface-raised text-foreground border border-border hover:bg-surface-sunken",
+  secondary: "bg-surface-raised text-foreground border-border hover:bg-surface-sunken",
   ghost: "bg-transparent text-foreground hover:bg-surface-raised",
   danger: "bg-danger text-white hover:opacity-90 active:opacity-80",
 };
 
-// `sm` is the density-driven default — its padding, font-size, and min-height
-// all pull from the `--density-*` CSS variables so the entire app rescales
-// with the `data-density` attribute on `<html>`. `md` and `lg` are explicit
-// larger presets for callouts where a fixed size is intentional.
+// Three fixed, clearly-distinct sizes so `sm < md < lg` reads correctly in every
+// theme density. (`sm` previously pulled from the `--density-*` tokens, whose
+// comfortable/spacious values made its min-height match `md` — so a "small"
+// button didn't look small. A fixed scale keeps the progression unambiguous.)
 const sizeClass: Record<Size, string> = {
-  sm: "px-[var(--density-cell-padding-x)] py-[var(--density-cell-padding-y)] text-[length:var(--density-font-size)] min-h-[var(--density-control-height)]",
+  sm: "px-2.5 py-1 text-xs",
   md: "px-3.5 py-1.5 text-sm",
   lg: "px-5 py-2.5 text-base",
 };
 
 const rootClass = computed(() =>
   cn(
-    "inline-flex items-center justify-center gap-1.5 rounded-md font-medium",
+    // A 1px transparent border on every variant so the bordered `secondary`
+    // isn't 2px taller than the others (auto-height + border-box adds a real
+    // border's height; the transparent border equalizes it).
+    "inline-flex items-center justify-center gap-1.5 rounded-md border border-transparent font-medium",
     "transition-colors duration-150 ease-out",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-focus-ring)] focus-visible:ring-offset-2",
     "disabled:cursor-not-allowed disabled:opacity-50",
     variantClass[props.variant],
     sizeClass[props.size],

@@ -41,11 +41,11 @@ const theme = ref<FieldsetPassThroughOptions>({
         hover:bg-surface-100 dark:hover:bg-surface-800
         text-surface-700 dark:text-surface-0
         hover:text-surface-800 dark:hover:text-surface-0
-        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-primary
+        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]
         transition-colors duration-200`,
   toggleIcon: `text-surface-500 dark:text-surface-400 transition-colors duration-200
         group-hover:text-surface-600 dark:group-hover:text-surface-300`,
-  legendLabel: `font-semibold`,
+  legendLabel: `font-semibold text-[length:var(--density-font-size)]`,
   contentContainer: ``,
   content: `p-0`,
   transition: {

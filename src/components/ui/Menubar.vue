@@ -40,7 +40,7 @@ const baseTheme: Record<string, PtSlot> = {
   item: { class: "relative" },
   itemContent: {
     class:
-      "hover:bg-surface-sunken focus-visible:ring-accent-500 rounded transition-colors focus-visible:ring-2 focus-visible:outline-none",
+      "hover:bg-surface-sunken focus-visible:ring-[color:var(--color-focus-ring)] rounded transition-colors focus-visible:ring-2 focus-visible:outline-none",
   },
   itemLink: {
     // Padding + font-size driven by the `--density-*` tokens so the menubar

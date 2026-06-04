@@ -76,9 +76,9 @@ function onCustomChange(value: unknown): void {
         :class="
           cn(
             'size-5 rounded-full border transition-shadow',
-            'focus-visible:ring-accent-500 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
+            'focus-visible:ring-2 focus-visible:ring-[color:var(--color-focus-ring)] focus-visible:ring-offset-1 focus-visible:outline-none',
             modelValue.toLowerCase() === swatch.hex.toLowerCase()
-              ? 'ring-accent-500 border-foreground ring-2 ring-offset-1'
+              ? 'border-foreground ring-2 ring-[color:var(--color-focus-ring)] ring-offset-1'
               : 'border-border hover:border-foreground/60',
             disabled && 'cursor-not-allowed opacity-50',
           )

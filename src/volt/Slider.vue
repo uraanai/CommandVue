@@ -20,7 +20,7 @@ defineProps<Props>();
 const handleCommon = `cursor-grab touch-none flex items-center justify-center h-[20px] w-[20px]
         bg-surface-200 dark:bg-surface-700 rounded-full
         transition-colors duration-200
-        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-primary
+        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]
         before:w-[16px] before:h-[16px] before:block before:rounded-full
         before:bg-surface-0 dark:before:bg-surface-950
         before:shadow-[0px_0.5px_0px_0px_rgba(0,0,0,0.08),0px_1px_1px_0px_rgba(0,0,0,0.14)]

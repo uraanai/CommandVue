@@ -1,0 +1,65 @@
+<template>
+  <Breadcrumb
+    unstyled
+    :pt="theme"
+    :pt-options="{
+      mergeProps: ptViewMerge,
+    }"
+  >
+    <!-- PrimeVue renders no separator in unstyled mode, so the crumbs ran
+         together. Supply a chevron between items (overridable by the consumer). -->
+    <template #separator>
+      <ChevronRightIcon class="h-3.5 w-3.5" />
+    </template>
+    <template v-for="(_, slotName) in $slots" #[slotName]="slotProps">
+      <slot :name="slotName" v-bind="slotProps ?? {}" />
+    </template>
+  </Breadcrumb>
+</template>
+
+<script setup lang="ts">
+import ChevronRightIcon from "@primevue/icons/chevronright";
+import Breadcrumb, {
+  type BreadcrumbPassThroughOptions,
+  type BreadcrumbProps,
+} from "primevue/breadcrumb";
+import { ref } from "vue";
+
+import { ptViewMerge } from "./utils";
+
+interface Props extends /* @vue-ignore */ BreadcrumbProps {}
+defineProps<Props>();
+
+const theme = ref<BreadcrumbPassThroughOptions>({
+  root: `bg-surface-0 dark:bg-surface-900 p-4 overflow-x-auto`,
+  list: `m-0 p-0 list-none flex items-center flex-nowrap gap-2`,
+  item: ``,
+  itemLink: `no-underline flex items-center gap-2 transition-colors duration-200 rounded-md
+        text-surface-500 dark:text-surface-400 hover:text-surface-700 dark:hover:text-surface-0
+        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]`,
+  itemIcon: ``,
+  itemLabel: ``,
+  separator: `flex items-center text-surface-400 dark:text-surface-500`,
+  separatorIcon: ``,
+});
+</script>
+
+<style>
+/* Keep the crumbs on one horizontal row even when a consumer passes its own
+   `:pt` (which replaces the `list` pt above and would otherwise leave the <ol>
+   as a vertical `display:block` list). Layout only — colors/spacing stay
+   theme-driven via the pt. */
+[data-pc-name="breadcrumb"] ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+[data-pc-name="breadcrumb"] ol > li {
+  display: inline-flex;
+  align-items: center;
+}
+</style>

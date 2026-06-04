@@ -81,6 +81,15 @@ export const BUILTIN_PANELS: readonly PanelDefinition[] = [
     singleton: true,
     component: () => import("@/components/panels/ComponentsPanel.vue"),
   },
+  {
+    id: "showcase",
+    title: "Component Showcase",
+    description: "Live gallery of every UI primitive — theming + behavior smoke test.",
+    icon: "palette",
+    category: "docs",
+    singleton: true,
+    component: () => import("@/components/panels/ShowcasePanel.vue"),
+  },
 ] as const;
 
 let registered = false;

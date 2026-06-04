@@ -97,6 +97,50 @@
   --p-primary-hover-color: var(--color-interactive-hover);
   --p-primary-active-color: var(--color-interactive-active);
   --p-primary-contrast-color: var(--color-on-interactive);
+
+  /* Highlight — the "selected option" row in Listbox / AutoComplete panel /
+   * Tree / DataView / Paginator. tailwindcss-primeui's `bg-highlight` /
+   * `text-highlight` utilities read these vars, but PrimeVue leaves them
+   * undefined in unstyled mode, so a selected row rendered with no visible
+   * background. Define them as a translucent primary tint that reads on any
+   * surface in both light and dark, following the active accent token. */
+  --p-highlight-background: color-mix(in oklch, var(--p-primary-color) 12%, transparent);
+  --p-highlight-color: var(--p-primary-color);
+  --p-highlight-focus-background: color-mix(in oklch, var(--p-primary-color) 22%, transparent);
+  --p-highlight-focus-color: var(--p-primary-color);
+}
+
+/*
+ * Theme-aware text selection. The browser/OS default selection highlight is a
+ * fixed blue that clashes with a recolored theme, so tint it with the
+ * interactive (accent) color — selecting text now matches the active theme.
+ */
+::selection {
+  background-color: color-mix(in oklch, var(--color-interactive) 28%, transparent);
+}
+
+/*
+ * Theme the form-control focus ring.
+ *
+ * `@tailwindcss/forms` adds a focus ring to inputs/textarea/select via a
+ * box-shadow whose colour is a HARD-CODED `--tw-ring-color: <blue-500>`. That
+ * blue ring sat on top of the wrapper's themed accent border regardless of the
+ * active theme. These rules are unlayered, so they beat the plugin's
+ * `@layer base` declaration: re-point `--tw-ring-color` at the themed focus
+ * token so the ring follows the accent, and clear the browser's own outline so
+ * the accent ring + border are the only focus indicators.
+ *
+ * Controls that use an accent OUTLINE for focus (the Knob's SVG, etc.) are not
+ * `input`/`textarea`/`select`, so they are unaffected.
+ */
+input:focus,
+input:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+select:focus,
+select:focus-visible {
+  outline: none;
+  --tw-ring-color: var(--color-focus-ring);
 }
 
 /*

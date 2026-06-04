@@ -50,7 +50,7 @@ defineEmits<{
         class: cn(
           'inline-flex items-center w-full rounded-md border border-border bg-surface text-foreground',
           'min-h-[var(--density-control-height)] text-[length:var(--density-font-size)]',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-focus-ring)]',
           'aria-disabled:cursor-not-allowed aria-disabled:opacity-50',
         ),
       },

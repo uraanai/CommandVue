@@ -381,8 +381,11 @@
   --color-toast-danger-bg: var(--color-status-danger-subtle);
   --color-toast-danger-fg: var(--color-status-danger);
 
-  /* Focus ring */
-  --color-focus-ring: var(--color-blue-500);
+  /* Focus ring — follows the interactive (accent) color by default so the focus
+   * outline never clashes with a recolored theme. It stays a distinct,
+   * overridable token: the theme generator sets it explicitly, and a downstream
+   * theme can point it at any color to give focus its own hue. */
+  --color-focus-ring: var(--color-interactive);
   --shadow-focus-ring: 0 0 0 2px var(--color-focus-ring);
 
   /* Semantic spacing — for layout-level usage (panels, forms, sections) */
@@ -582,8 +585,8 @@ html[data-theme="dark"] {
   --color-status-info: var(--color-blue-400);
   --color-status-info-subtle: var(--color-blue-950);
 
-  /* Focus */
-  --color-focus-ring: var(--color-blue-400);
+  /* Focus — follows the accent (see the light-mode note above). */
+  --color-focus-ring: var(--color-interactive);
 
   /* The backwards-compatibility aliases (--color-surface, --color-foreground,
    * --color-muted, --color-border, etc.) defined in the @theme block point at

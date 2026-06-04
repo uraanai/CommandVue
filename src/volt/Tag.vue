@@ -28,7 +28,7 @@ const theme = ref<TagPassThroughOptions>({
   // themes — no `dark:` variants and no off-palette literals (`sky`/`orange`
   // were never themeable). The base/secondary/contrast variants stay on the
   // PrimeUI `primary`/`surface` token utilities.
-  root: `inline-flex items-center justify-center text-sm font-bold py-1 px-2 rounded-md gap-1 p-rounded:rounded-2xl
+  root: `inline-flex items-center justify-center text-[length:var(--density-font-size)] font-bold py-1 px-2 rounded-md gap-1 p-rounded:rounded-2xl
         bg-primary-100 dark:bg-primary-500/15 text-primary-700 dark:text-primary-300
         p-success:bg-[var(--color-status-success-subtle)] p-success:text-[var(--color-status-success)] p-success:border p-success:border-[var(--color-status-success-border)]
         p-info:bg-[var(--color-status-info-subtle)] p-info:text-[var(--color-status-info)] p-info:border p-info:border-[var(--color-status-info-border)]
