@@ -32,6 +32,15 @@ const INNER_TABS = [
   { id: "archived", label: "Archived", disabled: true },
 ];
 
+// A long tab set to demonstrate the `scrollable` variants (one row + chevron
+// scroll buttons instead of wrapping to multiple lines).
+const innerTab3 = ref<string>("t1");
+const innerTab4 = ref<string>("t1");
+const MANY_TABS = Array.from({ length: 12 }, (_, i) => ({
+  id: `t${i + 1}`,
+  label: `Section ${i + 1}`,
+}));
+
 // --- Menubar ---------------------------------------------------------------
 // Harmless File / Edit / View model — no side effects beyond a transient note.
 const lastMenuAction = ref<string>("—");
@@ -97,6 +106,31 @@ const STEP_TITLES: Record<string, string> = {
 
     <Fieldset legend="Tabs — segmented (button switch)">
       <Tabs v-model="innerTab2" :tabs="INNER_TABS" variant="segmented">
+        <template #default="{ active }">
+          <p class="text-muted text-sm">
+            Active tab id: <span class="text-foreground font-mono">{{ active }}</span>
+          </p>
+        </template>
+      </Tabs>
+    </Fieldset>
+
+    <Fieldset legend="Tabs — underline, scrollable">
+      <p class="text-muted mb-2 text-sm">
+        Too many tabs for the width → one row with left/right chevron scroll buttons (and drag/wheel
+        scroll) instead of wrapping. Add
+        <code class="text-foreground">scrollable</code>.
+      </p>
+      <Tabs v-model="innerTab3" :tabs="MANY_TABS" scrollable>
+        <template #default="{ active }">
+          <p class="text-muted text-sm">
+            Active tab id: <span class="text-foreground font-mono">{{ active }}</span>
+          </p>
+        </template>
+      </Tabs>
+    </Fieldset>
+
+    <Fieldset legend="Tabs — segmented, scrollable">
+      <Tabs v-model="innerTab4" :tabs="MANY_TABS" variant="segmented" scrollable>
         <template #default="{ active }">
           <p class="text-muted text-sm">
             Active tab id: <span class="text-foreground font-mono">{{ active }}</span>
