@@ -131,6 +131,7 @@ export const SHOWCASE_PRIMITIVES: readonly ShowcaseEntry[] = [
   { source: "volt", id: "Divider", label: "Divider", tab: "panels-layout" },
   { source: "volt", id: "Accordion", label: "Accordion", tab: "panels-layout" },
   { source: "volt", id: "Toolbar", label: "Toolbar", tab: "panels-layout" },
+  { source: "volt", id: "Splitter", label: "Splitter (resizable)", tab: "panels-layout" },
   // --- Navigation ----------------------------------------------------------
   { source: "ui", id: "Tabs", label: "Tabs", tab: "navigation" },
   { source: "ui", id: "Menubar", label: "Menubar", tab: "navigation" },

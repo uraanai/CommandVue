@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { FileText, Plus, RefreshCcw, Trash2 } from "@lucide/vue";
+// Splitter detects its panes by child component type, so SplitterPanel can't be
+// wrapped in a Volt component (a wrapper renders an empty splitter). The styled
+// Volt <Splitter> parent supplies the visuals.
+import SplitterPanel from "primevue/splitterpanel"; // eslint-disable-line @typescript-eslint/no-restricted-imports
 import { ref } from "vue";
 
 import Button from "@/components/ui/Button.vue";
@@ -11,6 +15,7 @@ import Card from "@/volt/Card.vue";
 import Divider from "@/volt/Divider.vue";
 import Fieldset from "@/volt/Fieldset.vue";
 import Panel from "@/volt/Panel.vue";
+import Splitter from "@/volt/Splitter.vue";
 import Toolbar from "@/volt/Toolbar.vue";
 
 /**
@@ -157,6 +162,25 @@ const openSections = ref<string[]>(["0"]);
           </Button>
         </template>
       </Toolbar>
+    </Fieldset>
+
+    <!-- ================= SPLITTER ================= -->
+    <Fieldset legend="Splitter (resizable)">
+      <p class="text-muted mb-2 text-sm">Drag the gutter to rebalance the two panes.</p>
+      <div class="h-40">
+        <Splitter class="!h-full">
+          <SplitterPanel :size="40" :min-size="20">
+            <div class="text-muted h-full overflow-auto p-3 text-sm">
+              Left pane — controls, a list, or a form.
+            </div>
+          </SplitterPanel>
+          <SplitterPanel :size="60">
+            <div class="text-muted h-full overflow-auto p-3 text-sm">
+              Right pane — a preview, detail view, or map.
+            </div>
+          </SplitterPanel>
+        </Splitter>
+      </div>
     </Fieldset>
   </div>
 </template>
