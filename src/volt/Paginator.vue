@@ -19,12 +19,12 @@
       }"
     >
       <div class="flex flex-wrap items-center justify-center gap-2">
-        <SecondaryButton text rounded :disabled="page === 0" @click="firstPageCallback">
+        <SecondaryButton text :disabled="page === 0" @click="firstPageCallback">
           <template #icon>
             <AngleDoubleLeftIcon />
           </template>
         </SecondaryButton>
-        <SecondaryButton text rounded :disabled="page === 0" @click="prevPageCallback">
+        <SecondaryButton text :disabled="page === 0" @click="prevPageCallback">
           <template #icon>
             <AngleLeftIcon />
           </template>
@@ -34,18 +34,17 @@
             v-for="pageLink of pageLinks"
             :key="pageLink"
             :text="page + 1 !== pageLink"
-            rounded
             :class="['h-10 min-w-10 shrink-0', { 'bg-highlight!': page + 1 === pageLink }]"
             @click="() => changePageCallback(pageLink - 1)"
             >{{ pageLink }}
           </SecondaryButton>
         </div>
-        <SecondaryButton text rounded :disabled="page === pageCount! - 1" @click="nextPageCallback">
+        <SecondaryButton text :disabled="page === pageCount! - 1" @click="nextPageCallback">
           <template #icon>
             <AngleRightIcon />
           </template>
         </SecondaryButton>
-        <SecondaryButton text rounded :disabled="page === pageCount! - 1" @click="lastPageCallback">
+        <SecondaryButton text :disabled="page === pageCount! - 1" @click="lastPageCallback">
           <template #icon>
             <AngleDoubleRightIcon />
           </template>

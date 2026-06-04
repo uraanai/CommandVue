@@ -8,14 +8,14 @@
     }"
   >
     <template #closebutton="{ closeCallback }">
-      <SecondaryButton variant="text" rounded autofocus @click="closeCallback">
+      <SecondaryButton variant="text" autofocus @click="closeCallback">
         <template #icon>
           <TimesIcon />
         </template>
       </SecondaryButton>
     </template>
     <template #maximizebutton="{ maximized, maximizeCallback }">
-      <SecondaryButton variant="text" rounded autofocus @click="maximizeCallback">
+      <SecondaryButton variant="text" autofocus @click="maximizeCallback">
         <template #icon>
           <WindowMinimizeIcon v-if="maximized" />
           <WindowMaximizeIcon v-else />

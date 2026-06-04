@@ -25,6 +25,7 @@ import Stepper from "@/volt/Stepper.vue";
 
 // --- Tabs (inline) ---------------------------------------------------------
 const innerTab = ref<string>("overview");
+const innerTab2 = ref<string>("overview");
 const INNER_TABS = [
   { id: "overview", label: "Overview" },
   { id: "details", label: "Details" },
@@ -83,9 +84,19 @@ const STEP_TITLES: Record<string, string> = {
 
 <template>
   <div class="flex flex-col gap-4">
-    <!-- ================= TABS (INLINE) ================= -->
-    <Fieldset legend="Tabs (inline)">
+    <!-- ================= TABS (STYLES) ================= -->
+    <Fieldset legend="Tabs — underline">
       <Tabs v-model="innerTab" :tabs="INNER_TABS">
+        <template #default="{ active }">
+          <p class="text-muted text-sm">
+            Active tab id: <span class="text-foreground font-mono">{{ active }}</span>
+          </p>
+        </template>
+      </Tabs>
+    </Fieldset>
+
+    <Fieldset legend="Tabs — segmented (button switch)">
+      <Tabs v-model="innerTab2" :tabs="INNER_TABS" variant="segmented">
         <template #default="{ active }">
           <p class="text-muted text-sm">
             Active tab id: <span class="text-foreground font-mono">{{ active }}</span>

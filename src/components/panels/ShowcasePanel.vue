@@ -52,7 +52,7 @@ const TAB_COMPONENTS: Record<ShowcaseTab, Component> = {
 </script>
 
 <template>
-  <div class="bg-surface text-foreground flex h-full w-full flex-col">
+  <div class="bg-surface text-foreground flex h-full w-full flex-col overflow-hidden">
     <header class="border-border flex items-center gap-2 border-b px-4 py-2">
       <span class="text-foreground text-sm font-semibold">Component Showcase</span>
       <span class="text-faint text-xs">— live gallery + theming smoke test</span>

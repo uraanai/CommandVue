@@ -4,12 +4,18 @@ import PvTabList from "primevue/tablist";
 import PvTabPanel from "primevue/tabpanel";
 import PvTabPanels from "primevue/tabpanels";
 import PvTabs from "primevue/tabs";
+import { computed } from "vue";
 
 import { cn } from "@/utils/cn";
 
 /**
  * Tabs — thin wrapper over PrimeVue Tabs / TabList / Tab / TabPanels / TabPanel.
  * Preserves the previous flat `tabs: { id, label, disabled }[]` + v-model API.
+ *
+ * `variant` selects the visual style:
+ *   - `underline` (default) — a baseline with the active tab's accent underline.
+ *   - `segmented` — a button-group "switch": the tabs sit in a sunken track and
+ *     the active one reads as a raised, selected button.
  */
 interface Tab {
   id: string;
@@ -17,45 +23,68 @@ interface Tab {
   disabled?: boolean;
 }
 
+type TabVariant = "underline" | "segmented";
+
 interface Props {
   modelValue: string;
   tabs: Tab[];
+  variant?: TabVariant;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), { variant: "underline" });
 
 defineEmits<{
   "update:modelValue": [value: string];
 }>();
 
-function tabClass(tab: Tab) {
+function tabClass(tab: Tab): string {
   const isActive = tab.id === props.modelValue;
+  const base =
+    "inline-flex items-center gap-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-focus-ring)]";
+
+  if (props.variant === "segmented") {
+    return cn(
+      base,
+      "rounded-md px-3 py-1.5",
+      isActive ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-foreground",
+      tab.disabled && "cursor-not-allowed opacity-50",
+    );
+  }
+
+  // underline — `-mb-px` pulls the tab's 2px bottom border onto the tablist's
+  // baseline so the active accent line sits exactly on the bar (inactive tabs
+  // let the baseline show through).
   return cn(
-    // `-mb-px` pulls the tab's 2px bottom border onto the tablist's 1px baseline
-    // so the active accent line sits exactly on the bar (and inactive tabs let
-    // the baseline show through) — a proper tab-bar look.
-    "-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition-colors",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-focus-ring)] focus-visible:ring-offset-2",
+    base,
+    "-mb-px border-b-2 px-3 py-2 focus-visible:ring-offset-2",
     isActive
       ? "border-accent-500 text-foreground"
       : "border-transparent text-muted hover:text-foreground hover:bg-surface-raised",
     tab.disabled && "cursor-not-allowed opacity-50",
   );
 }
+
+// The active-bar is hidden in both variants (the per-tab styling is the
+// indicator). The `tablist` key on the Tabs pt does NOT reach the TabList, so
+// the row styling lives on `<PvTabList>` directly.
+const tabListPt = computed(() =>
+  props.variant === "segmented"
+    ? {
+        root: { class: "inline-flex rounded-lg bg-surface-sunken p-1" },
+        content: { class: "flex items-center gap-1" },
+        activeBar: { class: "hidden" },
+      }
+    : {
+        root: { class: "border-b border-border" },
+        content: { class: "flex items-center gap-1" },
+        activeBar: { class: "hidden" },
+      },
+);
 </script>
 
 <template>
   <PvTabs :value="modelValue" @update:value="(v) => $emit('update:modelValue', String(v))">
-    <!-- The baseline underline lives on the TabList root (the `tablist` key on
-         the Tabs pt does NOT reach it). `content` lays the tabs in a row; the
-         native sliding active-bar is hidden in favour of the per-tab border. -->
-    <PvTabList
-      :pt="{
-        root: { class: 'border-b border-border' },
-        content: { class: 'flex items-center gap-1' },
-        activeBar: { class: 'hidden' },
-      }"
-    >
+    <PvTabList :pt="tabListPt">
       <PvTab
         v-for="tab in tabs"
         :key="tab.id"

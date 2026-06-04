@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import type { NotifySeverity, ToastPosition } from "@/components/ui/toastTheme";
 
+import { TriangleAlert, X } from "@lucide/vue";
 import { ref } from "vue";
 
 import Button from "@/components/ui/Button.vue";
+import IconButton from "@/components/ui/IconButton.vue";
 import Select from "@/components/ui/Select.vue";
 import { useNotify } from "@/composables/useNotify";
 import Fieldset from "@/volt/Fieldset.vue";
+import Message from "@/volt/Message.vue";
 
 /**
  * NotificationsTab — the "Notifications" tab of the Component Showcase.
@@ -44,6 +47,15 @@ function fireToast(severity: NotifySeverity): void {
     position: toastPosition.value,
   });
 }
+
+// Inline alerts + banner -----------------------------------------------------
+const INLINE_ALERTS = [
+  { severity: "info", text: "12 new contacts entered the area of interest." },
+  { severity: "success", text: "Mission plan saved and synced to all stations." },
+  { severity: "warn", text: "Telemetry link degraded — retrying on backup channel." },
+  { severity: "error", text: "Failed to reach sensor grid. Last update 4m ago." },
+] as const;
+const bannerVisible = ref<boolean>(true);
 </script>
 
 <template>
@@ -100,6 +112,38 @@ function fireToast(severity: NotifySeverity): void {
           Reconnected (replaces)
         </Button>
       </div>
+    </Fieldset>
+
+    <Fieldset legend="Inline alerts">
+      <div class="flex flex-col gap-2">
+        <Message v-for="a in INLINE_ALERTS" :key="a.severity" :severity="a.severity" closable>
+          {{ a.text }}
+        </Message>
+      </div>
+    </Fieldset>
+
+    <Fieldset legend="Banner (dismissible)">
+      <div
+        v-if="bannerVisible"
+        class="flex items-center gap-3 rounded-md border p-3"
+        :style="{
+          borderColor: 'var(--color-status-warning-border)',
+          background: 'var(--color-status-warning-subtle)',
+        }"
+      >
+        <TriangleAlert :size="18" :style="{ color: 'var(--color-status-warning)' }" />
+        <div class="min-w-0 flex-1">
+          <p class="text-foreground text-sm font-medium">Scheduled maintenance window</p>
+          <p class="text-muted text-xs">Telemetry ingest pauses 02:00–02:30Z tonight.</p>
+        </div>
+        <Button size="sm" variant="secondary">Details</Button>
+        <IconButton label="Dismiss banner" @click="bannerVisible = false">
+          <X :size="16" />
+        </IconButton>
+      </div>
+      <Button v-else size="sm" variant="ghost" @click="bannerVisible = true">
+        Restore banner
+      </Button>
     </Fieldset>
   </div>
 </template>

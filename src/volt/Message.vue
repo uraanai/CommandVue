@@ -57,7 +57,7 @@ const theme = ref<MessagePassThroughOptions>({
         p-large:w-5 p-large:h-5 p-large:text-xl`,
   text: `text-base font-medium p-small:text-sm p-large:text-xl`,
   closeButton: `flex items-center justify-center flex-shrink-0 ms-auto overflow-hidden relative cursor-pointer select-none
-        w-7 h-7 rounded-full bg-transparent transition-colors duration-200 text-inherit p-0 border-none
+        w-7 h-7 rounded-md bg-transparent transition-colors duration-200 text-inherit p-0 border-none
         focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2
         p-info:hover:bg-[var(--color-status-info-subtle)] p-info:focus-visible:outline-[var(--color-status-info)]
         p-success:hover:bg-[var(--color-status-success-subtle)] p-success:focus-visible:outline-[var(--color-status-success)]

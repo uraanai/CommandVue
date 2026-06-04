@@ -67,6 +67,9 @@ const handleVal = ref<string>("");
 
 // --- Knob ------------------------------------------------------------------
 const knobVal = ref<number>(40);
+const knobVal2 = ref<number>(72);
+const knobVal3 = ref<number>(55);
+const knobVal4 = ref<number>(30);
 
 // --- Color + File ----------------------------------------------------------
 const colorVal = ref<string>("#10c4a2");
@@ -193,11 +196,43 @@ const fileLabel = ref<string>("no file chosen");
       </div>
     </Fieldset>
 
-    <Fieldset legend="Knob">
-      <div class="flex items-center gap-3">
-        <Knob v-model="knobVal" :min="0" :max="100" />
-        <!-- fixed-width echo: a free-width number reflows the row on every drag tick -->
-        <span class="text-muted inline-block w-16 text-sm tabular-nums">{{ knobVal }} / 100</span>
+    <Fieldset legend="Knob — styles">
+      <div class="flex flex-wrap items-center gap-6">
+        <div class="flex flex-col items-center gap-1">
+          <Knob v-model="knobVal" :min="0" :max="100" :size="90" />
+          <span class="text-faint text-xs">default</span>
+        </div>
+        <div class="flex flex-col items-center gap-1">
+          <Knob
+            v-model="knobVal2"
+            :size="90"
+            :stroke-width="14"
+            value-color="var(--color-status-success)"
+          />
+          <span class="text-faint text-xs">thick · success</span>
+        </div>
+        <div class="flex flex-col items-center gap-1">
+          <Knob
+            v-model="knobVal3"
+            :size="90"
+            :stroke-width="4"
+            value-color="var(--color-status-warning)"
+          />
+          <span class="text-faint text-xs">thin · warning</span>
+        </div>
+        <div class="flex flex-col items-center gap-1">
+          <Knob
+            v-model="knobVal4"
+            :size="90"
+            :show-value="false"
+            value-color="var(--color-status-danger)"
+          />
+          <span class="text-faint text-xs">no value · danger</span>
+        </div>
+        <div class="flex flex-col items-center gap-1">
+          <Knob :model-value="68" :size="64" readonly />
+          <span class="text-faint text-xs">small · readonly</span>
+        </div>
       </div>
     </Fieldset>
 

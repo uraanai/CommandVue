@@ -9,7 +9,7 @@
     <template #container="{ message, acceptCallback, rejectCallback }">
       <div class="flex shrink-0 items-center justify-between p-5">
         <span class="text-xl font-semibold">{{ message.header }}</span>
-        <SecondaryButton variant="text" rounded autofocus @click="rejectCallback">
+        <SecondaryButton variant="text" autofocus @click="rejectCallback">
           <template #icon>
             <TimesIcon />
           </template>

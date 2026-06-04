@@ -7,7 +7,7 @@
     }"
   >
     <template #closebutton="{ closeCallback }">
-      <SecondaryButton variant="text" rounded autofocus @click="closeCallback">
+      <SecondaryButton variant="text" autofocus @click="closeCallback">
         <template #icon>
           <TimesIcon />
         </template>

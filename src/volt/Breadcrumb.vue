@@ -43,3 +43,23 @@ const theme = ref<BreadcrumbPassThroughOptions>({
   separatorIcon: ``,
 });
 </script>
+
+<style>
+/* Keep the crumbs on one horizontal row even when a consumer passes its own
+   `:pt` (which replaces the `list` pt above and would otherwise leave the <ol>
+   as a vertical `display:block` list). Layout only — colors/spacing stay
+   theme-driven via the pt. */
+[data-pc-name="breadcrumb"] ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+[data-pc-name="breadcrumb"] ol > li {
+  display: inline-flex;
+  align-items: center;
+}
+</style>
