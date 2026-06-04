@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { PanelDefinition } from "@/modules/panels/types";
-import type { Theme } from "@/types/theme";
 import type { MenuItem } from "primevue/menuitem";
 
 import { ChevronDown, ChevronRight } from "@lucide/vue";
@@ -11,7 +10,6 @@ import ManageLayoutsDialog from "@/components/dialogs/ManageLayoutsDialog.vue";
 import ManagePresetsDialog from "@/components/dialogs/ManagePresetsDialog.vue";
 import ManageWorkspacesDialog from "@/components/dialogs/ManageWorkspacesDialog.vue";
 import SaveLayoutAsDialog from "@/components/dialogs/SaveLayoutAsDialog.vue";
-import ThemeCustomizerDialog from "@/components/dialogs/ThemeCustomizerDialog.vue";
 import ThemeImportDialog from "@/components/dialogs/ThemeImportDialog.vue";
 import ThemePickerDialog from "@/components/dialogs/ThemePickerDialog.vue";
 import FileUpload from "@/components/ui/FileUpload.vue";
@@ -42,28 +40,14 @@ const manageLayoutsOpen = ref(false);
 const managePresetsOpen = ref(false);
 const themePickerOpen = ref(false);
 const themeImportOpen = ref(false);
-const themeCustomizerOpen = ref(false);
-// When set, the customizer opens in edit mode pre-filled from this theme.
-// Cleared on dialog close so a subsequent "Create new theme…" starts blank.
-const themeToEdit = ref<Theme | null>(null);
 const saveAsOpen = ref(false);
 
 // "Edit current theme…" is only meaningful when the active theme is one the
-// engine produced — built-in / user / imported themes don't carry the
-// `generation` block the customizer needs to pre-fill its inputs.
+// engine produced — built-in / user / imported themes can't be re-edited from
+// their generation inputs. Authoring now happens in the Theme Studio panel.
 const canEditCurrentTheme = computed(
   () => themeStore.currentTheme?.source === "generated" && !!themeStore.currentTheme.generation,
 );
-
-function openCustomizer(edit: boolean): void {
-  themeToEdit.value = edit ? themeStore.currentTheme : null;
-  themeCustomizerOpen.value = true;
-}
-
-function onCustomizerVisibleChange(visible: boolean): void {
-  themeCustomizerOpen.value = visible;
-  if (!visible) themeToEdit.value = null;
-}
 
 // FileUpload — kept hidden by the wrapper; menu items trigger `choose()`
 // programmatically. customUpload + auto means @select fires immediately with
@@ -145,6 +129,42 @@ function toggleComponentsPanel(): void {
     component: "components-browser",
     title: "Components",
     floating: true,
+  });
+  session.markDirty();
+}
+
+/**
+ * Open (or focus) the singleton Theme Studio panel (Track A A2a). Passing a
+ * `themeToEditId` seeds it to edit that theme. If the panel already exists, it's
+ * brought forward (re-seeding an open Studio for a new edit target would require
+ * a remount — the common "open Studio" flow just focuses it).
+ */
+function openThemeStudio(themeToEditId?: string): void {
+  const api = session.getDockviewApi();
+  if (!api) return;
+  const existing = panelStateStore.listForLayout().find((s) => s.panelType === "theme-studio");
+  if (existing) {
+    const panel = api.getPanel(existing.id);
+    if (panel) {
+      panel.api.setActive();
+      return;
+    }
+  }
+  const layoutId = layoutStore.currentLayoutId;
+  if (!layoutId) return;
+  const panelId = newId();
+  void panelStateStore.createPanel({
+    layoutId,
+    panelType: "theme-studio",
+    assignmentState: "configured",
+    id: panelId,
+  });
+  api.addPanel({
+    id: panelId,
+    component: "theme-studio",
+    title: "Theme Studio",
+    floating: true,
+    ...(themeToEditId ? { params: { themeToEditId } } : {}),
   });
   session.markDirty();
 }
@@ -313,10 +333,10 @@ const menuItems = computed<MenuItem[]>(() => [
         shortcut: formatCombo("mod+b", isMac),
       },
       { label: "Themes…", command: () => (themePickerOpen.value = true) },
-      { label: "Create new theme…", command: () => openCustomizer(false) },
+      { label: "Theme Studio…", command: () => openThemeStudio() },
       {
         label: "Edit current theme…",
-        command: () => openCustomizer(true),
+        command: () => openThemeStudio(themeStore.currentTheme?.id),
         disabled: !canEditCurrentTheme.value,
       },
       { label: "Import theme…", command: () => (themeImportOpen.value = true) },
@@ -381,11 +401,6 @@ const menuItems = computed<MenuItem[]>(() => [
   <ManagePresetsDialog v-model:visible="managePresetsOpen" />
   <ThemePickerDialog v-model:visible="themePickerOpen" />
   <ThemeImportDialog v-model:visible="themeImportOpen" />
-  <ThemeCustomizerDialog
-    :visible="themeCustomizerOpen"
-    :theme-to-edit="themeToEdit"
-    @update:visible="onCustomizerVisibleChange"
-  />
   <SaveLayoutAsDialog
     v-model:visible="saveAsOpen"
     :default-name="(layoutStore.currentLayout?.name ?? '') + ' (saved)'"
