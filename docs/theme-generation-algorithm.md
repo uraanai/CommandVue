@@ -138,7 +138,7 @@ Sometimes you want a named handle so a control can be tuned independently (`--ti
 
 2. **`src/modules/themes/knownTokens.ts`** — add the names to `COMPONENT_TOKEN_NAMES` so `themeRepo`'s invariants and the import validator accept them as legal overrides in custom-theme JSON.
 
-The new token reads its value from a semantic token the generator already controls; under any generated theme it inherits correctly. Custom themes that _want_ to deviate can override `--titlebox-header-bg` explicitly in their JSON, and the import path now accepts it. `THEME_SCHEMA_VERSION` stays at `1` — adding tokens is backward-compatible. Old themes that don't override the new token simply fall back to the cascade.
+The new token reads its value from a semantic token the generator already controls; under any generated theme it inherits correctly. Custom themes that _want_ to deviate can override `--titlebox-header-bg` explicitly in their JSON, and the import path now accepts it. Adding a token does **not** bump `THEME_SCHEMA_VERSION` (now `2`, after the data-model v2 migration) — a new key is backward-compatible. Old themes that don't override the new token simply fall back to the cascade. (Changing an _existing_ emitted token's derivation math is different — that bumps `ENGINE_VERSION`; see the §3i engine-stability contract.)
 
 ### 1% case — generator should compute a non-trivial derived value
 
@@ -162,7 +162,7 @@ If the gap is genuinely about _vocabulary_ — a meaning the existing semantic l
 - `knownTokens.ts` — `SEMANTIC_TOKEN_NAMES`.
 - `generate.ts` — emit a derived value via the surface / text / interactive / status scale it logically belongs to.
 - `docs/design-tokens.md` and `docs/theme-schema-for-llms.md` (Phase G) — so LLM-generated themes know about the new token.
-- `THEME_SCHEMA_VERSION` stays `1` (additive).
+- Adding the token does not bump `THEME_SCHEMA_VERSION` (now `2`) — a new key is additive.
 
 New semantic tokens are a governed surface — they belong on the cheat sheet in the theming agent skill and the LLM schema doc, so every consumer learns about them.
 

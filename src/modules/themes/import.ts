@@ -23,7 +23,8 @@
 
 import { newId } from "@/modules/storage/ids";
 import { themeRepo } from "@/modules/storage/themeRepo";
-import { PortableThemeSchema } from "@/modules/themes/portableSchema";
+import { migrateThemeV1ToV2, type MigratableTheme } from "@/modules/themes/migrate";
+import { PortableThemeSchema, ThemeSchema } from "@/modules/themes/portableSchema";
 import { THEME_SCHEMA_VERSION, type Theme, type ThemeId } from "@/types/theme";
 
 /** ULID format (Crockford base32, 26 chars, excludes I/L/O/U). Matches the
@@ -84,34 +85,52 @@ export async function importThemeFromJson(
     return { success: false, errors: [`Invalid JSON: ${(e as Error).message}`] };
   }
 
-  // 2. Schema-version check BEFORE Zod for a clearer error than a literal
-  // mismatch buried in .issues. We don't trust any other field yet, so this
-  // is the only top-level property we read pre-validation.
-  if (typeof raw === "object" && raw !== null && "schemaVersion" in raw) {
-    const v = (raw as { schemaVersion: unknown }).schemaVersion;
-    if (v !== THEME_SCHEMA_VERSION) {
+  // 2. Schema-version branch BEFORE Zod. Accept the current version (validate
+  // the whole envelope) and the previous version 1 (upcast the inner theme to
+  // v2 *before* validating — upcast-before-validate, §3j — so old exported files,
+  // including ones carrying the now-dead `--color-p-surface-*` keys, still import).
+  // Any other version is rejected with a clear message.
+  const declaredVersion =
+    typeof raw === "object" && raw !== null && "schemaVersion" in raw
+      ? (raw as { schemaVersion: unknown }).schemaVersion
+      : undefined;
+
+  const fmtIssues = (issues: { path: PropertyKey[]; message: string }[]): string[] =>
+    issues.map((i) => `${i.path.length > 0 ? i.path.join(".") : "<root>"}: ${i.message}`);
+
+  const warnings: string[] = [];
+  let theme: Theme;
+
+  if (declaredVersion === THEME_SCHEMA_VERSION) {
+    const parsed = PortableThemeSchema.safeParse(raw);
+    if (!parsed.success) return { success: false, errors: fmtIssues(parsed.error.issues) };
+    theme = parsed.data.theme;
+  } else if (declaredVersion === 1) {
+    // Upcast the untrusted inner theme, then validate the v2 result. `migrate` is
+    // defensive (never throws on a bad generation block — static fallback); a
+    // throw here means a structurally broken file, surfaced as an import error.
+    const innerRaw = (raw as { theme?: unknown }).theme;
+    let upcast: Theme;
+    try {
+      upcast = migrateThemeV1ToV2(innerRaw as MigratableTheme);
+    } catch (e) {
       return {
         success: false,
-        errors: [
-          `Unsupported schema version: ${JSON.stringify(v)}. This app supports version ${THEME_SCHEMA_VERSION}.`,
-        ],
+        errors: [`Failed to upgrade a version 1 theme: ${(e as Error).message}`],
       };
     }
-  }
-
-  // 3. Zod structural + content validation.
-  const parsed = PortableThemeSchema.safeParse(raw);
-  if (!parsed.success) {
+    const parsed = ThemeSchema.safeParse(upcast);
+    if (!parsed.success) return { success: false, errors: fmtIssues(parsed.error.issues) };
+    theme = parsed.data as Theme;
+    warnings.push("Imported a version 1 theme and upgraded it to the current format.");
+  } else {
     return {
       success: false,
-      errors: parsed.error.issues.map((i) => {
-        const path = i.path.length > 0 ? i.path.join(".") : "<root>";
-        return `${path}: ${i.message}`;
-      }),
+      errors: [
+        `Unsupported schema version: ${JSON.stringify(declaredVersion)}. This app supports version ${THEME_SCHEMA_VERSION}.`,
+      ],
     };
   }
-  let theme = parsed.data.theme;
-  const warnings: string[] = [];
 
   // 4. Auto-mint a ULID if the imported id isn't one. Storage requires ULIDs
   // (`themeRepo` invariant 1); imported files — especially LLM-authored or
@@ -198,8 +217,13 @@ export async function importThemeFromJson(
       source: "imported",
       mode: theme.mode,
       density: theme.density,
-      tokens: theme.tokens,
-      generation: theme.generation,
+      // v2: persist the base + sparse overrides; the repo re-derives the resolved
+      // `tokens` cache and the `generation` compat block. The embedded cache in
+      // the file (Open Decision 7) is preserved for same-engine imports because
+      // `resolve()` reproduces it exactly.
+      base: theme.base,
+      overrides: theme.overrides,
+      ...(theme.paired !== undefined ? { paired: theme.paired } : {}),
     });
     return { success: true, theme: created, warnings: warnings.length ? warnings : undefined };
   } catch (e) {

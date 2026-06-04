@@ -169,7 +169,9 @@ function solveDarkText(interactive: Oklch, hue: number): Oklch {
 }
 
 // Fixed semantic hue families for status colors (OKLCH degrees).
-const STATUS_HUES = { success: 145, warning: 75, danger: 27, info: 250 } as const;
+// Exported so the v1→v2 migration can pin a generated theme's `base.input.statusHues`
+// to these defaults (self-describing input + §3i engine-stability).
+export const STATUS_HUES = { success: 145, warning: 75, danger: 27, info: 250 } as const;
 
 /**
  * Generate a complete theme from high-level inputs.
@@ -502,19 +504,20 @@ export function generateTheme(input: ThemeGenerationInput): ThemeGenerationResul
  * @throws if `theme` is not a generated theme (no `generation` block to read).
  */
 export function generatePairedVariant(theme: Theme): ThemeGenerationResult {
-  if (theme.source !== "generated" || !theme.generation) {
-    throw new Error("Can only pair a generated theme (missing generation block).");
+  if (theme.base.kind !== "generated") {
+    throw new Error("Can only pair a generated theme (base.kind must be 'generated').");
   }
+  const input = theme.base.input;
   const flipped: ThemeMode = theme.mode === "light" ? "dark" : "light";
   return generateTheme({
-    baseColor: theme.generation.baseColor,
-    accentColor: theme.generation.accentColor,
-    contrast: theme.generation.contrast,
+    baseColor: input.baseColor,
+    accentColor: input.accentColor,
+    contrast: input.contrast,
     mode: flipped,
     density: theme.density,
     // Carry status overrides so the paired variant re-points the same hues and
     // emits the same border/toast key set (keeping token coverage symmetric).
-    statusOverrides: theme.generation.statusOverrides,
+    statusOverrides: input.statusOverrides,
     name: `${theme.name} (${flipped === "dark" ? "Dark" : "Light"})`,
   });
 }

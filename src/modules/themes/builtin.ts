@@ -53,9 +53,15 @@ export function registerBuiltinThemes(): void {
   if (registered) return;
   const now = Date.now();
   for (const def of BUILTIN_DEFINITIONS) {
+    // Data-model v2: built-ins are `static` bases (they reference hand-tuned
+    // `var(--color-slate-*)` primitives and were never generated). The resolved
+    // `tokens` cache equals the static base; `overrides` is empty.
+    const normalized = normalizeTokens(def.tokens);
     const theme: Theme = {
       ...def,
-      tokens: normalizeTokens(def.tokens),
+      base: { kind: "static", tokens: normalized },
+      overrides: {},
+      tokens: normalized,
       source: "built-in",
       createdAt: now,
       updatedAt: now,

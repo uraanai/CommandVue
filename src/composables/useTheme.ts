@@ -128,8 +128,9 @@ function bridgeVariant(resolved: ResolvedTheme): void {
   // Current theme already on the right side — nothing to bridge.
   if (currentTheme.mode === resolved) return;
 
-  // 1. Generated themes: explicit cross-link via generation.paired.
-  const pairedId = currentTheme.generation?.paired;
+  // 1. Generated themes: explicit cross-link via `paired` (v2; `generation.paired`
+  //    is the derived compat mirror, kept as a fallback through the transition).
+  const pairedId = currentTheme.paired ?? currentTheme.generation?.paired;
   if (pairedId) {
     const paired = themeRegistry.get(pairedId);
     if (paired && paired.mode === resolved) {

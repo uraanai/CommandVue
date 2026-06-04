@@ -60,6 +60,14 @@ brand: warm off-white background, clay/rust accent"]_
 - `id` can be any string — CommandVue reassigns it a real ULID on import.
 - `createdAt` / `updatedAt` / `exportedAt` can be `0` — they're restamped on import.
 
+> **Keep authoring this flat `schemaVersion: 1` envelope — it stays this simple.**
+> CommandVue's current internal format is version 2 (a discriminated `base` +
+> sparse `overrides` + a resolved-token cache). You do **not** need to produce it:
+> a version-1 flat-token file is **automatically upgraded on import** into a frozen
+> `base: { "kind": "static", … }` theme — your `tokens` map becomes the static
+> base, with empty `overrides`. The richer `base.input` form is only for themes the
+> in-app generator derives from base/accent/contrast; an LLM never needs to emit it.
+
 ### Token keys you may set
 
 Set any subset. Anything you omit inherits a sensible default. **Every key you
@@ -167,7 +175,9 @@ End of prompt template.
 
 ## What happens on import
 
-1. CommandVue parses the JSON and checks `schemaVersion`.
+1. CommandVue parses the JSON and checks `schemaVersion`. A version-1 file is
+   upgraded to the current version-2 model first (your flat `tokens` map becomes
+   a frozen `static` base); a version-2 file is validated directly.
 2. It validates the structure + every token name + CSS-value safety with Zod.
 3. It resolves any id/name clash with your chosen policy (import a copy /
    replace / skip).

@@ -1,4 +1,4 @@
-import type { Theme } from "@/types/theme";
+import type { Theme, ThemeBase } from "@/types/theme";
 
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -11,6 +11,14 @@ import { resetStorage } from "../storage/helpers";
 
 function makeTheme(over: Partial<Theme> = {}): Theme {
   const now = Date.now();
+  // For a static fixture, `tokens` (the cache) and `base.tokens` are the same
+  // bag, so a `tokens` override drives both — otherwise a re-import would resolve
+  // the static base and ignore the overridden cache. A `base` override wins.
+  const tokens = over.tokens ?? {
+    "--color-surface-base": "oklch(0.98 0.005 250)",
+    "--color-text-primary": "oklch(0.2 0.04 264)",
+  };
+  const base: ThemeBase = over.base ?? { kind: "static", tokens };
   return {
     id: "01ARZ3NDEKTSV4RRFFQ69G5FAV",
     name: "Sample",
@@ -19,13 +27,12 @@ function makeTheme(over: Partial<Theme> = {}): Theme {
     source: "user",
     mode: "light",
     density: "comfortable",
-    tokens: {
-      "--color-surface-base": "oklch(0.98 0.005 250)",
-      "--color-text-primary": "oklch(0.2 0.04 264)",
-    },
+    ...over,
+    base,
+    overrides: over.overrides ?? {},
+    tokens,
     createdAt: now,
     updatedAt: now,
-    ...over,
   };
 }
 
@@ -33,7 +40,7 @@ describe("exportThemeToJson", () => {
   it("wraps a theme in the PortableTheme envelope", () => {
     const theme = makeTheme();
     const parsed = JSON.parse(exportThemeToJson(theme)) as Record<string, unknown>;
-    expect(parsed.schemaVersion).toBe(1);
+    expect(parsed.schemaVersion).toBe(2);
     expect(parsed.exportedBy).toBe("commandvue");
     expect(typeof parsed.exportedByVersion).toBe("string");
     expect(typeof parsed.exportedAt).toBe("number");
@@ -126,19 +133,56 @@ describe("importThemeFromJson", () => {
   it("forces source to 'imported' regardless of what the file claims", async () => {
     const seed = makeTheme({
       source: "generated",
-      generation: {
-        schemaVersion: 1,
-        baseColor: "oklch(0.98 0.005 250)",
-        accentColor: "oklch(0.55 0.18 250)",
-        contrast: 50,
+      base: {
+        kind: "generated",
+        input: {
+          schemaVersion: 2,
+          baseColor: "oklch(0.98 0.005 250)",
+          accentColor: "oklch(0.55 0.18 250)",
+          contrast: 50,
+          mode: "light",
+          density: "comfortable",
+        },
       },
     });
     const result = await importThemeFromJson(exportThemeToJson(seed));
     expect(result.success).toBe(true);
     expect(result.theme?.source).toBe("imported");
-    // generation block carries through so a re-imported generated theme can
-    // still be edited by the customizer (Phase E).
+    // The generated base survives (so the customizer can re-edit), and the
+    // derived `generation` compat block reflects its inputs.
+    expect(result.theme?.base.kind).toBe("generated");
     expect(result.theme?.generation?.contrast).toBe(50);
+  });
+
+  it("upcasts a version 1 export (incl. legacy --color-p-surface-* keys) to v2", async () => {
+    const v1File = JSON.stringify({
+      schemaVersion: 1,
+      exportedAt: Date.now(),
+      exportedBy: "commandvue",
+      exportedByVersion: "0.1.0",
+      theme: {
+        id: "01ARZ3NDEKTSV4RRFFQ69G5FAV",
+        name: "Legacy Import",
+        description: "a v1 file in the wild",
+        author: "old-app",
+        source: "imported",
+        mode: "light",
+        density: "comfortable",
+        tokens: {
+          "--color-surface-base": "oklch(0.98 0.005 250)",
+          "--color-text-primary": "oklch(0.2 0.04 264)",
+          "--color-p-surface-0": "#ffffff",
+        },
+        createdAt: 1,
+        updatedAt: 2,
+      },
+    });
+    const result = await importThemeFromJson(v1File);
+    expect(result.success).toBe(true);
+    expect(result.theme?.source).toBe("imported");
+    expect(result.theme?.base.kind).toBe("static");
+    expect(result.theme?.tokens["--color-p-surface-0"]).toBe("#ffffff"); // legacy key preserved
+    expect(result.warnings?.some((w) => /version 1/.test(w))).toBe(true);
   });
 
   describe("ID conflict resolution", () => {

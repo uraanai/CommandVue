@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type {
+  GenerationInputV2,
   StatusFamily,
   StatusOverrides,
   Theme,
@@ -240,6 +241,27 @@ const dialogHeader = computed(() =>
 
 const canSave = computed(() => !saving.value && name.value.trim().length > 0);
 
+/**
+ * Assemble the v2 {@link GenerationInputV2} from the current form state for the
+ * given mode. `statusHues` is intentionally omitted for freshly-authored themes
+ * (the engine does not consume it; the v1→v2 migration pins it only to keep
+ * legacy themes self-describing). `fontFamily` / `statusOverrides` are included
+ * only when set, so the persisted input stays honest (§3i).
+ */
+function buildGenerationInput(forMode: ThemeMode): GenerationInputV2 {
+  const input: GenerationInputV2 = {
+    schemaVersion: 2,
+    baseColor: baseColor.value,
+    accentColor: accentColor.value,
+    contrast: contrast.value,
+    mode: forMode,
+    density: density.value,
+  };
+  if (fontFamily.value) input.fontFamily = fontFamily.value;
+  if (statusOverrides.value) input.statusOverrides = statusOverrides.value;
+  return input;
+}
+
 // --- Save ----------------------------------------------------------------
 async function save(): Promise<void> {
   saveError.value = null;
@@ -255,13 +277,9 @@ async function save(): Promise<void> {
   }
   saving.value = true;
   try {
-    const generationMeta = {
-      schemaVersion: 1 as const,
-      baseColor: baseColor.value,
-      accentColor: accentColor.value,
-      contrast: contrast.value,
-      ...(statusOverrides.value ? { statusOverrides: statusOverrides.value } : {}),
-    };
+    // v2: persist the generation inputs as a `generated` base; the repo derives
+    // the resolved `tokens` cache (== `result.tokens`, same inputs) and the
+    // deprecated `generation` compat block.
     const created = await themeRepo.create({
       name: cleanName,
       description: description.value,
@@ -269,24 +287,14 @@ async function save(): Promise<void> {
       source: "generated",
       mode: mode.value,
       density: density.value,
-      tokens: result.tokens,
-      generation: generationMeta,
+      base: { kind: "generated", input: buildGenerationInput(mode.value) },
+      overrides: {},
     });
 
     if (generatePaired.value) {
       const flippedMode: ThemeMode = mode.value === "light" ? "dark" : "light";
       const pairedSuffix = flippedMode === "dark" ? "Dark" : "Light";
       const pairedName = `${cleanName} (${pairedSuffix})`;
-      const pairedResult = generateTheme({
-        name: pairedName,
-        baseColor: baseColor.value,
-        accentColor: accentColor.value,
-        contrast: contrast.value,
-        mode: flippedMode,
-        density: density.value,
-        fontFamily: fontFamily.value || undefined,
-        statusOverrides: statusOverrides.value,
-      });
       const paired = await themeRepo.create({
         name: pairedName,
         description: description.value,
@@ -294,14 +302,13 @@ async function save(): Promise<void> {
         source: "generated",
         mode: flippedMode,
         density: density.value,
-        tokens: pairedResult.tokens,
-        generation: { ...generationMeta, paired: created.id },
+        base: { kind: "generated", input: buildGenerationInput(flippedMode) },
+        overrides: {},
+        paired: created.id,
       });
       // Backfill the primary so the Light/Dark toggle can bridge in both
       // directions. update() also re-syncs `themeRegistry`.
-      await themeRepo.update(created.id, {
-        generation: { ...generationMeta, paired: paired.id },
-      });
+      await themeRepo.update(created.id, { paired: paired.id });
     }
 
     if (applyAfterSave.value) {
@@ -338,22 +345,16 @@ async function updateExisting(): Promise<void> {
   }
   saving.value = true;
   try {
-    const generationMeta = {
-      schemaVersion: 1 as const,
-      baseColor: baseColor.value,
-      accentColor: accentColor.value,
-      contrast: contrast.value,
-      // Preserve the original paired ref if there was one.
-      paired: props.themeToEdit.generation?.paired,
-      ...(statusOverrides.value ? { statusOverrides: statusOverrides.value } : {}),
-    };
+    // Preserve the original paired ref if there was one (v2 top-level `paired`,
+    // falling back to the derived compat mirror during the transition).
+    const existingPaired = props.themeToEdit.paired ?? props.themeToEdit.generation?.paired;
     const updated = await themeRepo.update(props.themeToEdit.id, {
       name: cleanName,
       description: description.value,
       mode: mode.value,
       density: density.value,
-      tokens: result.tokens,
-      generation: generationMeta,
+      base: { kind: "generated", input: buildGenerationInput(mode.value) },
+      ...(existingPaired !== undefined ? { paired: existingPaired } : {}),
     });
     if (applyAfterSave.value) {
       await themeStore.setTheme(updated.id, workspaceStore.currentWorkspaceId);
