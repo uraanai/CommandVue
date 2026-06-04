@@ -4,9 +4,11 @@ import type { MenuItem } from "primevue/menuitem";
 import { ChevronRight, Folder, Home, Map } from "@lucide/vue";
 import { computed, ref } from "vue";
 
+import ColorPicker from "@/components/ui/ColorPicker.vue";
 import Menubar from "@/components/ui/Menubar.vue";
 import Tabs from "@/components/ui/Tabs.vue";
 import Breadcrumb from "@/volt/Breadcrumb.vue";
+import Checkbox from "@/volt/Checkbox.vue";
 import Fieldset from "@/volt/Fieldset.vue";
 import Paginator from "@/volt/Paginator.vue";
 import Step from "@/volt/Step.vue";
@@ -31,6 +33,20 @@ const INNER_TABS = [
   { id: "details", label: "Details" },
   { id: "archived", label: "Archived", disabled: true },
 ];
+
+// A long tab set to demonstrate the `scrollable` variants (one row + chevron
+// scroll buttons instead of wrapping to multiple lines).
+const innerTab3 = ref<string>("t1");
+const innerTab4 = ref<string>("t1");
+const MANY_TABS = Array.from({ length: 12 }, (_, i) => ({
+  id: `t${i + 1}`,
+  label: `Section ${i + 1}`,
+}));
+
+// Shared controls for the two scrollable demos: the scrollbar is hidden by
+// default (chevrons / wheel / drag still scroll) and its color is selectable.
+const showScrollbar = ref<boolean>(false);
+const scrollbarColor = ref<string>("#94a3b8");
 
 // --- Menubar ---------------------------------------------------------------
 // Harmless File / Edit / View model — no side effects beyond a transient note.
@@ -103,6 +119,67 @@ const STEP_TITLES: Record<string, string> = {
           </p>
         </template>
       </Tabs>
+    </Fieldset>
+
+    <Fieldset legend="Tabs — scrollable (underline + segmented)">
+      <p class="text-muted mb-3 text-sm">
+        Too many tabs for the width → one row with left/right chevron scroll buttons (and wheel /
+        drag) instead of wrapping. Add <code class="text-foreground">scrollable</code>. The
+        scrollbar is <span class="text-foreground font-medium">hidden by default</span> — toggle and
+        recolor it below (<code class="text-foreground">scrollbar</code> /
+        <code class="text-foreground">scrollbar-color</code>).
+      </p>
+
+      <!-- Shared controls — drive the scrollbar on BOTH strips below. -->
+      <div
+        class="border-border bg-surface-sunken/40 mb-4 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-md border p-3"
+      >
+        <label class="flex items-center gap-2 text-sm">
+          <Checkbox v-model="showScrollbar" :binary="true" />
+          <span>Show scroll bar</span>
+        </label>
+        <div class="flex items-center gap-2">
+          <span class="text-muted text-sm">Scroll bar color</span>
+          <ColorPicker v-model="scrollbarColor" :disabled="!showScrollbar" />
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-4">
+        <div class="flex flex-col gap-1">
+          <span class="text-faint text-xs">underline</span>
+          <Tabs
+            v-model="innerTab3"
+            :tabs="MANY_TABS"
+            scrollable
+            :scrollbar="showScrollbar"
+            :scrollbar-color="scrollbarColor"
+          >
+            <template #default="{ active }">
+              <p class="text-muted text-sm">
+                Active tab id: <span class="text-foreground font-mono">{{ active }}</span>
+              </p>
+            </template>
+          </Tabs>
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <span class="text-faint text-xs">segmented</span>
+          <Tabs
+            v-model="innerTab4"
+            :tabs="MANY_TABS"
+            variant="segmented"
+            scrollable
+            :scrollbar="showScrollbar"
+            :scrollbar-color="scrollbarColor"
+          >
+            <template #default="{ active }">
+              <p class="text-muted text-sm">
+                Active tab id: <span class="text-foreground font-mono">{{ active }}</span>
+              </p>
+            </template>
+          </Tabs>
+        </div>
+      </div>
     </Fieldset>
 
     <!-- ================= MENUBAR ================= -->

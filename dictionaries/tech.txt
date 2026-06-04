@@ -330,3 +330,6 @@ toggleswitch
 treenode
 unmaskicon
 xlarge
+previcon
+nexticon
+nobar
