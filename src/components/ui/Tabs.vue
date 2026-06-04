@@ -106,7 +106,11 @@ const tabListPt = computed(() => {
   const navButton =
     "flex shrink-0 items-center justify-center self-stretch w-7 cursor-pointer text-muted transition-colors hover:text-foreground disabled:cursor-default disabled:opacity-30";
   return {
-    root: { class: cn(rootBase, "flex w-full items-center") },
+    // `min-w-0 max-w-full` lets the strip fit the available width instead of its
+    // intrinsic (all-tabs) width — without it, `min-width:auto` pushes the row
+    // wider than its parent (esp. inside a flex column), so `content` never
+    // overflows itself and no scroll appears.
+    root: { class: cn(rootBase, "flex w-full min-w-0 max-w-full items-center") },
     content: { class: "min-w-0 flex-1 overflow-x-auto scroll-smooth [scrollbar-width:thin]" },
     tabList: { class: "flex items-center gap-1" },
     activeBar: { class: "hidden" },

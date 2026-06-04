@@ -59,7 +59,7 @@ const TAB_COMPONENTS: Record<ShowcaseTab, Component> = {
     </header>
 
     <div class="min-h-0 flex-1 overflow-y-auto px-4 py-3">
-      <Tabs v-model="activeTab" :tabs="TABS" scrollable>
+      <Tabs v-model="activeTab" :tabs="TABS">
         <template #default="{ active }">
           <component :is="TAB_COMPONENTS[active as ShowcaseTab]" />
         </template>
