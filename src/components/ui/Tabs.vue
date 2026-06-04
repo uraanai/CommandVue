@@ -19,12 +19,14 @@ import { cn } from "@/utils/cn";
  *     the active one reads as a raised, selected button.
  *
  * `scrollable` (default false) keeps the strip on **one line** when the tabs
- * outgrow the available width: the row scrolls horizontally and PrimeVue renders
- * left/right chevron nav buttons (auto-disabled at the extremes) instead of
- * wrapping to multiple lines. The user can click the chevrons, drag the
- * scrollbar, or wheel-scroll. This is the single reusable affordance to use
- * anywhere a horizontal tab/segment strip can overflow (the navigation, the
- * Theme Studio, the showcase, …) — just add `scrollable`.
+ * outgrow the available width: the row scrolls horizontally and PrimeVue shows
+ * left/right chevron nav buttons (auto-hidden at the extremes) instead of
+ * wrapping to multiple lines. The buttons are absolutely positioned over a
+ * reserved gutter so the row never jumps when they appear/disappear, and a 2px
+ * themed scrollbar (`.tab-scroll-thin`) lets the user drag/wheel-scroll too.
+ * This is the single reusable affordance to use anywhere a horizontal
+ * tab/segment strip can overflow (the navigation, the Theme Studio, the
+ * showcase, …) — just add `scrollable`.
  */
 interface Tab {
   id: string;
@@ -99,23 +101,35 @@ const tabListPt = computed(() => {
     };
   }
 
-  // Scrollable: lay out as [prev] [scroll viewport] [next] on one line. The
-  // chevron nav buttons are rendered by PrimeVue only while the row overflows,
-  // and it toggles their `disabled` attr at the scroll extremes. `content` is
-  // the scroll viewport; `tabList` is the actual (no-wrap) flex row of tabs.
+  // Scrollable: the scroll viewport (`content`) spans the full width and the
+  // chevron nav buttons are absolutely positioned over each edge. PrimeVue
+  // mounts/unmounts those buttons (v-if on can-scroll-this-way), so keeping them
+  // OUT of flow is what stops the row from jumping 28px when one appears — the
+  // viewport width never changes. The viewport carries NO horizontal padding:
+  // PrimeVue's end-detection measures `getWidth` (content-box, padding excluded)
+  // against `scrollWidth` (padding included), so any padding here would leave the
+  // next chevron stuck visible at the end. Instead the tabs fade out under the
+  // chevrons via the `.tab-scroll-thin` mask (in main.css), matched to each
+  // button with `:has()`.
   const navButton =
-    "flex shrink-0 items-center justify-center self-stretch w-7 cursor-pointer text-muted transition-colors hover:text-foreground disabled:cursor-default disabled:opacity-30";
+    "absolute inset-y-0 z-10 flex w-7 items-center justify-center cursor-pointer text-muted transition-colors hover:text-foreground";
   return {
-    // `min-w-0 max-w-full` lets the strip fit the available width instead of its
-    // intrinsic (all-tabs) width — without it, `min-width:auto` pushes the row
-    // wider than its parent (esp. inside a flex column), so `content` never
-    // overflows itself and no scroll appears.
-    root: { class: cn(rootBase, "flex w-full min-w-0 max-w-full items-center") },
-    content: { class: "min-w-0 flex-1 overflow-x-auto scroll-smooth [scrollbar-width:thin]" },
+    // `relative` anchors the absolute nav buttons. `min-w-0 max-w-full` lets the
+    // strip fit the available width instead of its intrinsic (all-tabs) width —
+    // without it, `min-width:auto` pushes the row wider than its parent (esp.
+    // inside a flex column), so `content` never overflows itself.
+    root: { class: cn(rootBase, "relative flex w-full min-w-0 max-w-full items-center") },
+    // `overflow-y-hidden` kills the scrollbar-induced vertical scrollbar (the
+    // 2px horizontal bar eats a sliver of height, which would otherwise make the
+    // row overflow vertically). `tab-scroll-thin` = 2px themed bar, no arrows,
+    // plus the edge fade-out mask.
+    content: {
+      class: "tab-scroll-thin min-w-0 flex-1 overflow-x-auto overflow-y-hidden scroll-smooth",
+    },
     tabList: { class: "flex items-center gap-1" },
     activeBar: { class: "hidden" },
-    prevButton: { class: navButton },
-    nextButton: { class: navButton },
+    prevButton: { class: cn(navButton, "left-0") },
+    nextButton: { class: cn(navButton, "right-0") },
   };
 });
 </script>
