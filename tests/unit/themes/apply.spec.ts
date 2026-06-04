@@ -2,7 +2,12 @@ import type { Theme } from "@/types/theme";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { applyTheme, clearTheme } from "@/modules/themes/apply";
+import {
+  applyTheme,
+  applyTokenOverrides,
+  clearTheme,
+  clearTokenOverrides,
+} from "@/modules/themes/apply";
 
 function fixture(id: string, tokens: Record<string, string>): Theme {
   const now = Date.now();
@@ -104,5 +109,82 @@ describe("applyTheme / clearTheme", () => {
     applyTheme(t);
     applyTheme(t);
     expect(document.documentElement.style.getPropertyValue("--color-surface-base")).toBe("#fff");
+  });
+});
+
+describe("applyTokenOverrides / clearTokenOverrides (live preview — A2a)", () => {
+  let root: HTMLElement;
+  beforeEach(() => {
+    root = document.createElement("div");
+  });
+
+  it("writes overrides onto an EXPLICIT root and tracks them", () => {
+    applyTokenOverrides({ "--color-surface-base": "#111", "color-text-primary": "#eee" }, root);
+    expect(root.style.getPropertyValue("--color-surface-base")).toBe("#111");
+    expect(root.style.getPropertyValue("--color-text-primary")).toBe("#eee"); // bare key normalized
+    expect(JSON.parse(root.getAttribute("data-theme-preview-applied")!)).toEqual([
+      "--color-surface-base",
+      "--color-text-primary",
+    ]);
+  });
+
+  it("is additive — a second call keeps earlier preview keys", () => {
+    applyTokenOverrides({ "--color-surface-base": "#111" }, root);
+    applyTokenOverrides({ "--color-interactive": "#0af" }, root);
+    expect(root.style.getPropertyValue("--color-surface-base")).toBe("#111");
+    expect(root.style.getPropertyValue("--color-interactive")).toBe("#0af");
+    expect(JSON.parse(root.getAttribute("data-theme-preview-applied")!)).toEqual([
+      "--color-surface-base",
+      "--color-interactive",
+    ]);
+  });
+
+  it("clearTokenOverrides removes the whole preview overlay + attribute", () => {
+    applyTokenOverrides({ "--color-surface-base": "#111", "--color-interactive": "#0af" }, root);
+    clearTokenOverrides(root);
+    expect(root.style.getPropertyValue("--color-surface-base")).toBe("");
+    expect(root.style.getPropertyValue("--color-interactive")).toBe("");
+    expect(root.getAttribute("data-theme-preview-applied")).toBeNull();
+  });
+
+  it("clearTokenOverrides keeps the `except` keys inline (no-flash ordering)", () => {
+    applyTokenOverrides({ "--color-surface-base": "#111", "--color-interactive": "#0af" }, root);
+    clearTokenOverrides(root, new Set(["--color-interactive"]));
+    expect(root.style.getPropertyValue("--color-surface-base")).toBe(""); // preview-only → removed
+    expect(root.style.getPropertyValue("--color-interactive")).toBe("#0af"); // committed-owned → kept
+    expect(JSON.parse(root.getAttribute("data-theme-preview-applied")!)).toEqual([
+      "--color-interactive",
+    ]);
+  });
+
+  it("operates on the given root only, never document.documentElement", () => {
+    applyTokenOverrides({ "--color-surface-base": "#111" }, root);
+    expect(document.documentElement.style.getPropertyValue("--color-surface-base")).toBe("");
+  });
+});
+
+describe("applyTheme reconciles a live preview overlay (no-flash commit)", () => {
+  beforeEach(() => {
+    document.documentElement.removeAttribute("data-theme-applied");
+    document.documentElement.removeAttribute("data-theme-preview-applied");
+    document.documentElement.style.cssText = "";
+  });
+  afterEach(() => clearTheme());
+
+  it("drops committed keys from the preview tracking so a later clear can't strip them", () => {
+    const root = document.documentElement;
+    // Preview overlay touches two keys, one of which the committed theme also owns.
+    applyTokenOverrides({ "color-surface-base": "#abc", "--color-interactive": "#0af" }, root);
+    // Commit a theme that owns surface-base.
+    applyTheme(fixture("committed", { "color-surface-base": "#fff" }));
+    // surface-base is now committed-owned (dropped from preview tracking);
+    // interactive remains a preview-only key.
+    expect(JSON.parse(root.getAttribute("data-theme-preview-applied")!)).toEqual([
+      "--color-interactive",
+    ]);
+    // Clearing the preview overlay must NOT remove the committed surface-base.
+    clearTokenOverrides(root);
+    expect(root.style.getPropertyValue("--color-surface-base")).toBe("#fff");
+    expect(root.style.getPropertyValue("--color-interactive")).toBe("");
   });
 });

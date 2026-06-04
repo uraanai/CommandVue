@@ -25,6 +25,7 @@ const MIRRORED_ATTRS = ["data-theme", "data-theme-id", "data-density"] as const;
 
 const popoutWindows = new Set<Window>();
 let observer: MutationObserver | null = null;
+let syncScheduled = false;
 
 /** Copy the opener's theme attributes + inline token style onto one pop-out. */
 function syncWindow(win: Window): void {
@@ -67,11 +68,29 @@ function syncAll(): void {
  */
 export function initPopoutThemeSync(): void {
   if (observer || typeof MutationObserver === "undefined") return;
-  observer = new MutationObserver(() => syncAll());
+  observer = new MutationObserver(scheduleSync);
   observer.observe(document.documentElement, {
     attributes: true,
     attributeFilter: [...MIRRORED_ATTRS, "style"],
   });
+}
+
+/**
+ * Coalesce a burst of mutations into a single `syncAll()` per animation frame.
+ * The Theme Studio (A2a) writes many token mutations while a slider is dragged;
+ * without batching, each one would rebuild every pop-out's entire inline style.
+ * Falls back to a microtask where `requestAnimationFrame` is unavailable
+ * (jsdom / SSR) so mirroring still happens.
+ */
+function scheduleSync(): void {
+  if (syncScheduled) return;
+  syncScheduled = true;
+  const flush = (): void => {
+    syncScheduled = false;
+    syncAll();
+  };
+  if (typeof requestAnimationFrame === "function") requestAnimationFrame(flush);
+  else queueMicrotask(flush);
 }
 
 /** Track a freshly-opened pop-out and mirror the current theme onto it now. */
@@ -93,4 +112,5 @@ export function __popoutWindowCountForTests(): number {
 /** Test seam: clear the tracked-window set for per-test isolation. */
 export function __resetForTests(): void {
   popoutWindows.clear();
+  syncScheduled = false;
 }
