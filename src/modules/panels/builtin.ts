@@ -90,6 +90,15 @@ export const BUILTIN_PANELS: readonly PanelDefinition[] = [
     singleton: true,
     component: () => import("@/components/panels/ShowcasePanel.vue"),
   },
+  {
+    id: "theme-studio",
+    title: "Theme Studio",
+    description: "Author themes with a live preview that recolors every window at once.",
+    icon: "paintbrush",
+    category: "tools",
+    singleton: true,
+    component: () => import("@/components/panels/ThemeStudioPanel.vue"),
+  },
 ] as const;
 
 let registered = false;

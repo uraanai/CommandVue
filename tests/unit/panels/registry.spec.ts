@@ -108,6 +108,7 @@ describe("registerBuiltinPanels", () => {
       "showcase",
       "symbology",
       "telemetry",
+      "theme-studio",
     ]);
   });
 
