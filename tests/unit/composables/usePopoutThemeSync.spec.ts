@@ -54,7 +54,8 @@ describe("usePopoutThemeSync (Track B Phase 6a)", () => {
     // Flip the opener to light + a different token — the observer should mirror it.
     document.documentElement.setAttribute("data-theme", "light");
     document.documentElement.setAttribute("style", "--color-surface: rgb(9, 9, 9);");
-    await new Promise((r) => setTimeout(r, 0)); // flush the MutationObserver microtask
+    // Flush the MutationObserver microtask AND the rAF-coalesced sync (A2a).
+    await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
 
     const dst = win.document.documentElement;
     expect(dst.getAttribute("data-theme")).toBe("light");
