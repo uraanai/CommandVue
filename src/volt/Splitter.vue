@@ -21,12 +21,17 @@ interface Props extends /* @vue-ignore */ SplitterProps {}
 defineProps<Props>();
 
 const theme = ref<SplitterPassThroughOptions>({
-  root: `flex flex-wrap
+  // NOTE (CommandVue): dropped Volt's default `flex-wrap`. `flex-wrap` makes a
+  // multi-line flex container, which sizes each pane to its CONTENT height
+  // instead of stretching to the (bounded) splitter height — so a tall pane
+  // overflowed the container and never scrolled. `flex-nowrap` + `*:min-h-0`
+  // keep the panes constrained so each pane's own `overflow-*` can scroll.
+  root: `flex flex-nowrap min-h-0
         border border-surface-200 dark:border-surface-700 rounded-md
         bg-surface-0 dark:bg-surface-900
         text-surface-700 dark:text-surface-0
         p-vertical:flex-col p-nested:grow p-nested:border-none
-        *:grow *:overflow-hidden *:flex`,
+        *:grow *:overflow-hidden *:flex *:min-h-0 *:min-w-0`,
   gutter: `grow-0 shrink-0 flex items-center justify-center z-10 bg-surface-200 dark:bg-surface-700
         p-horizontal:cursor-col-resize p-vertical:cursor-row-resize`,
   gutterHandle: `rounded-md bg-transparent 

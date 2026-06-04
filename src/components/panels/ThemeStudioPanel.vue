@@ -58,7 +58,9 @@ let interacted = false;
 
 function applyToApp(): void {
   const result = a.generationResult.value;
-  if (result && liveAcrossApp.value) themeStore.previewThemeTokens(result.tokens);
+  if (result && liveAcrossApp.value) {
+    themeStore.previewThemeTokens(result.tokens, a.density.value);
+  }
 }
 
 onMounted(() => {
@@ -291,7 +293,7 @@ function onDiscard(): void {
                 }"
               >
                 <div
-                  class="flex items-center gap-4 rounded-md px-3 py-2 text-xs"
+                  class="flex items-center gap-4 rounded-md px-[var(--density-cell-padding-x)] py-[var(--density-cell-padding-y)] text-xs"
                   :style="{
                     backgroundColor: 'var(--color-surface-raised)',
                     color: 'var(--color-text-primary)',
@@ -324,7 +326,7 @@ function onDiscard(): void {
                       { name: 'Charlie unit', range: '67 nm' },
                     ]"
                     :key="i"
-                    class="flex items-center justify-between px-3 py-1.5 text-xs"
+                    class="flex items-center justify-between px-[var(--density-cell-padding-x)] py-[var(--density-cell-padding-y)] text-xs"
                     :style="{
                       backgroundColor: i % 2 === 1 ? 'var(--color-surface-sunken)' : 'transparent',
                       color: 'var(--color-text-primary)',

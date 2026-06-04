@@ -1,4 +1,4 @@
-import type { Theme, ThemeId } from "@/types/theme";
+import type { Theme, ThemeDensity, ThemeId } from "@/types/theme";
 import type { Ulid } from "@/types/workspace";
 
 import { defineStore } from "pinia";
@@ -231,10 +231,14 @@ export const useThemeStore = defineStore("theme", () => {
    * emits a stable key set each pass, so values overwrite in place (no clear-gap
    * flash) and the change fans out to every pop-out via the mirror observer.
    */
-  function previewThemeTokens(tokens: Record<string, string>): void {
+  function previewThemeTokens(tokens: Record<string, string>, density?: ThemeDensity): void {
     isPreviewing.value = true;
     previewDraft.value = { ...tokens };
     applyTokenOverrides(tokens, APP_ROOT);
+    // Density isn't a token — it cascades from the `data-density` attribute. Mirror
+    // it onto the root during preview so spacing changes live too. Restored on
+    // cancel/commit via `applyTheme`, which re-sets the committed theme's density.
+    if (density) APP_ROOT.setAttribute("data-density", density);
   }
 
   /**
