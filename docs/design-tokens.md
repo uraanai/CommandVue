@@ -220,6 +220,21 @@ Names with meaning. Reference primitives only. Light defaults in `:root`; dark o
 
 `--color-focus-ring` + `--shadow-focus-ring` (`0 0 0 2px var(--color-focus-ring)`).
 
+### Depth & accent (the "less-flat" palette — Track A A1c)
+
+Foreground-class colors (border/shadow only, never fills) so they survive the
+float-transparency override. Defaults chain off surface/border/interactive
+(auto-adapting to dark mode); a generated theme emits precise per-mode values.
+
+| Token                                                        | Purpose                                                                                                            |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `--color-surface-bevel-light` / `--color-surface-bevel-dark` | Top-highlight / bottom-line edge colors of the triple-layer bevel.                                                 |
+| `--color-border-accent`                                      | Default border nudged toward the accent hue — active/selected panels (wires `--dv-paneview-active-outline-color`). |
+| `--color-interactive-glow`                                   | Translucent accent for focus halos / hover rings / active-tab glow.                                                |
+| `--color-interactive-dim`                                    | Desaturated, darkened accent for secondary accent surfaces.                                                        |
+| `--shadow-bevel-raised` / `--shadow-bevel-sunken`            | Composed inset bevel box-shadows (reference the bevel colors).                                                     |
+| `--shadow-accent-glow`                                       | `0 0 0 3px var(--color-interactive-glow)` — focus/selection halo.                                                  |
+
 ### Semantic spacing
 
 ```

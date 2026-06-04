@@ -50,9 +50,11 @@
 
   --dv-separator-border: var(--color-border);
   /* Active-panel outline + drag-over highlight follow the THEME's semantic
-     interactive accent (Track A A1a) rather than the raw `--color-accent-500`
-     primitive, so a custom theme recolors them with everything else. */
-  --dv-paneview-active-outline-color: var(--color-interactive);
+     accent (rather than the raw `--color-accent-500` primitive) so a custom
+     theme recolors them with everything else. The active outline uses the A1c
+     tiered accent border (`--color-border-accent` — the default border nudged
+     toward the accent hue), a touch softer than the full interactive. */
+  --dv-paneview-active-outline-color: var(--color-border-accent);
   --dv-drag-over-background-color: color-mix(in srgb, var(--color-interactive) 15%, transparent);
   --dv-drag-over-border-color: var(--color-accent-500);
 

@@ -127,6 +127,17 @@ const meterValue = ref<MeterItem[]>([
 // --- Inplace ---------------------------------------------------------------
 const inplaceText = ref<string>("Sector Bravo");
 
+// --- Depth & accent tokens (Track A A1c) -----------------------------------
+// The five themeable color tokens behind the "less-flat" palette; each follows
+// the active theme (and dark mode) via its tokens.css chain / generator value.
+const DEPTH_TOKENS = [
+  { token: "--color-surface-bevel-light", label: "bevel-light" },
+  { token: "--color-surface-bevel-dark", label: "bevel-dark" },
+  { token: "--color-border-accent", label: "border-accent" },
+  { token: "--color-interactive-glow", label: "interactive-glow" },
+  { token: "--color-interactive-dim", label: "interactive-dim" },
+] as const;
+
 // --- Stat cards (configurable KPI tiles) -----------------------------------
 // Driven by the reusable <StatCard> primitive — every color treatment is a
 // prop, so the same component covers all the dashboard card styles. One tile
@@ -184,6 +195,46 @@ const STAT_CARDS: StatTile[] = [
           :status="s.status"
           :variant="s.variant"
         />
+      </div>
+    </Fieldset>
+
+    <Fieldset legend="Depth & accent (theme palette — A1c)">
+      <div class="flex flex-col gap-4">
+        <!-- The five themeable color tokens, each following the active theme. -->
+        <div class="flex flex-wrap gap-2">
+          <div
+            v-for="t in DEPTH_TOKENS"
+            :key="t.token"
+            class="border-border flex items-center gap-2 rounded-md border px-2 py-1.5"
+          >
+            <span
+              class="border-border h-5 w-5 rounded border"
+              :style="{ background: `var(${t.token})` }"
+            />
+            <span class="text-muted font-mono text-xs">{{ t.label }}</span>
+          </div>
+        </div>
+        <!-- The three composed depth shadows on sample surfaces. -->
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div
+            class="bg-surface text-foreground rounded-lg p-4 text-sm shadow-[var(--shadow-bevel-raised)]"
+          >
+            <div class="font-medium">Bevel — raised</div>
+            <div class="text-muted text-xs">--shadow-bevel-raised</div>
+          </div>
+          <div
+            class="bg-surface-sunken text-foreground rounded-lg p-4 text-sm shadow-[var(--shadow-bevel-sunken)]"
+          >
+            <div class="font-medium">Bevel — sunken</div>
+            <div class="text-muted text-xs">--shadow-bevel-sunken</div>
+          </div>
+          <div
+            class="bg-surface text-foreground border-border rounded-lg border p-4 text-sm shadow-[var(--shadow-accent-glow)]"
+          >
+            <div class="font-medium">Accent glow</div>
+            <div class="text-muted text-xs">--shadow-accent-glow</div>
+          </div>
+        </div>
       </div>
     </Fieldset>
 

@@ -113,6 +113,14 @@ families, so most themes omit them):** neutral `--color-toast-bg`,
 `--color-toast-{success,info,warning,danger}-bg` (subtle fill) and `-fg`
 (solid text).
 
+**Depth & accent (optional — the "less-flat" palette; all default to chains off
+the surface / border / interactive tokens, so most themes omit them):** the two
+bevel edge colors `--color-surface-bevel-light`, `--color-surface-bevel-dark`;
+the accent border `--color-border-accent`; the accent triad
+`--color-interactive-glow` (translucent) and `--color-interactive-dim`. The
+composed shadows `--shadow-bevel-raised`, `--shadow-bevel-sunken`, and
+`--shadow-accent-glow` reference those colors and are usually left to inherit.
+
 **Typography (optional):** `--font-family-sans`, `--font-family-mono`
 
 There are additional component-level keys (datatable, menubar, dialog, etc.)
