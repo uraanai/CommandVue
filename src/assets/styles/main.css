@@ -120,14 +120,18 @@
 }
 
 /*
- * Suppress the browser's own (blue) focus outline on form controls FIRST, so the
- * only focus indicator is the themed one the wrappers draw — an accent border
- * (InputText, Textarea, Select, DatePicker, …) or an accent ring (ui/Input,
- * ui/Button). Chrome otherwise layers its default :focus-visible ring on top of
- * inputs that focus via a border, showing a blue outline unrelated to the theme.
+ * Theme the form-control focus ring.
  *
- * Controls that intentionally use an accent OUTLINE for focus (the Knob's SVG,
- * etc.) are not `input`/`textarea`/`select`, so they keep their themed outline.
+ * `@tailwindcss/forms` adds a focus ring to inputs/textarea/select via a
+ * box-shadow whose colour is a HARD-CODED `--tw-ring-color: <blue-500>`. That
+ * blue ring sat on top of the wrapper's themed accent border regardless of the
+ * active theme. These rules are unlayered, so they beat the plugin's
+ * `@layer base` declaration: re-point `--tw-ring-color` at the themed focus
+ * token so the ring follows the accent, and clear the browser's own outline so
+ * the accent ring + border are the only focus indicators.
+ *
+ * Controls that use an accent OUTLINE for focus (the Knob's SVG, etc.) are not
+ * `input`/`textarea`/`select`, so they are unaffected.
  */
 input:focus,
 input:focus-visible,
@@ -136,6 +140,7 @@ textarea:focus-visible,
 select:focus,
 select:focus-visible {
   outline: none;
+  --tw-ring-color: var(--color-focus-ring);
 }
 
 /*
