@@ -8,6 +8,11 @@ OLED
 LLMs
 llms
 
+# Theme data-model v2 (Track A A1a.5)
+idempotently
+materializer
+unparseable
+
 # Font / typography (Prompt 4 Phase E curated font stacks)
 Segoe
 
