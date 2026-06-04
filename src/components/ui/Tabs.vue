@@ -71,11 +71,14 @@ function tabClass(tab: Tab): string {
   }
 
   // underline — `-mb-px` pulls the tab's 2px bottom border onto the tablist's
-  // baseline so the active accent line sits exactly on the bar (inactive tabs
-  // let the baseline show through).
+  // `border-b` baseline so the active accent line sits exactly on the bar
+  // (inactive tabs let the baseline show through). Scrollable strips have no
+  // real `border-b` (the baseline is a pseudo-line pinned above the scrollbar),
+  // so the pull would nudge the underline 1px into the bar — skip it there.
   return cn(
     base,
-    "-mb-px border-b-2 px-3 py-2 focus-visible:ring-offset-2",
+    "border-b-2 px-3 py-2 focus-visible:ring-offset-2",
+    !props.scrollable && "-mb-px",
     isActive
       ? "border-accent-500 text-foreground"
       : "border-transparent text-muted hover:text-foreground hover:bg-surface-raised",
@@ -113,12 +116,26 @@ const tabListPt = computed(() => {
   // button with `:has()`.
   const navButton =
     "absolute inset-y-0 z-10 flex w-7 items-center justify-center cursor-pointer text-muted transition-colors hover:text-foreground";
+  // The 2px scrollbar must sit flush UNDER the tab line, not overlap it.
+  //   - underline: the baseline is a 1px PSEUDO-line pinned just above the
+  //     scrollbar (`after:bottom-[2px]`), so the active tab's accent underline
+  //     and the baseline share one line (as in the non-scrollable view) and the
+  //     bar runs beneath. A real `border-b` can't be used — it lands under the
+  //     scrollbar, splitting the underline from the baseline.
+  //   - segmented: drop the sunken track's BOTTOM padding so the bar hugs the
+  //     track's bottom edge with no gap.
+  // `relative` also anchors the absolute nav buttons; `min-w-0 max-w-full` lets
+  // the strip fit the available width instead of its intrinsic (all-tabs) width.
+  const base = "relative flex w-full min-w-0 max-w-full items-center";
+  const scrollRoot =
+    props.variant === "segmented"
+      ? cn(base, "rounded-lg bg-surface-sunken px-1 pt-1 pb-0")
+      : cn(
+          base,
+          "after:pointer-events-none after:absolute after:inset-x-0 after:bottom-[2px] after:h-px after:bg-[var(--color-border)] after:content-['']",
+        );
   return {
-    // `relative` anchors the absolute nav buttons. `min-w-0 max-w-full` lets the
-    // strip fit the available width instead of its intrinsic (all-tabs) width —
-    // without it, `min-width:auto` pushes the row wider than its parent (esp.
-    // inside a flex column), so `content` never overflows itself.
-    root: { class: cn(rootBase, "relative flex w-full min-w-0 max-w-full items-center") },
+    root: { class: scrollRoot },
     // `overflow-y-hidden` kills the scrollbar-induced vertical scrollbar (the
     // 2px horizontal bar eats a sliver of height, which would otherwise make the
     // row overflow vertically). `tab-scroll-thin` = 2px themed bar, no arrows,
