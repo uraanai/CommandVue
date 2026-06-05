@@ -7,7 +7,7 @@ import { cn } from "@/utils/cn";
  * EditableLabel — an inline, click-to-edit word (free text, no suggestions).
  *
  * It reads as a word in a sentence: it inherits the surrounding font, size,
- * line-height and colour (`font: inherit` overrides the UA control reset), sizes
+ * line-height and color (`font: inherit` overrides the UA control reset), sizes
  * to its text (an invisible sizer mirrors the value so the editor grows with the
  * content instead of being a fixed box), and carries no horizontal padding — no
  * left/right space. Clicking it (or an opt-in hover/background) is the only
