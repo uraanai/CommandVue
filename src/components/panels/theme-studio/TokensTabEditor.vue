@@ -80,7 +80,7 @@ const editedCount = computed(() => Object.keys(props.overrides).length);
     </div>
 
     <!-- Body -->
-    <div class="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
+    <div class="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-3 pb-3">
       <section v-for="group in sections" :key="group.section">
         <h3
           class="bg-surface text-faint sticky top-0 z-10 py-1.5 text-[10px] font-semibold tracking-wider uppercase"

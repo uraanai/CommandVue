@@ -17,6 +17,10 @@ import InputNumber from "@/volt/InputNumber.vue";
  * TokenRow — one token's editor row (Track A C1). Presentation only: it takes
  * the entry + resolved values and emits set/reset; it never imports the store or
  * the composable. The control is chosen by `entry.kind`.
+ *
+ * Layout is a strict two-column grid — a min-w-0 label column (label + raw name
+ * + advisory chip stacked) and a fixed-width control column — so rows never push
+ * a horizontal scrollbar in the narrow controls pane.
  */
 interface Props {
   entry: TokenManifestEntry;
@@ -103,32 +107,31 @@ const isDensity = computed(() => props.entry.section === "density");
 
 <template>
   <div
-    class="border-border-subtle flex items-center gap-3 border-b py-1.5 last:border-b-0"
+    class="border-border-subtle grid grid-cols-[1fr_10rem] items-center gap-x-3 gap-y-0.5 border-b py-1.5 last:border-b-0"
     :title="entry.name"
   >
-    <div class="min-w-0 flex-1">
-      <div class="flex items-center gap-1.5">
-        <span class="text-foreground truncate text-sm">{{ entry.label }}</span>
-        <span
-          v-if="edited"
-          class="bg-interactive size-1.5 shrink-0 rounded-full"
-          aria-hidden="true"
-        />
-      </div>
-      <code class="text-faint block truncate font-mono text-[10px]">{{ entry.name }}</code>
-      <div v-if="isDensity" class="text-faint text-[10px]">Overrides the density attribute</div>
+    <!-- Column 1 — label / raw name / advisory chip (min-w-0; no width pressure) -->
+    <div class="col-start-1 row-start-1 flex min-w-0 items-center gap-1.5">
+      <span class="text-foreground truncate text-sm">{{ entry.label }}</span>
+      <span
+        v-if="edited"
+        class="bg-interactive size-1.5 shrink-0 rounded-full"
+        aria-hidden="true"
+      />
+    </div>
+    <div class="col-start-1 row-start-2 flex min-w-0 items-center gap-2">
+      <code class="text-faint min-w-0 truncate font-mono text-[10px]">{{ entry.name }}</code>
+      <span
+        v-if="wcagChip"
+        :class="['shrink-0 font-mono text-[10px]', wcagChip.tone]"
+        title="Advisory WCAG contrast (this color vs its background) — does not block"
+        >{{ wcagChip.text }}</span
+      >
+      <span v-if="isDensity" class="text-faint shrink-0 text-[10px]">overrides density attr</span>
     </div>
 
-    <!-- WCAG advisory chip (color rows with a contrast partner) -->
-    <span
-      v-if="wcagChip"
-      :class="['shrink-0 font-mono text-[10px]', wcagChip.tone]"
-      title="Advisory WCAG contrast — does not block"
-      >{{ wcagChip.text }}</span
-    >
-
-    <!-- kind-specific control -->
-    <div class="flex shrink-0 items-center gap-1.5">
+    <!-- Column 2 — the kind-specific control + reset (fixed width; never overflows) -->
+    <div class="col-start-2 row-span-2 flex w-40 shrink-0 items-center justify-end gap-1">
       <TokenColorField
         v-if="entry.kind === 'color'"
         :resolved-value="resolvedValue"
@@ -137,18 +140,18 @@ const isDensity = computed(() => props.entry.section === "density");
         @change="(v: string) => $emit('set', entry.name, v)"
       />
 
-      <template v-else-if="entry.kind === 'length'">
+      <div v-else-if="entry.kind === 'length'" class="flex min-w-0 flex-1 items-center gap-1">
         <template v-if="isPlainLength">
           <InputNumber
             :model-value="lengthNum"
             :max-fraction-digits="4"
-            class="w-20"
+            class="min-w-0 flex-1"
             @update:model-value="emitLength"
           />
           <Select
             v-model="lengthUnit"
             :options="UNIT_OPTIONS"
-            class="w-16"
+            class="w-14 shrink-0"
             @update:model-value="emitLengthUnit"
           />
         </template>
@@ -156,18 +159,18 @@ const isDensity = computed(() => props.entry.section === "density");
           v-else
           v-model="freeText"
           :invalid="freeTextError"
-          class="w-40"
+          class="min-w-0 flex-1"
           spellcheck="false"
           title="var()/calc() chain — edit raw"
           @keyup.enter="emitFreeText"
           @blur="emitFreeText"
         />
-      </template>
+      </div>
 
       <InputNumber
         v-else-if="entry.kind === 'number'"
         :model-value="Number(resolvedValue) || 0"
-        class="w-24"
+        class="min-w-0 flex-1"
         @update:model-value="emitNumber"
       />
 
@@ -175,7 +178,7 @@ const isDensity = computed(() => props.entry.section === "density");
         v-else-if="entry.kind === 'font-stack'"
         :model-value="resolvedValue"
         :options="FONT_OPTIONS"
-        class="w-44"
+        class="min-w-0 flex-1"
         placeholder="Font…"
         @update:model-value="emitFont"
       />
@@ -184,7 +187,7 @@ const isDensity = computed(() => props.entry.section === "density");
         v-else-if="entry.kind === 'shadow'"
         v-model="freeText"
         :invalid="freeTextError"
-        class="w-44"
+        class="min-w-0 flex-1"
         spellcheck="false"
         title="box-shadow value"
         @keyup.enter="emitFreeText"
@@ -195,6 +198,7 @@ const isDensity = computed(() => props.entry.section === "density");
         v-if="edited"
         label="Reset this token"
         size="sm"
+        class="shrink-0"
         @click="$emit('reset', entry.name)"
       >
         <RotateCcw />

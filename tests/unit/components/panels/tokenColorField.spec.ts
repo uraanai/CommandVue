@@ -1,7 +1,10 @@
-import { mount } from "@vue/test-utils";
+import { enableAutoUnmount, mount } from "@vue/test-utils";
 import PrimeVue from "primevue/config";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { nextTick } from "vue";
+
+// The popover teleports to <body>; auto-unmount keeps it from leaking between tests.
+enableAutoUnmount(afterEach);
 
 import TokenColorField from "@/components/panels/theme-studio/TokenColorField.vue";
 import Input from "@/components/ui/Input.vue";
@@ -15,11 +18,26 @@ function mountField(resolvedValue = "oklch(0.55 0.18 250)") {
 }
 
 describe("TokenColorField (C1)", () => {
-  it("renders a swatch trigger tinted with the resolved value; no native color input", () => {
+  it("renders a swatch trigger tinted with the resolved value; popover is closed initially", () => {
     const w = mountField();
     const swatch = w.find("button");
     expect(swatch.attributes("style")).toContain("background-color");
+    // The popover (and its controls, incl. the native picker) only render when opened.
     expect(w.find('input[type="color"]').exists()).toBe(false);
+  });
+
+  it("the native color picker converts a chosen hex to an OKLCH change", async () => {
+    const w = mountField();
+    await w.find("button").trigger("click"); // open popover (teleported to body)
+    await nextTick();
+    const native = document.querySelector('input[type="color"]') as HTMLInputElement | null;
+    expect(native).toBeTruthy();
+    native!.value = "#ff0000";
+    native!.dispatchEvent(new Event("input"));
+    await nextTick();
+    const change = w.emitted("change");
+    expect(change).toBeTruthy();
+    expect(change!.at(-1)![0]).toMatch(/^oklch\(/);
   });
 
   it("editing an OKLCH channel emits a formatCss-normalized OKLCH string", async () => {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onClickOutside } from "@vueuse/core";
-import { converter, formatCss } from "culori";
+import { converter, formatCss, formatHex } from "culori";
 import { nextTick, onBeforeUnmount, ref, watch } from "vue";
 
 import Input from "@/components/ui/Input.vue";
@@ -52,6 +52,7 @@ const h = ref(0);
 const parsedOklch = ref(false);
 const advanced = ref("");
 const advancedError = ref(false);
+const hexSeed = ref("#888888"); // seeds the native picker (sRGB approximation of the value)
 
 function round(n: number, digits: number): number {
   const f = 10 ** digits;
@@ -74,6 +75,7 @@ function seed(): void {
   }
   advanced.value = props.resolvedValue;
   advancedError.value = false;
+  hexSeed.value = formatHex(props.resolvedValue) ?? "#888888";
 }
 
 // Re-seed when the resolved value changes from outside (e.g. a reset), but only
@@ -142,6 +144,21 @@ function onChannel(channel: "l" | "c" | "h", value: number | null): void {
   emit("change", formatCss({ mode: "oklch", l: l.value, c: c.value, h: h.value }));
 }
 
+// Native visual picker → convert the chosen sRGB hex to OKLCH (the user picked an
+// sRGB color, so gamut-mapping to it is the intent, not corruption) and sync the
+// fine-tune channels.
+function onNativePick(event: Event): void {
+  const hex = (event.target as HTMLInputElement).value;
+  const oklch = toOklch(hex);
+  if (!oklch) return;
+  l.value = round(oklch.l ?? 0, 4);
+  c.value = round(oklch.c ?? 0, 4);
+  h.value = Math.round(oklch.h ?? 0);
+  parsedOklch.value = true;
+  hexSeed.value = hex;
+  emit("change", formatCss({ mode: "oklch", l: l.value, c: c.value, h: h.value }));
+}
+
 function commitAdvanced(): void {
   const v = advanced.value.trim();
   if (!TokenValueSchema.safeParse(v).success) {
@@ -179,9 +196,19 @@ function commitAdvanced(): void {
         :style="popStyle"
         class="border-border bg-surface-raised flex flex-col gap-2 rounded-md border p-3 shadow-lg"
       >
-        <span class="text-faint text-[10px] tracking-wider uppercase">OKLCH</span>
+        <span class="text-faint text-[10px] tracking-wider uppercase">Pick a color</span>
+        <!-- eslint-disable-next-line vue/no-restricted-html-elements -- native visual color picker; the chosen sRGB hex is converted to OKLCH on pick -->
+        <input
+          type="color"
+          :value="hexSeed"
+          class="border-border h-8 w-full cursor-pointer rounded-md border bg-transparent p-0"
+          aria-label="Pick a color"
+          @input="onNativePick"
+        />
+
+        <span class="text-faint mt-1 text-[10px] tracking-wider uppercase">OKLCH (fine-tune)</span>
         <label class="flex items-center gap-2 text-xs">
-          <span class="text-muted w-3 shrink-0">L</span>
+          <span class="text-muted w-12 shrink-0">L · light</span>
           <InputNumber
             :model-value="l"
             :min="0"
@@ -192,7 +219,7 @@ function commitAdvanced(): void {
           />
         </label>
         <label class="flex items-center gap-2 text-xs">
-          <span class="text-muted w-3 shrink-0">C</span>
+          <span class="text-muted w-12 shrink-0">C · chroma</span>
           <InputNumber
             :model-value="c"
             :min="0"
@@ -203,7 +230,7 @@ function commitAdvanced(): void {
           />
         </label>
         <label class="flex items-center gap-2 text-xs">
-          <span class="text-muted w-3 shrink-0">H</span>
+          <span class="text-muted w-12 shrink-0">H · hue</span>
           <InputNumber
             :model-value="h"
             :min="0"
