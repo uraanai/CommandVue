@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onClickOutside } from "@vueuse/core";
 import { converter, formatCss } from "culori";
-import { ref, watch } from "vue";
+import { nextTick, onBeforeUnmount, ref, watch } from "vue";
 
 import Input from "@/components/ui/Input.vue";
 import { TokenValueSchema } from "@/modules/themes/portableSchema";
@@ -17,8 +17,12 @@ import InputNumber from "@/volt/InputNumber.vue";
  * every pick, and cannot preserve `color-mix()` / `var()` defaults. This control
  * takes no options, seeds from a computed resolved value, edits in OKLCH (or raw
  * via Advanced), and preserves an unedited value verbatim. There is NO
- * `<input type="color">` here. Token-pure; lives under panels/ (not scanned by
- * check:single-source) — the one raw element is the custom swatch trigger.
+ * `<input type="color">` here.
+ *
+ * The popover is TELEPORTED to `<body>` and `fixed`-positioned from the swatch's
+ * rect (right-aligned, flips up near the viewport bottom). A plain `absolute`
+ * popover gets clipped by the Tokens-tab `overflow-y-auto` scroll body and the
+ * narrow panel edge — teleporting escapes both so the editor is always usable.
  */
 interface Props {
   /** Computed resolved CSS value for this token (getComputedStyle(APP_ROOT)). Seeds the control. */
@@ -33,9 +37,14 @@ const emit = defineEmits<{ change: [value: string] }>();
 
 const toOklch = converter("oklch");
 
+const POPOVER_WIDTH = 240; // matches the popover's fixed width below
+
 const open = ref(false);
-const root = ref<HTMLElement | null>(null);
-onClickOutside(root, () => (open.value = false));
+const triggerRef = ref<HTMLElement | null>(null);
+const popoverRef = ref<HTMLElement | null>(null);
+const popStyle = ref<Record<string, string>>({});
+
+onClickOutside(triggerRef, () => closePopover(), { ignore: [popoverRef] });
 
 const l = ref(0.7);
 const c = ref(0);
@@ -77,10 +86,53 @@ watch(
   { immediate: true },
 );
 
-function toggle(): void {
-  if (!open.value) seed();
-  open.value = !open.value;
+function reposition(): void {
+  const t = triggerRef.value;
+  if (!t) return;
+  const r = t.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const popH = popoverRef.value?.offsetHeight ?? 240;
+  // Horizontal: right-align the popover to the swatch (extend left), clamp to the viewport.
+  let left = r.right - POPOVER_WIDTH;
+  if (left < 8) left = 8;
+  if (left + POPOVER_WIDTH > vw - 8) left = Math.max(8, vw - 8 - POPOVER_WIDTH);
+  // Vertical: below the swatch if it fits, otherwise above.
+  let top = r.bottom + 4;
+  if (top + popH > vh - 8) {
+    const above = r.top - popH - 4;
+    top = above >= 8 ? above : Math.max(8, vh - 8 - popH);
+  }
+  popStyle.value = {
+    position: "fixed",
+    top: `${top}px`,
+    left: `${left}px`,
+    width: `${POPOVER_WIDTH}px`,
+    zIndex: "2000",
+  };
 }
+
+function openPopover(): void {
+  seed();
+  open.value = true;
+  void nextTick(() => {
+    reposition();
+    // Keep the popover anchored to the swatch as the body scrolls / window resizes.
+    window.addEventListener("scroll", reposition, true);
+    window.addEventListener("resize", reposition);
+  });
+}
+function closePopover(): void {
+  if (!open.value) return;
+  open.value = false;
+  window.removeEventListener("scroll", reposition, true);
+  window.removeEventListener("resize", reposition);
+}
+function toggle(): void {
+  if (open.value) closePopover();
+  else openPopover();
+}
+onBeforeUnmount(closePopover);
 
 function onChannel(channel: "l" | "c" | "h", value: number | null): void {
   const n = value ?? 0;
@@ -102,9 +154,10 @@ function commitAdvanced(): void {
 </script>
 
 <template>
-  <div ref="root" class="relative inline-flex">
+  <div class="inline-flex">
     <!-- eslint-disable-next-line vue/no-restricted-html-elements -- custom color swatch trigger (mirrors ui/ColorSwatchPicker); not a Button surface -->
     <button
+      ref="triggerRef"
       type="button"
       :aria-label="label"
       :title="resolvedValue"
@@ -119,56 +172,60 @@ function commitAdvanced(): void {
       @click="toggle"
     />
 
-    <div
-      v-if="open"
-      class="border-border bg-surface-raised absolute top-full left-0 z-50 mt-1 flex w-60 flex-col gap-2 rounded-md border p-3 shadow-lg"
-    >
-      <span class="text-faint text-[10px] tracking-wider uppercase">OKLCH</span>
-      <label class="flex items-center gap-2 text-xs">
-        <span class="text-muted w-3 shrink-0">L</span>
-        <InputNumber
-          :model-value="l"
-          :min="0"
-          :max="1"
-          :step="0.01"
-          :max-fraction-digits="4"
-          @update:model-value="(v: number | null) => onChannel('l', v)"
-        />
-      </label>
-      <label class="flex items-center gap-2 text-xs">
-        <span class="text-muted w-3 shrink-0">C</span>
-        <InputNumber
-          :model-value="c"
-          :min="0"
-          :max="0.4"
-          :step="0.005"
-          :max-fraction-digits="4"
-          @update:model-value="(v: number | null) => onChannel('c', v)"
-        />
-      </label>
-      <label class="flex items-center gap-2 text-xs">
-        <span class="text-muted w-3 shrink-0">H</span>
-        <InputNumber
-          :model-value="h"
-          :min="0"
-          :max="360"
-          :step="1"
-          @update:model-value="(v: number | null) => onChannel('h', v)"
-        />
-      </label>
-      <p v-if="!parsedOklch" class="text-faint text-[10px] leading-snug">
-        Current value isn't OKLCH — edit it raw below, or use the channels above to overwrite.
-      </p>
+    <Teleport to="body">
+      <div
+        v-if="open"
+        ref="popoverRef"
+        :style="popStyle"
+        class="border-border bg-surface-raised flex flex-col gap-2 rounded-md border p-3 shadow-lg"
+      >
+        <span class="text-faint text-[10px] tracking-wider uppercase">OKLCH</span>
+        <label class="flex items-center gap-2 text-xs">
+          <span class="text-muted w-3 shrink-0">L</span>
+          <InputNumber
+            :model-value="l"
+            :min="0"
+            :max="1"
+            :step="0.01"
+            :max-fraction-digits="4"
+            @update:model-value="(v: number | null) => onChannel('l', v)"
+          />
+        </label>
+        <label class="flex items-center gap-2 text-xs">
+          <span class="text-muted w-3 shrink-0">C</span>
+          <InputNumber
+            :model-value="c"
+            :min="0"
+            :max="0.4"
+            :step="0.005"
+            :max-fraction-digits="4"
+            @update:model-value="(v: number | null) => onChannel('c', v)"
+          />
+        </label>
+        <label class="flex items-center gap-2 text-xs">
+          <span class="text-muted w-3 shrink-0">H</span>
+          <InputNumber
+            :model-value="h"
+            :min="0"
+            :max="360"
+            :step="1"
+            @update:model-value="(v: number | null) => onChannel('h', v)"
+          />
+        </label>
+        <p v-if="!parsedOklch" class="text-faint text-[10px] leading-snug">
+          Current value isn't OKLCH — edit it raw below, or use the channels above to overwrite.
+        </p>
 
-      <span class="text-faint mt-1 text-[10px] tracking-wider uppercase">Advanced</span>
-      <Input
-        v-model="advanced"
-        :invalid="advancedError"
-        :title="advancedError ? 'Invalid or unsafe value' : 'oklch(), color-mix(), var(), #hex…'"
-        spellcheck="false"
-        @keyup.enter="commitAdvanced"
-        @blur="commitAdvanced"
-      />
-    </div>
+        <span class="text-faint mt-1 text-[10px] tracking-wider uppercase">Advanced</span>
+        <Input
+          v-model="advanced"
+          :invalid="advancedError"
+          :title="advancedError ? 'Invalid or unsafe value' : 'oklch(), color-mix(), var(), #hex…'"
+          spellcheck="false"
+          @keyup.enter="commitAdvanced"
+          @blur="commitAdvanced"
+        />
+      </div>
+    </Teleport>
   </div>
 </template>
