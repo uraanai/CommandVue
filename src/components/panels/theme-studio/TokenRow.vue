@@ -158,6 +158,7 @@ const isDensity = computed(() => props.entry.section === "density");
           <InputNumber
             :model-value="lengthNum"
             :max-fraction-digits="4"
+            fluid
             class="min-w-0 flex-1"
             @update:model-value="emitLength"
           />
@@ -183,6 +184,7 @@ const isDensity = computed(() => props.entry.section === "density");
       <InputNumber
         v-else-if="entry.kind === 'number'"
         :model-value="Number(resolvedValue) || 0"
+        fluid
         class="min-w-0 flex-1"
         @update:model-value="emitNumber"
       />

@@ -215,6 +215,7 @@ function commitAdvanced(): void {
             :max="1"
             :step="0.01"
             :max-fraction-digits="4"
+            fluid
             @update:model-value="(v: number | null) => onChannel('l', v)"
           />
         </label>
@@ -226,6 +227,7 @@ function commitAdvanced(): void {
             :max="0.4"
             :step="0.005"
             :max-fraction-digits="4"
+            fluid
             @update:model-value="(v: number | null) => onChannel('c', v)"
           />
         </label>
@@ -236,6 +238,7 @@ function commitAdvanced(): void {
             :min="0"
             :max="360"
             :step="1"
+            fluid
             @update:model-value="(v: number | null) => onChannel('h', v)"
           />
         </label>
