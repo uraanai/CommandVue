@@ -1,0 +1,490 @@
+{
+  "version": 1,
+  "generatedAt": "2026-06-05",
+  "families": [
+    {
+      "family": "Inter",
+      "category": "sans-serif",
+      "variants": [100, 200, 300, 400, 500, 600, 700, 800, 900],
+      "offline": true
+    },
+    {
+      "family": "Roboto",
+      "category": "sans-serif",
+      "variants": [100, 300, 400, 500, 700, 900],
+      "offline": true
+    },
+    {
+      "family": "Open Sans",
+      "category": "sans-serif",
+      "variants": [300, 400, 500, 600, 700, 800],
+      "offline": true
+    },
+    {
+      "family": "Lato",
+      "category": "sans-serif",
+      "variants": [100, 300, 400, 700, 900],
+      "offline": true
+    },
+    {
+      "family": "Montserrat",
+      "category": "sans-serif",
+      "variants": [100, 200, 300, 400, 500, 600, 700, 800, 900],
+      "offline": true
+    },
+    {
+      "family": "Source Sans 3",
+      "category": "sans-serif",
+      "variants": [200, 300, 400, 500, 600, 700, 900],
+      "offline": true
+    },
+    {
+      "family": "IBM Plex Sans",
+      "category": "sans-serif",
+      "variants": [100, 200, 300, 400, 500, 600, 700],
+      "offline": true
+    },
+    {
+      "family": "Merriweather",
+      "category": "serif",
+      "variants": [300, 400, 700, 900],
+      "offline": true
+    },
+    {
+      "family": "Lora",
+      "category": "serif",
+      "variants": [400, 500, 600, 700],
+      "offline": true
+    },
+    {
+      "family": "Nunito",
+      "category": "sans-serif",
+      "variants": [200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    {
+      "family": "Nunito Sans",
+      "category": "sans-serif",
+      "variants": [200, 300, 400, 600, 700, 800, 900]
+    },
+    {
+      "family": "Poppins",
+      "category": "sans-serif",
+      "variants": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    {
+      "family": "Raleway",
+      "category": "sans-serif",
+      "variants": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    {
+      "family": "Work Sans",
+      "category": "sans-serif",
+      "variants": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    {
+      "family": "Mukta",
+      "category": "sans-serif",
+      "variants": [200, 300, 400, 500, 600, 700, 800]
+    },
+    {
+      "family": "Rubik",
+      "category": "sans-serif",
+      "variants": [300, 400, 500, 600, 700, 800, 900]
+    },
+    {
+      "family": "Noto Sans",
+      "category": "sans-serif",
+      "variants": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    {
+      "family": "PT Sans",
+      "category": "sans-serif",
+      "variants": [400, 700]
+    },
+    {
+      "family": "Oswald",
+      "category": "sans-serif",
+      "variants": [200, 300, 400, 500, 600, 700]
+    },
+    {
+      "family": "Karla",
+      "category": "sans-serif",
+      "variants": [200, 300, 400, 500, 600, 700, 800]
+    },
+    {
+      "family": "Mulish",
+      "category": "sans-serif",
+      "variants": [200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    {
+      "family": "DM Sans",
+      "category": "sans-serif",
+      "variants": [400, 500, 700]
+    },
+    {
+      "family": "Manrope",
+      "category": "sans-serif",
+      "variants": [200, 300, 400, 500, 600, 700, 800]
+    },
+    {
+      "family": "Quicksand",
+      "category": "sans-serif",
+      "variants": [300, 400, 500, 600, 700]
+    },
+    {
+      "family": "Hind",
+      "category": "sans-serif",
+      "variants": [300, 400, 500, 600, 700]
+    },
+    {
+      "family": "Heebo",
+      "category": "sans-serif",
+      "variants": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    {
+      "family": "Barlow",
+      "category": "sans-serif",
+      "variants": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    {
+      "family": "Cabin",
+      "category": "sans-serif",
+      "variants": [400, 500, 600, 700]
+    },
+    {
+      "family": "Titillium Web",
+      "category": "sans-serif",
+      "variants": [200, 300, 400, 600, 700, 900]
+    },
+    {
+      "family": "Fira Sans",
+      "category": "sans-serif",
+      "variants": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    {
+      "family": "Josefin Sans",
+      "category": "sans-serif",
+      "variants": [100, 200, 300, 400, 500, 600, 700]
+    },
+    {
+      "family": "Archivo",
+      "category": "sans-serif",
+      "variants": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    {
+      "family": "Public Sans",
+      "category": "sans-serif",
+      "variants": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    {
+      "family": "Plus Jakarta Sans",
+      "category": "sans-serif",
+      "variants": [200, 300, 400, 500, 600, 700, 800]
+    },
+    {
+      "family": "Figtree",
+      "category": "sans-serif",
+      "variants": [300, 400, 500, 600, 700, 800, 900]
+    },
+    {
+      "family": "Outfit",
+      "category": "sans-serif",
+      "variants": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    {
+      "family": "Sora",
+      "category": "sans-serif",
+      "variants": [100, 200, 300, 400, 500, 600, 700, 800]
+    },
+    {
+      "family": "Space Grotesk",
+      "category": "sans-serif",
+      "variants": [300, 400, 500, 600, 700]
+    },
+    {
+      "family": "Albert Sans",
+      "category": "sans-serif",
+      "variants": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    {
+      "family": "Onest",
+      "category": "sans-serif",
+      "variants": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    {
+      "family": "Inter Tight",
+      "category": "sans-serif",
+      "variants": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    {
+      "family": "Geist",
+      "category": "sans-serif",
+      "variants": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    {
+      "family": "Hanken Grotesk",
+      "category": "sans-serif",
+      "variants": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    {
+      "family": "Schibsted Grotesk",
+      "category": "sans-serif",
+      "variants": [400, 500, 600, 700, 800, 900]
+    },
+    {
+      "family": "Playfair Display",
+      "category": "serif",
+      "variants": [400, 500, 600, 700, 800, 900]
+    },
+    {
+      "family": "PT Serif",
+      "category": "serif",
+      "variants": [400, 700]
+    },
+    {
+      "family": "Noto Serif",
+      "category": "serif",
+      "variants": [400, 700]
+    },
+    {
+      "family": "Roboto Slab",
+      "category": "serif",
+      "variants": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    {
+      "family": "Bitter",
+      "category": "serif",
+      "variants": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    {
+      "family": "Crimson Text",
+      "category": "serif",
+      "variants": [400, 600, 700]
+    },
+    {
+      "family": "EB Garamond",
+      "category": "serif",
+      "variants": [400, 500, 600, 700, 800]
+    },
+    {
+      "family": "Libre Baskerville",
+      "category": "serif",
+      "variants": [400, 700]
+    },
+    {
+      "family": "Source Serif 4",
+      "category": "serif",
+      "variants": [200, 300, 400, 500, 600, 700, 900]
+    },
+    {
+      "family": "Cormorant Garamond",
+      "category": "serif",
+      "variants": [300, 400, 500, 600, 700]
+    },
+    {
+      "family": "Spectral",
+      "category": "serif",
+      "variants": [200, 300, 400, 500, 600, 700, 800]
+    },
+    {
+      "family": "Domine",
+      "category": "serif",
+      "variants": [400, 500, 600, 700]
+    },
+    {
+      "family": "Frank Ruhl Libre",
+      "category": "serif",
+      "variants": [300, 400, 500, 600, 700, 800, 900]
+    },
+    {
+      "family": "Noto Serif Display",
+      "category": "serif",
+      "variants": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    {
+      "family": "DM Serif Display",
+      "category": "serif",
+      "variants": [400]
+    },
+    {
+      "family": "Zilla Slab",
+      "category": "serif",
+      "variants": [300, 400, 500, 600, 700]
+    },
+    {
+      "family": "Newsreader",
+      "category": "serif",
+      "variants": [200, 300, 400, 500, 600, 700, 800]
+    },
+    {
+      "family": "Fraunces",
+      "category": "serif",
+      "variants": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    {
+      "family": "Bebas Neue",
+      "category": "display",
+      "variants": [400]
+    },
+    {
+      "family": "Anton",
+      "category": "display",
+      "variants": [400]
+    },
+    {
+      "family": "Lobster",
+      "category": "display",
+      "variants": [400]
+    },
+    {
+      "family": "Righteous",
+      "category": "display",
+      "variants": [400]
+    },
+    {
+      "family": "Comfortaa",
+      "category": "display",
+      "variants": [300, 400, 500, 600, 700]
+    },
+    {
+      "family": "Abril Fatface",
+      "category": "display",
+      "variants": [400]
+    },
+    {
+      "family": "Archivo Black",
+      "category": "display",
+      "variants": [400]
+    },
+    {
+      "family": "Pathway Gothic One",
+      "category": "display",
+      "variants": [400]
+    },
+    {
+      "family": "Alfa Slab One",
+      "category": "display",
+      "variants": [400]
+    },
+    {
+      "family": "Passion One",
+      "category": "display",
+      "variants": [400, 700, 900]
+    },
+    {
+      "family": "Fjalla One",
+      "category": "display",
+      "variants": [400]
+    },
+    {
+      "family": "Staatliches",
+      "category": "display",
+      "variants": [400]
+    },
+    {
+      "family": "Bungee",
+      "category": "display",
+      "variants": [400]
+    },
+    {
+      "family": "Unbounded",
+      "category": "display",
+      "variants": [200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    {
+      "family": "Dancing Script",
+      "category": "handwriting",
+      "variants": [400, 500, 600, 700]
+    },
+    {
+      "family": "Pacifico",
+      "category": "handwriting",
+      "variants": [400]
+    },
+    {
+      "family": "Caveat",
+      "category": "handwriting",
+      "variants": [400, 500, 600, 700]
+    },
+    {
+      "family": "Satisfy",
+      "category": "handwriting",
+      "variants": [400]
+    },
+    {
+      "family": "Shadows Into Light",
+      "category": "handwriting",
+      "variants": [400]
+    },
+    {
+      "family": "Indie Flower",
+      "category": "handwriting",
+      "variants": [400]
+    },
+    {
+      "family": "Permanent Marker",
+      "category": "handwriting",
+      "variants": [400]
+    },
+    {
+      "family": "Sacramento",
+      "category": "handwriting",
+      "variants": [400]
+    },
+    {
+      "family": "Great Vibes",
+      "category": "handwriting",
+      "variants": [400]
+    },
+    {
+      "family": "Kalam",
+      "category": "handwriting",
+      "variants": [300, 400, 700]
+    },
+    {
+      "family": "Roboto Mono",
+      "category": "monospace",
+      "variants": [100, 200, 300, 400, 500, 600, 700]
+    },
+    {
+      "family": "JetBrains Mono",
+      "category": "monospace",
+      "variants": [300, 400, 500, 600, 700, 800, 900]
+    },
+    {
+      "family": "Source Code Pro",
+      "category": "monospace",
+      "variants": [200, 300, 400, 500, 600, 700, 900]
+    },
+    {
+      "family": "Fira Code",
+      "category": "monospace",
+      "variants": [300, 400, 500, 600, 700]
+    },
+    {
+      "family": "IBM Plex Mono",
+      "category": "monospace",
+      "variants": [100, 200, 300, 400, 500, 600, 700]
+    },
+    {
+      "family": "Space Mono",
+      "category": "monospace",
+      "variants": [400, 700]
+    },
+    {
+      "family": "Inconsolata",
+      "category": "monospace",
+      "variants": [200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    {
+      "family": "Ubuntu Mono",
+      "category": "monospace",
+      "variants": [400, 700]
+    },
+    {
+      "family": "DM Mono",
+      "category": "monospace",
+      "variants": [300, 400, 500]
+    }
+  ]
+}

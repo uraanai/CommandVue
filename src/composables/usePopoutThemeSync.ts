@@ -61,6 +61,44 @@ function syncAll(): void {
   for (const win of [...popoutWindows]) syncWindow(win);
 }
 
+// --- C3 font-face mirroring --------------------------------------------------
+// `syncWindow` mirrors the token VALUES (incl. `--font-family-*`); this path
+// mirrors the FACES — the Google css2 `<link>`s `useFontLoader` injects into the
+// opener — so a pop-out's text isn't tofu. Keyed by family (a Map, not the
+// plan's `${key} ${href}` Set: family names contain spaces, e.g. "Open Sans",
+// which `split(" ")` would corrupt).
+/** Font <link> hrefs registered by useFontLoader, keyed by family. */
+export const registeredFontHrefs = new Map<string, string>();
+
+/**
+ * Inject one font stylesheet into a pop-out's `<head>` if absent. Origin-safe:
+ * callers only ever pass hrefs built by `useFontLoader`. The family key is
+ * charset-allowlisted, so the `[data-cv-font-key="<family>"]` selector needs no
+ * escaping.
+ */
+export function injectFontLinkIntoWindow(win: Window, href: string, key: string): void {
+  if (win.closed) return;
+  try {
+    const doc = win.document;
+    if (doc.head.querySelector(`link[data-cv-font-key="${key}"]`)) return;
+    const link = doc.createElement("link");
+    link.rel = "stylesheet";
+    link.href = href;
+    link.crossOrigin = "anonymous";
+    link.dataset.cvFontKey = key;
+    doc.head.appendChild(link);
+  } catch {
+    // window torn down mid-inject — register-time backfill covers it
+  }
+}
+
+/** Called by useFontLoader when a new font href is registered; mirrors it into
+ *  every open pop-out and records it for register-time backfill. */
+export function mirrorFontLinkToAllPopouts(href: string, key: string): void {
+  registeredFontHrefs.set(key, href);
+  for (const win of [...popoutWindows]) injectFontLinkIntoWindow(win, href, key);
+}
+
 /**
  * Start the observer. Idempotent; call once from `AppShell` on mount. Watches the
  * opener `<html>` for theme/density attribute changes and inline-style (token)
@@ -97,6 +135,8 @@ function scheduleSync(): void {
 export function registerPopoutWindow(win: Window): void {
   popoutWindows.add(win);
   syncWindow(win);
+  // Backfill any fonts loaded before this pop-out opened.
+  for (const [key, href] of registeredFontHrefs) injectFontLinkIntoWindow(win, href, key);
 }
 
 /** Stop tracking a pop-out (its window is closing / docked back). */
@@ -112,5 +152,6 @@ export function __popoutWindowCountForTests(): number {
 /** Test seam: clear the tracked-window set for per-test isolation. */
 export function __resetForTests(): void {
   popoutWindows.clear();
+  registeredFontHrefs.clear();
   syncScheduled = false;
 }

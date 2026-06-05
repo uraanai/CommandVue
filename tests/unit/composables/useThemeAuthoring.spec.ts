@@ -197,3 +197,50 @@ describe("useThemeAuthoring", () => {
     expect(a.saveError.value).toMatch(/invalid value/i);
   });
 });
+
+describe("useThemeAuthoring — fontSpec (C3)", () => {
+  it("a fontSpec drives the live generationResult body/sans tokens", () => {
+    const a = useThemeAuthoring();
+    a.seedFromTheme(null);
+    expect(a.fontSpec.value).toBeNull();
+    a.fontSpec.value = {
+      family: "Open Sans",
+      source: "google",
+      weights: [400, 700],
+      fallback: "system-ui, sans-serif",
+    };
+    expect(a.generationResult.value?.tokens["--font-family-sans"]).toBe(
+      "'Open Sans', system-ui, sans-serif",
+    );
+  });
+
+  it("seeds fontSpec from a generated theme and nulls it on a blank seed", async () => {
+    const fontSpec = { family: "Roboto", source: "google" as const, weights: [400, 700] };
+    const theme = await themeRepo.create({
+      name: "Has Font",
+      description: "",
+      author: "",
+      source: "generated",
+      mode: "dark",
+      density: "compact",
+      base: {
+        kind: "generated",
+        input: {
+          schemaVersion: 2,
+          baseColor: "oklch(0.16 0.03 285)",
+          accentColor: "oklch(0.7 0.16 320)",
+          contrast: 62,
+          mode: "dark",
+          density: "compact",
+          fontSpec,
+        },
+      },
+      overrides: {},
+    });
+    const a = useThemeAuthoring();
+    a.seedFromTheme(theme);
+    expect(a.fontSpec.value).toEqual(fontSpec);
+    a.seedFromTheme(null);
+    expect(a.fontSpec.value).toBeNull();
+  });
+});

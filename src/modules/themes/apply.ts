@@ -62,6 +62,17 @@ export function applyTheme(theme: Theme): void {
   root.setAttribute("data-theme-id", theme.id);
   root.setAttribute("data-theme", theme.mode);
   root.setAttribute("data-density", theme.density);
+
+  // C3 — committed-theme font load. Single choke point for boot / setTheme /
+  // workspace bind / commit. Fire-and-forget: the --font-family-* token value is
+  // already applied above, so text paints in the fallback immediately and the
+  // webfont swaps in when ready (display: swap). The dynamic import keeps the
+  // loader out of apply.ts's static graph; the loader's offline check uses a
+  // hardcoded set, so the catalog JSON never enters the boot path.
+  if (theme.base.kind === "generated" && theme.base.input.fontSpec) {
+    const spec = theme.base.input.fontSpec;
+    void import("@/composables/useFontLoader").then((m) => m.ensureFontSpecLoaded(spec));
+  }
 }
 
 /**
