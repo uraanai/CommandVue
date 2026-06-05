@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { PanelApiProps } from "@/composables/usePanelApi";
 
+import { LayoutPanelTop, SlidersHorizontal, Sparkles, Type } from "@lucide/vue";
+import { useDebounceFn, useElementSize } from "@vueuse/core";
 // PrimeVue's Splitter identifies its panes by child component TYPE, so SplitterPanel
 // can't be wrapped in a Volt component (a wrapper breaks pane detection → empty
 // splitter). It's a structural sub-component, like the styled Volt Splitter's
@@ -8,10 +10,13 @@ import type { PanelApiProps } from "@/composables/usePanelApi";
 import SplitterPanel from "primevue/splitterpanel"; // eslint-disable-line @typescript-eslint/no-restricted-imports
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
+import StudioTabPlaceholder from "@/components/panels/theme-studio/StudioTabPlaceholder.vue";
+import { STUDIO_L1_TABS } from "@/components/panels/theme-studio/studioTabs";
 import Button from "@/components/ui/Button.vue";
 import ColorSwatchPicker from "@/components/ui/ColorSwatchPicker.vue";
 import Input from "@/components/ui/Input.vue";
 import Select from "@/components/ui/Select.vue";
+import Tabs from "@/components/ui/Tabs.vue";
 import { usePanelApi } from "@/composables/usePanelApi";
 import { useThemeAuthoring } from "@/composables/useThemeAuthoring";
 import { ACCENT_COLOR_SWATCHES, BASE_COLOR_SWATCHES } from "@/modules/themes/curated-swatches";
@@ -49,18 +54,44 @@ usePanelApi(props);
 const themeStore = useThemeStore();
 const a = useThemeAuthoring();
 
+const activeTab = ref<string>("generate");
+
+// Responsive Splitter: stack controls above preview when the panel is too narrow
+// for a usable side-by-side split. Observed on the panel root (per-window — a
+// narrow pop-out stacks, a wide one splits).
+const panelRoot = ref<HTMLElement | null>(null);
+const { width: panelWidth } = useElementSize(panelRoot);
+const STACK_BELOW_PX = 560; // below this total width → vertical stack
+const splitterLayout = computed<"horizontal" | "vertical">(() =>
+  panelWidth.value > 0 && panelWidth.value < STACK_BELOW_PX ? "vertical" : "horizontal",
+);
+
+// Preview = generated tokens with per-token overrides layered on top (override
+// wins). The C6 Tokens tab is a placeholder, so `overrides` is empty today; the
+// merge is the seam C1 builds on.
 const previewStyle = computed<Record<string, string>>(() => ({
   ...(a.generationResult.value?.tokens ?? {}),
+  ...a.overrides.value,
 }));
 
 const liveAcrossApp = ref(true);
 let interacted = false;
+let disposed = false;
+
+// The SINGLE live-apply writer (integration §4): both the generator path and the
+// per-token override path push through one merged `previewThemeTokens`. Debounced
+// so a burst of edits coalesces into one apply. `disposed` blocks a trailing
+// debounce from re-applying after unmount/discard.
+const pushPreview = useDebounceFn(() => {
+  if (disposed) return;
+  const tokens = { ...(a.generationResult.value?.tokens ?? {}), ...a.overrides.value };
+  if (Object.keys(tokens).length > 0 && liveAcrossApp.value) {
+    themeStore.previewThemeTokens(tokens, a.density.value);
+  }
+}, 120);
 
 function applyToApp(): void {
-  const result = a.generationResult.value;
-  if (result && liveAcrossApp.value) {
-    themeStore.previewThemeTokens(result.tokens, a.density.value);
-  }
+  pushPreview();
 }
 
 onMounted(() => {
@@ -78,6 +109,16 @@ watch(a.generationResult, () => {
   applyToApp();
 });
 
+// Per-token override edits (C1) re-push through the same merged writer.
+watch(
+  a.overrides,
+  () => {
+    interacted = true;
+    pushPreview();
+  },
+  { deep: false },
+);
+
 watch(liveAcrossApp, (on) => {
   if (on) {
     if (interacted) applyToApp();
@@ -87,6 +128,7 @@ watch(liveAcrossApp, (on) => {
 });
 
 onUnmounted(() => {
+  disposed = true;
   themeStore.cancelPreview();
 });
 
@@ -106,7 +148,10 @@ function onDiscard(): void {
 </script>
 
 <template>
-  <div class="bg-surface text-foreground flex h-full w-full flex-col overflow-hidden">
+  <div
+    ref="panelRoot"
+    class="bg-surface text-foreground flex h-full w-full flex-col overflow-hidden"
+  >
     <!-- Header -->
     <header class="border-border flex items-center justify-between border-b px-3 py-2">
       <h2 class="text-foreground text-sm font-semibold">
@@ -177,103 +222,162 @@ function onDiscard(): void {
 
     <!-- Resizable controls | preview. Drag the gutter to rebalance. -->
     <div class="min-h-0 flex-1 overflow-hidden">
-      <Splitter class="!h-full !rounded-none !border-0">
+      <Splitter
+        :key="splitterLayout"
+        :layout="splitterLayout"
+        class="!h-full !rounded-none !border-0"
+      >
         <SplitterPanel :size="44" :min-size="22">
-          <div class="flex min-h-0 w-full flex-col gap-4 overflow-y-auto p-3 text-sm">
-            <div class="flex flex-col gap-1">
-              <span class="text-foreground font-medium">Mode</span>
-              <div class="flex gap-1" role="radiogroup" aria-label="Mode">
-                <Button
-                  v-for="m in a.MODES"
-                  :key="m"
-                  size="sm"
-                  :variant="a.mode.value === m ? 'primary' : 'secondary'"
-                  :aria-checked="a.mode.value === m"
-                  role="radio"
-                  @click="a.mode.value = m"
+          <!-- §3E option (3): the editor chrome is pinned to a fixed `comfortable`
+               density so its controls never re-space with the AUTHORED density.
+               Only the preview pane (the other SplitterPanel) reflects a.density.value. -->
+          <div data-density="comfortable" class="flex min-h-0 w-full flex-col overflow-hidden">
+            <Tabs
+              v-model="activeTab"
+              :tabs="STUDIO_L1_TABS"
+              scrollable
+              panels-class="flex min-h-0 flex-1 flex-col"
+              class="flex min-h-0 flex-1 flex-col"
+            >
+              <template #default="{ active }">
+                <!-- GENERATE — today's controls, bindings unchanged. Structural only:
+                     was `p-3`, now `px-3 pt-1 pb-3` + `flex-1` so the body scrolls
+                     inside the bounded tab panel. -->
+                <div
+                  v-if="active === 'generate'"
+                  class="flex min-h-0 w-full flex-1 flex-col gap-4 overflow-y-auto px-3 pt-1 pb-3 text-sm"
                 >
-                  {{ m === "light" ? "Light" : "Dark" }}
-                </Button>
-              </div>
-            </div>
+                  <div class="flex flex-col gap-1">
+                    <span class="text-foreground font-medium">Mode</span>
+                    <div class="flex gap-1" role="radiogroup" aria-label="Mode">
+                      <Button
+                        v-for="m in a.MODES"
+                        :key="m"
+                        size="sm"
+                        :variant="a.mode.value === m ? 'primary' : 'secondary'"
+                        :aria-checked="a.mode.value === m"
+                        role="radio"
+                        @click="a.mode.value = m"
+                      >
+                        {{ m === "light" ? "Light" : "Dark" }}
+                      </Button>
+                    </div>
+                  </div>
 
-            <div class="flex flex-col gap-1">
-              <span class="text-foreground font-medium">Base color</span>
-              <ColorSwatchPicker
-                v-model="a.baseColor.value"
-                :options="BASE_COLOR_SWATCHES"
-                aria-label="Base color"
-              />
-              <span class="text-faint font-mono text-[10px]">{{ a.baseColor.value }}</span>
-            </div>
+                  <div class="flex flex-col gap-1">
+                    <span class="text-foreground font-medium">Base color</span>
+                    <ColorSwatchPicker
+                      v-model="a.baseColor.value"
+                      :options="BASE_COLOR_SWATCHES"
+                      aria-label="Base color"
+                    />
+                    <span class="text-faint font-mono text-[10px]">{{ a.baseColor.value }}</span>
+                  </div>
 
-            <div class="flex flex-col gap-1">
-              <span class="text-foreground font-medium">Accent color</span>
-              <ColorSwatchPicker
-                v-model="a.accentColor.value"
-                :options="ACCENT_COLOR_SWATCHES"
-                aria-label="Accent color"
-              />
-              <span class="text-faint font-mono text-[10px]">{{ a.accentColor.value }}</span>
-            </div>
+                  <div class="flex flex-col gap-1">
+                    <span class="text-foreground font-medium">Accent color</span>
+                    <ColorSwatchPicker
+                      v-model="a.accentColor.value"
+                      :options="ACCENT_COLOR_SWATCHES"
+                      aria-label="Accent color"
+                    />
+                    <span class="text-faint font-mono text-[10px]">{{ a.accentColor.value }}</span>
+                  </div>
 
-            <div class="flex flex-col gap-1.5">
-              <span class="text-foreground font-medium">Status hues</span>
-              <div v-for="fam in a.STATUS_FAMILIES" :key="fam" class="flex items-center gap-2">
-                <span class="text-muted w-16 shrink-0 text-xs capitalize">{{ fam }}</span>
-                <ColorSwatchPicker
-                  v-model="a.statusSwatch.value[fam]"
-                  :options="a.statusOptions.value[fam]"
-                  :allow-custom="false"
-                  :aria-label="`${fam} hue`"
+                  <div class="flex flex-col gap-1.5">
+                    <span class="text-foreground font-medium">Status hues</span>
+                    <div
+                      v-for="fam in a.STATUS_FAMILIES"
+                      :key="fam"
+                      class="flex items-center gap-2"
+                    >
+                      <span class="text-muted w-16 shrink-0 text-xs capitalize">{{ fam }}</span>
+                      <ColorSwatchPicker
+                        v-model="a.statusSwatch.value[fam]"
+                        :options="a.statusOptions.value[fam]"
+                        :allow-custom="false"
+                        :aria-label="`${fam} hue`"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="flex flex-col gap-1">
+                    <div class="flex items-center justify-between">
+                      <span class="text-foreground font-medium">Contrast</span>
+                      <span class="text-muted text-xs">{{ a.contrast.value }}</span>
+                    </div>
+                    <Slider v-model="a.contrast.value" :min="30" :max="100" :step="1" />
+                  </div>
+
+                  <div class="flex flex-col gap-1">
+                    <span class="text-foreground font-medium">Density</span>
+                    <div class="flex gap-1" role="radiogroup" aria-label="Density">
+                      <Button
+                        v-for="d in a.DENSITIES"
+                        :key="d"
+                        size="sm"
+                        :variant="a.density.value === d ? 'primary' : 'secondary'"
+                        :aria-checked="a.density.value === d"
+                        role="radio"
+                        @click="a.density.value = d"
+                      >
+                        {{ d.charAt(0).toUpperCase() + d.slice(1) }}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div class="flex flex-col gap-1">
+                    <span class="text-foreground font-medium">Font family</span>
+                    <Select v-model="a.fontFamily.value" :options="a.FONT_OPTIONS" />
+                  </div>
+
+                  <div class="border-border-subtle flex flex-col gap-2 border-t pt-3">
+                    <label class="flex items-center gap-2">
+                      <Checkbox v-model="a.generatePaired.value" :binary="true" />
+                      <span>
+                        Generate paired {{ a.mode.value === "light" ? "Dark" : "Light" }} variant
+                      </span>
+                    </label>
+                    <label class="flex items-center gap-2">
+                      <Checkbox v-model="a.applyAfterSave.value" :binary="true" />
+                      <span>Apply after saving</span>
+                    </label>
+                  </div>
+
+                  <p v-if="a.saveError.value" class="text-danger text-xs">
+                    {{ a.saveError.value }}
+                  </p>
+                </div>
+                <StudioTabPlaceholder
+                  v-else-if="active === 'tokens'"
+                  :icon="SlidersHorizontal"
+                  title="Tokens"
+                  phase="C1"
+                  note="Per-token editor — change any of the themeable tokens directly."
                 />
-              </div>
-            </div>
-
-            <div class="flex flex-col gap-1">
-              <div class="flex items-center justify-between">
-                <span class="text-foreground font-medium">Contrast</span>
-                <span class="text-muted text-xs">{{ a.contrast.value }}</span>
-              </div>
-              <Slider v-model="a.contrast.value" :min="30" :max="100" :step="1" />
-            </div>
-
-            <div class="flex flex-col gap-1">
-              <span class="text-foreground font-medium">Density</span>
-              <div class="flex gap-1" role="radiogroup" aria-label="Density">
-                <Button
-                  v-for="d in a.DENSITIES"
-                  :key="d"
-                  size="sm"
-                  :variant="a.density.value === d ? 'primary' : 'secondary'"
-                  :aria-checked="a.density.value === d"
-                  role="radio"
-                  @click="a.density.value = d"
-                >
-                  {{ d.charAt(0).toUpperCase() + d.slice(1) }}
-                </Button>
-              </div>
-            </div>
-
-            <div class="flex flex-col gap-1">
-              <span class="text-foreground font-medium">Font family</span>
-              <Select v-model="a.fontFamily.value" :options="a.FONT_OPTIONS" />
-            </div>
-
-            <div class="border-border-subtle flex flex-col gap-2 border-t pt-3">
-              <label class="flex items-center gap-2">
-                <Checkbox v-model="a.generatePaired.value" :binary="true" />
-                <span>
-                  Generate paired {{ a.mode.value === "light" ? "Dark" : "Light" }} variant
-                </span>
-              </label>
-              <label class="flex items-center gap-2">
-                <Checkbox v-model="a.applyAfterSave.value" :binary="true" />
-                <span>Apply after saving</span>
-              </label>
-            </div>
-
-            <p v-if="a.saveError.value" class="text-danger text-xs">{{ a.saveError.value }}</p>
+                <StudioTabPlaceholder
+                  v-else-if="active === 'typography'"
+                  :icon="Type"
+                  title="Typography"
+                  phase="C2"
+                  note="Font roles, the modular type scale, and Google Fonts."
+                />
+                <StudioTabPlaceholder
+                  v-else-if="active === 'panels'"
+                  :icon="LayoutPanelTop"
+                  title="Panels & Chrome"
+                  phase="C4"
+                  note="Dockview chrome tokens and per-panel appearance variants."
+                />
+                <StudioTabPlaceholder
+                  v-else-if="active === 'effects'"
+                  :icon="Sparkles"
+                  title="Effects"
+                  phase="C5"
+                  note="Elevation, glow, and blur."
+                />
+              </template>
+            </Tabs>
           </div>
         </SplitterPanel>
 
@@ -281,6 +385,7 @@ function onDiscard(): void {
           <div class="bg-surface-sunken flex min-h-0 w-full flex-col gap-3 overflow-y-auto p-3">
             <span class="text-faint text-[10px] tracking-wider uppercase">Live preview</span>
             <div
+              data-testid="studio-preview"
               class="border-border-subtle overflow-hidden rounded-lg border"
               :style="previewStyle"
               :data-density="a.density.value"
