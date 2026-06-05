@@ -25,13 +25,16 @@ interface Props {
   options: string[];
   placeholder?: string;
   disabled?: boolean;
-  /** Opt-in hover affordance on the resting label. Off by default. */
+  /** Opt-in hover highlight on the resting label. Off by default. */
   hoverable?: boolean;
+  /** Opt-in persistent theme background on the resting label. Off by default. */
+  background?: boolean;
 }
 const props = withDefaults(defineProps<Props>(), {
   placeholder: undefined,
   disabled: false,
   hoverable: false,
+  background: false,
 });
 const emit = defineEmits<{ "update:modelValue": [value: string] }>();
 
@@ -114,30 +117,23 @@ function cancel(): void {
   editing.value = false;
   draft.value = props.modelValue;
 }
-
-/**
- * Shared footprint — the display matches the combobox's border-box. `leading-6`
- * (24px) matches the Volt AutoComplete input baseline so the resting label and
- * the combobox are the same height as well as width: zero jerk on toggle.
- */
-const BOX =
-  "w-full box-border rounded-md border leading-6 " +
-  "px-[var(--density-cell-padding-x)] py-[var(--density-cell-padding-y)] " +
-  "min-h-[var(--density-control-height)] text-[length:var(--density-font-size)]";
 </script>
 
 <template>
   <div class="w-full">
-    <!-- eslint-disable-next-line vue/no-restricted-html-elements -- inline-edit display affordance, not a Button surface; matched to the combobox box -->
+    <!-- Resting state reads as a tight label (content width, minimal side
+         padding) rather than a boxed control; clicking opens the combobox, which
+         fills the parent's width. -->
+    <!-- eslint-disable-next-line vue/no-restricted-html-elements -- inline-edit display affordance, not a Button surface -->
     <button
       v-if="!editing"
       type="button"
       :disabled="disabled"
       :class="
         cn(
-          BOX,
-          'text-foreground flex cursor-text items-center border-transparent bg-transparent text-left',
-          hoverable && !disabled && 'hover:bg-surface-sunken',
+          'text-foreground inline-flex max-w-full cursor-text items-center rounded-sm border-0 bg-transparent px-1 text-left text-[length:var(--density-font-size)] leading-6 outline-none',
+          background && 'bg-surface-sunken',
+          hoverable && !disabled && !background && 'hover:bg-surface-sunken',
           disabled && 'cursor-not-allowed opacity-50',
         )
       "

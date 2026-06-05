@@ -4,30 +4,31 @@ import { nextTick, ref } from "vue";
 import { cn } from "@/utils/cn";
 
 /**
- * EditableLabel — click-to-edit free-text label (no suggestions).
+ * EditableLabel — an inline, click-to-edit word (free text, no suggestions).
  *
- * Resting state is a plain label; clicking it swaps in a text input *in the
- * exact same box* — same padding, height, font, radius and a 1px border that is
- * transparent at rest and visible while editing. Tailwind is border-box, so the
- * footprint never changes: no width/height jerk when toggling. The background is
- * transparent throughout, so only the border appears. Enter / blur commits,
- * Escape reverts.
+ * It reads as a word in a sentence: it inherits the surrounding font, size,
+ * line-height and colour (`font: inherit` overrides the UA control reset), sizes
+ * to its text (an invisible sizer mirrors the value so the editor grows with the
+ * content instead of being a fixed box), and carries no horizontal padding — no
+ * left/right space. Clicking it (or an opt-in hover/background) is the only
+ * affordance. Enter / blur commits, Escape reverts.
  *
- * The toggle is hand-rolled (not PrimeVue `Inplace`) precisely so the resting
- * box can match the editor's box and the hover affordance can be opt-in. For an
- * option-constrained value, use {@link EditableSelect}.
+ * For an option-constrained value, use {@link EditableSelect}.
  */
 interface Props {
   modelValue: string;
   placeholder?: string;
   disabled?: boolean;
-  /** Opt-in hover affordance on the resting label. Off by default. */
+  /** Opt-in hover highlight on the resting word. Off by default. */
   hoverable?: boolean;
+  /** Opt-in persistent theme background on the resting word. Off by default. */
+  background?: boolean;
 }
 const props = withDefaults(defineProps<Props>(), {
   placeholder: undefined,
   disabled: false,
   hoverable: false,
+  background: false,
 });
 const emit = defineEmits<{ "update:modelValue": [value: string] }>();
 
@@ -53,57 +54,47 @@ function cancel(): void {
   editing.value = false;
   draft.value = props.modelValue;
 }
-
-/**
- * Shared footprint — both states resolve to the identical border-box. `leading-6`
- * (24px) matches the Volt input baseline so the resting label and the editor are
- * the same height as well as width: zero jerk on toggle.
- */
-const BOX =
-  "block w-full box-border truncate rounded-md border bg-transparent text-left leading-6 " +
-  "px-[var(--density-cell-padding-x)] py-[var(--density-cell-padding-y)] " +
-  "min-h-[var(--density-control-height)] text-[length:var(--density-font-size)]";
 </script>
 
 <template>
-  <div class="w-full">
-    <!-- eslint-disable-next-line vue/no-restricted-html-elements -- inline-edit display affordance, not a Button surface; matched to the editor box -->
+  <span class="inline-flex max-w-full align-baseline">
+    <!-- eslint-disable-next-line vue/no-restricted-html-elements -- inline-edit word affordance; not a Button surface -->
     <button
       v-if="!editing"
       type="button"
       :disabled="disabled"
       :class="
         cn(
-          BOX,
-          'text-foreground flex cursor-text items-center border-transparent',
-          hoverable && !disabled && 'hover:bg-surface-sunken',
+          'inline max-w-full cursor-text rounded-sm border-0 bg-transparent p-0 text-left align-baseline outline-none [font:inherit]',
+          background && 'bg-surface-sunken',
+          hoverable && !disabled && !background && 'hover:bg-surface-sunken',
           disabled && 'cursor-not-allowed opacity-50',
         )
       "
       @click="startEdit"
     >
-      <span :class="modelValue ? 'truncate' : 'text-faint truncate'">{{
-        modelValue || placeholder || "—"
-      }}</span>
+      <span :class="modelValue ? '' : 'text-faint'">{{ modelValue || placeholder || "—" }}</span>
     </button>
-    <!-- eslint-disable-next-line vue/no-restricted-html-elements -- transparent inline editor matched 1:1 to the display box -->
-    <input
-      v-else
-      ref="inputRef"
-      v-model="draft"
-      type="text"
-      :placeholder="placeholder"
-      spellcheck="false"
-      :class="
-        cn(
-          BOX,
-          'border-border text-foreground outline-none',
-          'focus:border-[color:var(--color-focus-ring)] focus:ring-2 focus:ring-[color:var(--color-focus-ring)]',
-        )
-      "
-      @keyup.enter="commit"
-      @keyup.escape="cancel"
-      @blur="commit"
-    />
-  </div>
+    <!-- Editor sizes to its text: an invisible sizer sets the grid track width,
+         the input overlays it. Grows as the user types; no fixed footprint. -->
+    <span v-else class="inline-grid max-w-full align-baseline">
+      <span
+        class="invisible col-start-1 row-start-1 whitespace-pre [font:inherit]"
+        aria-hidden="true"
+        >{{ draft || placeholder || " " }}</span
+      >
+      <!-- eslint-disable-next-line vue/no-restricted-html-elements -- transparent inline editor; width tracks the sizer -->
+      <input
+        ref="inputRef"
+        v-model="draft"
+        type="text"
+        :placeholder="placeholder"
+        spellcheck="false"
+        class="text-foreground bg-surface-sunken col-start-1 row-start-1 w-full min-w-0 rounded-sm border-0 p-0 align-baseline outline-none [font:inherit]"
+        @keyup.enter="commit"
+        @keyup.escape="cancel"
+        @blur="commit"
+      />
+    </span>
+  </span>
 </template>

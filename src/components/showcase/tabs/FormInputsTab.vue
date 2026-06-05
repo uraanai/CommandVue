@@ -41,6 +41,7 @@ const textareaVal = ref<string>("");
 // --- EditableLabel ---------------------------------------------------------
 const editableLabelVal = ref<string>("Sector 7");
 const editableHover = ref<boolean>(false);
+const editableBg = ref<boolean>(false);
 
 // --- Password --------------------------------------------------------------
 const passwordVal = ref<string>("");
@@ -106,26 +107,30 @@ const fileLabel = ref<string>("no file chosen");
 
     <Fieldset legend="EditableLabel (click-to-edit)">
       <div class="flex flex-col gap-3">
+        <p class="text-sm">
+          Operation
+          <EditableLabel
+            v-model="editableLabelVal"
+            :hoverable="editableHover"
+            :background="editableBg"
+            placeholder="codename"
+          />
+          is currently active.
+        </p>
         <span class="text-faint text-xs"
-          >click the value to edit · Enter / blur commits · Esc reverts · the box width stays
-          constant (no jerk)</span
+          >an inline word — sizes to its text, no side padding · click to rename · Enter / blur
+          commits · Esc reverts</span
         >
-        <div class="flex flex-wrap items-center gap-3">
-          <div class="w-48">
-            <EditableLabel
-              v-model="editableLabelVal"
-              :hoverable="editableHover"
-              placeholder="Set a name…"
-            />
-          </div>
-          <span class="text-muted font-mono text-xs tabular-nums">{{
-            editableLabelVal || "—"
-          }}</span>
+        <div class="flex flex-wrap gap-4">
+          <label class="flex items-center gap-2 text-sm">
+            <Checkbox v-model="editableHover" :binary="true" />
+            <span>Hover affordance</span>
+          </label>
+          <label class="flex items-center gap-2 text-sm">
+            <Checkbox v-model="editableBg" :binary="true" />
+            <span>Background</span>
+          </label>
         </div>
-        <label class="flex items-center gap-2 text-sm">
-          <Checkbox v-model="editableHover" :binary="true" />
-          <span>Hover affordance ({{ editableHover ? "on" : "off" }})</span>
-        </label>
       </div>
     </Fieldset>
 

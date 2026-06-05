@@ -42,6 +42,7 @@ const SELECT_OPTIONS = UNITS.map((u) => ({ label: u.name, value: u.code }));
 const editableUnit = ref<string>("rem");
 const EDITABLE_UNITS: string[] = ["rem", "px", "em", "%"];
 const editableSelectHover = ref<boolean>(false);
+const editableSelectBg = ref<boolean>(false);
 
 // Checkbox + RadioButton -----------------------------------------------------
 const checkVal = ref<boolean>(true);
@@ -104,24 +105,29 @@ const ratingVal = ref<number>(3);
 
     <Fieldset legend="EditableSelect (click-to-edit)">
       <div class="flex flex-col gap-3">
+        <p class="text-sm">
+          Spacing unit:
+          <EditableSelect
+            v-model="editableUnit"
+            :options="EDITABLE_UNITS"
+            :hoverable="editableSelectHover"
+            :background="editableSelectBg"
+          />
+        </p>
         <span class="text-faint text-xs"
-          >click to edit · type-to-filter or pick · only the listed options commit · the box width
-          stays constant (no jerk)</span
+          >a tight label until clicked, then a constrained combobox · type-to-filter or pick · only
+          the listed options commit</span
         >
-        <div class="flex flex-wrap items-center gap-3">
-          <div class="w-24">
-            <EditableSelect
-              v-model="editableUnit"
-              :options="EDITABLE_UNITS"
-              :hoverable="editableSelectHover"
-            />
-          </div>
-          <span class="text-muted font-mono text-xs tabular-nums">{{ editableUnit }}</span>
+        <div class="flex flex-wrap gap-4">
+          <label class="flex items-center gap-2 text-sm">
+            <Checkbox v-model="editableSelectHover" :binary="true" />
+            <span>Hover affordance</span>
+          </label>
+          <label class="flex items-center gap-2 text-sm">
+            <Checkbox v-model="editableSelectBg" :binary="true" />
+            <span>Background</span>
+          </label>
         </div>
-        <label class="flex items-center gap-2 text-sm">
-          <Checkbox v-model="editableSelectHover" :binary="true" />
-          <span>Hover affordance ({{ editableSelectHover ? "on" : "off" }})</span>
-        </label>
       </div>
     </Fieldset>
 
