@@ -145,6 +145,32 @@ Drop those into the `@theme` block as `--color-surface` (navy) and
 `--color-accent-500` (teal), with derived shades for the rest of the
 accent palette.
 
+## Theme Studio information architecture
+
+The **Theme Studio** panel (`src/components/panels/ThemeStudioPanel.vue`) is the
+runtime authoring surface. Its layout is locked (Phase C6):
+
+- The **common band** (Start-from · Name · Description) is pinned at the top,
+  **outside** the tabs — it applies to the whole theme.
+- The controls pane is one **scrollable `ui/Tabs` strip** with five locked tabs,
+  in order: **Generate · Tokens · Typography · Panels & Chrome · Effects**
+  (`src/components/panels/theme-studio/studioTabs.ts`, guarded by a drift test).
+  `Generate` holds the high-level generator inputs; the other four are per-area
+  editors (the not-yet-built ones render a "lands in Cx" placeholder).
+- A draggable **Splitter** divides the controls pane from the **live preview**
+  pane. The preview stays outside the tabs and persists across tab switches;
+  switching tabs never re-pushes the app theme. Below ~560px the Splitter stacks
+  vertically (controls above preview).
+
+**Density resolution.** The Studio's editor chrome is pinned to a fixed
+`comfortable` density regardless of the theme being authored — only the
+**live-preview pane** reflects the authored density. A `[data-density="comfortable"]`
+wrapper around the controls, plus the matching `[data-density="comfortable"]`
+block in `tokens.css`, makes that wrapper win the cascade over an inherited
+`<html data-density="…">`, while the preview wrapper binds `:data-density` to the
+authored value. So changing the authored density visibly tightens the preview
+without re-spacing the editor.
+
 ## A note on `dark:` Tailwind utilities
 
 We mapped `dark:` to the `data-theme="dark"` attribute via

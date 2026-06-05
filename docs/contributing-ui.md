@@ -205,6 +205,29 @@ If you find yourself reaching for `<button>` or `<input>`:
 - Is the only reason I want raw HTML "to keep it simple"? (That reason is usually wrong — the wrappers _are_ simple.)
 - If the answer to all of the above is "yes I really need raw HTML", does it belong inside `src/components/ui/` or `src/volt/`?
 
+## Scrollable tab strips (`<Tabs scrollable>`)
+
+When a horizontal tab/segment strip can outgrow its width, use the **`scrollable`**
+prop on the `ui/Tabs` wrapper rather than letting it wrap to multiple lines:
+
+```vue
+<Tabs v-model="active" :tabs="TABS" scrollable />
+```
+
+`scrollable` keeps the strip on **one row** and renders left/right chevron nav
+buttons (auto-hidden at the extremes) plus wheel/drag scrolling. The native
+scrollbar is **hidden by default** — opt in with `scrollbar`, and recolor its
+thumb with `scrollbarColor`. It works for both the `underline` and `segmented`
+variants. This is the single shared overflow affordance: the Theme Studio's L1
+tab strip and the Component Showcase's Navigation demos both consume it, so a
+consumer opts in identically each time.
+
+**Track B cross-reference.** The dockview-native **dock tab strip** (Track B) is a
+_separate_ engine: dockview owns its tab DOM and provides its own single-row
+overflow dropdown (themed via `--dv-tabs-container-scrollbar-color`). The two
+share only the **one-row-never-wrap** contract, not an implementation — do not
+mount `ui/Tabs` inside a dockview tab header.
+
 ## References
 
 - [ADR 0001 — DataTable library](./decisions/0001-datatable-library.md)

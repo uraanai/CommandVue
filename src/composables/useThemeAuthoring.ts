@@ -17,6 +17,8 @@ import {
   STATUS_HUE_SWATCHES,
 } from "@/modules/themes/curated-swatches";
 import { generateTheme } from "@/modules/themes/generate";
+import { isKnownToken } from "@/modules/themes/knownTokens";
+import { TokenValueSchema } from "@/modules/themes/portableSchema";
 import { themeRegistry } from "@/modules/themes/registry";
 import { useThemeStore } from "@/stores/theme";
 import { useWorkspaceStore } from "@/stores/workspace";
@@ -94,6 +96,24 @@ export function useThemeAuthoring() {
 
   /** The theme being edited (when seeded from an existing generated theme). */
   const themeToEdit = ref<Theme | null>(null);
+
+  // --- Per-token overrides (C6 seam) ---------------------------------------
+  // The single sparse-override store for the (future) Tokens tab and any
+  // per-area per-token edit. C6 lands the plumbing + validation + the merged
+  // live-apply rule; C1 builds the Tokens-tab UI on top of it. Persists into the
+  // existing `Theme.overrides` field — no data-model change.
+  const overrides = ref<Record<string, string>>({});
+  function setOverride(token: string, value: string): void {
+    overrides.value = { ...overrides.value, [token]: value };
+  }
+  function clearOverride(token: string): void {
+    const next = { ...overrides.value };
+    delete next[token];
+    overrides.value = next;
+  }
+  function clearAllOverrides(): void {
+    overrides.value = {};
+  }
 
   // --- Status hues (A1b) ---------------------------------------------------
   const statusSwatch = ref<Record<StatusFamily, string>>({
@@ -203,6 +223,15 @@ export function useThemeAuthoring() {
   function seedFromTheme(t: Theme | null): void {
     saveError.value = null;
     themeToEdit.value = t;
+    // Seed overrides from the theme's existing sparse map (works for generated
+    // AND static bases — never touches `.input`). Only reassign when content
+    // actually changes: assigning a fresh `{}` over an already-empty map would
+    // create a new ref and fire the panel's `overrides` watch, pushing a preview
+    // on a blank mount (breaks the idle-by-default invariant).
+    const nextOverrides = t ? { ...(t.overrides ?? {}) } : {};
+    if (Object.keys(nextOverrides).length > 0 || Object.keys(overrides.value).length > 0) {
+      overrides.value = nextOverrides;
+    }
     const gen = t ? genInputOf(t) : null;
     if (t && gen) {
       name.value = t.name;
@@ -226,6 +255,8 @@ export function useThemeAuthoring() {
     saveError.value = null;
     name.value = "";
     description.value = "";
+    // Only clear when non-empty (avoid a spurious new-ref watch fire on blank mount).
+    if (Object.keys(overrides.value).length > 0) overrides.value = {};
     startFromMode.value = "blank";
     startFromBuiltInId.value = null;
     startFromCustomId.value = null;
@@ -257,6 +288,19 @@ export function useThemeAuthoring() {
       saveError.value = "Inputs produced an invalid theme — adjust the base or accent color.";
       return false;
     }
+    // Per-token overrides (C6 seam): reject anything outside the allowlist or
+    // the value schema before it reaches `themeRepo` — the allowlist is the
+    // security boundary.
+    for (const [key, val] of Object.entries(overrides.value)) {
+      if (!isKnownToken(key)) {
+        saveError.value = `Unknown token: ${key}`;
+        return false;
+      }
+      if (!TokenValueSchema.safeParse(val).success) {
+        saveError.value = `Invalid value for ${key}`;
+        return false;
+      }
+    }
     return true;
   }
 
@@ -275,7 +319,9 @@ export function useThemeAuthoring() {
         mode: mode.value,
         density: density.value,
         base: { kind: "generated", input: buildGenerationInput(mode.value) },
-        overrides: {},
+        // Plain copy — `overrides.value` is a reactive proxy and IndexedDB can't
+        // structured-clone a proxy (values are strings, so a shallow spread is enough).
+        overrides: { ...overrides.value },
       });
       if (generatePaired.value) {
         const flippedMode: ThemeMode = mode.value === "light" ? "dark" : "light";
@@ -319,6 +365,7 @@ export function useThemeAuthoring() {
         mode: mode.value,
         density: density.value,
         base: { kind: "generated", input: buildGenerationInput(mode.value) },
+        overrides: { ...overrides.value }, // plain copy (proxy isn't IDB-cloneable)
         ...(existingPaired !== undefined ? { paired: existingPaired } : {}),
       });
       if (applyAfterSave.value) {
@@ -373,5 +420,10 @@ export function useThemeAuthoring() {
     save,
     updateExisting,
     buildGenerationInput,
+    // per-token overrides seam (C6)
+    overrides,
+    setOverride,
+    clearOverride,
+    clearAllOverrides,
   };
 }

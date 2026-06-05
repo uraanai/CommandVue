@@ -464,6 +464,26 @@
   --spacing-statusbar: var(--density-statusbar-height);
 }
 
+/* Comfortable is the @theme/:root default; this explicit block lets a nested
+ * `[data-density="comfortable"]` wrapper (the Theme Studio editor chrome, C6)
+ * override an inherited `<html data-density="…">` for its subtree. Values are
+ * identical to the :root defaults above — this adds NO new token NAME, so it is
+ * not a doc-sync / knownTokens / engine change. Authored as a bare attribute
+ * selector (specificity 0-1-0) so the inner wrapper beats the html-level value. */
+[data-density="comfortable"] {
+  --density-row-height: 2.25rem;
+  --density-cell-padding-y: var(--space-2);
+  --density-cell-padding-x: var(--space-3);
+  --density-control-height: 2rem;
+  --density-icon-size: 1rem;
+  --density-font-size: var(--text-sm);
+  --density-titlebar-height: 2.5rem;
+  --density-statusbar-height: 1.75rem;
+  --density-panel-header-height: 2.25rem;
+  --spacing-titlebar: var(--density-titlebar-height);
+  --spacing-statusbar: var(--density-statusbar-height);
+}
+
 [data-density="compact"] {
   --density-row-height: 1.75rem;
   --density-cell-padding-y: var(--space-1);

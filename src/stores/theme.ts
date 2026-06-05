@@ -234,6 +234,11 @@ export const useThemeStore = defineStore("theme", () => {
   function previewThemeTokens(tokens: Record<string, string>, density?: ThemeDensity): void {
     isPreviewing.value = true;
     previewDraft.value = { ...tokens };
+    // Clear any previously-pushed preview key NOT in the new set, then apply.
+    // This drops a removed per-token override from the root instead of stranding
+    // it (the C6 `overrides` seam can shrink the set). Keys IN the new set are
+    // preserved across the clear → no flash for the stable generator key set.
+    clearTokenOverrides(APP_ROOT, new Set(Object.keys(tokens)));
     applyTokenOverrides(tokens, APP_ROOT);
     // Density isn't a token — it cascades from the `data-density` attribute. Mirror
     // it onto the root during preview so spacing changes live too. Restored on
