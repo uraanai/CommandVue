@@ -7,16 +7,16 @@ import AutoComplete from "@/volt/AutoComplete.vue";
 /**
  * EditableSelect — click-to-edit label constrained to a fixed option set.
  *
- * Resting state is a plain label; clicking it swaps in a combobox *in the exact
- * same box* (same padding/height/font/radius + a 1px border, transparent at
- * rest). Tailwind is border-box, so the footprint never changes — no jerk when
- * toggling. The N options drop down on focus (`completeOnFocus`); click one or
- * type to filter. Only a value present in `options` commits; anything else
- * reverts. Enter / selecting commits, Escape reverts.
+ * Resting state is a tight, content-width label (minimal side padding) that
+ * reads as a value, not a boxed control; clicking it swaps in a constrained
+ * combobox that fills the parent's width. The N options drop down on focus
+ * (`completeOnFocus`); click one or type to filter. Only a value present in
+ * `options` commits; anything else reverts. Enter / selecting commits, Escape
+ * reverts.
  *
- * The toggle is hand-rolled (not PrimeVue `Inplace`) so the resting box matches
- * the combobox box and the hover affordance is opt-in. The combobox itself is
- * the already-installed `volt/AutoComplete`. For free text, use
+ * The toggle is hand-rolled (not PrimeVue `Inplace`) so the resting label can be
+ * a tight word and the hover / background affordances are opt-in. The combobox
+ * itself is the already-installed `volt/AutoComplete`. For free text, use
  * {@link EditableLabel}.
  */
 interface Props {
