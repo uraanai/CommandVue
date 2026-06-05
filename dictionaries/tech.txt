@@ -339,3 +339,4 @@ wght
 fontless
 macrotask
 dedupes
+gstatic

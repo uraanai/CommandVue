@@ -65,6 +65,28 @@ add_header Content-Security-Policy
 output today; we're tracking the upstream movement toward
 nonce-friendly style emission and will tighten when feasible.
 
+#### Google Fonts (Theme Studio)
+
+The baseline above is **`'self'`-locked**, and the app still works: the Theme
+Studio font picker lists every family, and the curated families
+(Inter, Roboto, Open Sans, Lato, Montserrat, Source Sans 3, IBM Plex Sans,
+Merriweather, Lora) render from self-hosted faces with **no external origin**.
+Non-curated Google families simply fall back to the system stack under this
+policy.
+
+To allow the **full Google catalog** to load at runtime, add the two Google
+origins:
+
+```nginx
+   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; \
+   font-src  'self' data: https://fonts.gstatic.com; \
+```
+
+`fonts.googleapis.com` serves the **css2 stylesheet** (governed by `style-src`)
+and `fonts.gstatic.com` serves the **woff2 files** (governed by `font-src`). The
+mechanism is a `<link rel="stylesheet">` plus the browser's own font fetch —
+never `fetch()` or a raw `FontFace`, so **`connect-src` stays untouched**.
+
 ## Environment variables
 
 | Name                          | Default                       | Purpose                      |
