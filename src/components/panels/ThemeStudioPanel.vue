@@ -10,6 +10,7 @@ import { useDebounceFn, useElementSize } from "@vueuse/core";
 import SplitterPanel from "primevue/splitterpanel"; // eslint-disable-line @typescript-eslint/no-restricted-imports
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
+import FontPicker from "@/components/panels/theme-studio/FontPicker.vue";
 import StudioTabPlaceholder from "@/components/panels/theme-studio/StudioTabPlaceholder.vue";
 import { STUDIO_L1_TABS } from "@/components/panels/theme-studio/studioTabs";
 import TokensTabEditor from "@/components/panels/theme-studio/TokensTabEditor.vue";
@@ -18,6 +19,7 @@ import ColorSwatchPicker from "@/components/ui/ColorSwatchPicker.vue";
 import Input from "@/components/ui/Input.vue";
 import Select from "@/components/ui/Select.vue";
 import Tabs from "@/components/ui/Tabs.vue";
+import { ensureFontSpecLoaded } from "@/composables/useFontLoader";
 import { usePanelApi } from "@/composables/usePanelApi";
 import { useThemeAuthoring } from "@/composables/useThemeAuthoring";
 import { APP_ROOT } from "@/modules/themes/appRoot";
@@ -112,6 +114,16 @@ watch(a.generationResult, () => {
   interacted = true;
   applyToApp();
 });
+
+// C3 — kick the Google-font load in flight before the regenerated --font-family-*
+// token flips (display: swap covers the gap). The token push is the existing
+// generationResult watch above; this is an additive side-effect keyed on fontSpec.
+watch(
+  () => a.fontSpec.value,
+  (spec) => {
+    if (spec) void ensureFontSpecLoaded(spec);
+  },
+);
 
 // Per-token override edits (C1) re-push through the same merged writer.
 watch(
@@ -361,7 +373,15 @@ function onDiscard(): void {
 
                   <div class="flex flex-col gap-1">
                     <span class="text-foreground font-medium">Font family</span>
-                    <Select v-model="a.fontFamily.value" :options="a.FONT_OPTIONS" />
+                    <!-- Quick-stack picker writes the legacy fontFamily; choosing one
+                         clears any Google fontSpec so the stack takes effect (§0.4). -->
+                    <Select
+                      v-model="a.fontFamily.value"
+                      :options="a.FONT_OPTIONS"
+                      @update:model-value="a.fontSpec.value = null"
+                    />
+                    <span class="text-faint mt-1 text-xs">…or pick any Google font</span>
+                    <FontPicker v-model="a.fontSpec.value" />
                   </div>
 
                   <div class="border-border-subtle flex flex-col gap-2 border-t pt-3">

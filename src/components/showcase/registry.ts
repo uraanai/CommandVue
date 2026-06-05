@@ -158,6 +158,12 @@ export const SHOWCASE_EXCLUDE: readonly ShowcaseExclusion[] = [
   },
   {
     source: "volt",
+    id: "Select",
+    reason:
+      "Filterable/grouped Select consumed by the Theme Studio FontPicker; the canonical Select primitive is ui/Select.",
+  },
+  {
+    source: "volt",
     id: "AvatarGroup",
     reason: "Grouping container demoed within the Avatar section (Data Display).",
   },
