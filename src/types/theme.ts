@@ -97,6 +97,32 @@ export interface StatusHues {
   info?: number;
 }
 
+/** Provenance of a font-family choice (Track A C3). */
+export type FontSource = "google" | "system" | "stack";
+
+/**
+ * A structured font choice (Track A C3). Persisted on a generated theme's
+ * `base.input` and carried in the portable export JSON so a re-import re-loads
+ * the same Google font. Lossless superset of the legacy `fontFamily` string.
+ *
+ * In C3 `fontSpec` is GOOGLE-ONLY: it is set only when the author picks a Google
+ * family. The curated quick-stack `<Select>` keeps writing the legacy
+ * `fontFamily` string (see plan §0.4). The optional `heading` sub-shape is
+ * carried for forward-compat + round-trip but is NOT consumed by C3's engine
+ * emit or UI — `--font-family-heading` is owned by C2 (Typography).
+ */
+export interface FontSpec {
+  /** Catalog display name (e.g. "Inter", "IBM Plex Sans"). Charset-allowlisted. */
+  family: string;
+  source: FontSource;
+  /** Upright weights to request from Google. Empty/omitted → loader requests 400. */
+  weights?: number[];
+  /** Fallback stack appended after `family` (e.g. "system-ui, sans-serif"). */
+  fallback?: string;
+  /** Forward-compat heading role (consumed by C2, not C3). */
+  heading?: { family: string; source: FontSource; weights?: number[]; fallback?: string };
+}
+
 /**
  * Inputs to the generation engine, persisted as a generated theme's `base`
  * (Track A data-model v2). Unlike the legacy {@link ThemeGenerationMeta}, this
@@ -119,6 +145,13 @@ export interface GenerationInputV2 {
   statusHues?: StatusHues;
   /** Per-family status overrides (A1b live hue lever). */
   statusOverrides?: StatusOverrides;
+  /**
+   * Structured font choice (C3). When present it is the source of truth; the
+   * engine derives `fontFamily` from `fontSpec` so the legacy token-emit path
+   * stays identical. `fontFamily` is retained for back-compat (pre-C3 themes and
+   * the System/quick-stack picks that never needed a fontSpec).
+   */
+  fontSpec?: FontSpec;
 }
 
 /**

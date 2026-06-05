@@ -81,6 +81,41 @@ const GenerationMetaSchema = z.object({
   statusOverrides: StatusOverridesSchema.optional(),
 });
 
+// --- C3 font spec (security boundary at the Zod edge) -----------------------
+// The `fallback` regex deliberately excludes `<`, `(`, `)`, `:`, `;`, `/` — so a
+// composed `--font-family-*` value built only from a validated `family` +
+// `fallback` can never form a CSS-injection sequence (this is why the engine
+// does no re-validation of the composed string).
+const FontFamilyNameSchema = z
+  .string()
+  .min(1)
+  .max(64)
+  .regex(/^[A-Za-z0-9][A-Za-z0-9 \-]*$/, "Invalid font family name");
+const FontSourceSchema = z.enum(["google", "system", "stack"]);
+const FontWeightsSchema = z.array(z.number().int().min(1).max(1000)).max(18).optional();
+const FontFallbackSchema = z
+  .string()
+  .max(200)
+  .regex(/^[A-Za-z0-9 ,'_-]*$/, "Invalid font fallback stack")
+  .optional();
+
+/** C3 — structured font choice. Plain z.object (strip unknown keys), NOT
+ *  .strict(), for forward-compat with future additive sub-fields. */
+const FontSpecSchema = z.object({
+  family: FontFamilyNameSchema,
+  source: FontSourceSchema,
+  weights: FontWeightsSchema,
+  fallback: FontFallbackSchema,
+  heading: z
+    .object({
+      family: FontFamilyNameSchema,
+      source: FontSourceSchema,
+      weights: FontWeightsSchema,
+      fallback: FontFallbackSchema,
+    })
+    .optional(),
+});
+
 /** The v2 generation input persisted as a `generated` base. Lossless — carries
  *  fontFamily + status inputs so the theme is fully re-derivable. */
 const GenerationInputV2Schema = z.object({
@@ -93,6 +128,7 @@ const GenerationInputV2Schema = z.object({
   fontFamily: z.string().min(1).max(200).optional(),
   statusHues: StatusHuesSchema.optional(),
   statusOverrides: StatusOverridesSchema.optional(),
+  fontSpec: FontSpecSchema.optional(),
 });
 
 /** Discriminated theme base (v2): re-derivable generated input, or frozen tokens. */

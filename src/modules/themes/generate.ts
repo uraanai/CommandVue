@@ -27,7 +27,14 @@
  * the Linear blog post that inspired the approach.
  */
 
-import type { StatusFamily, StatusOverrides, Theme, ThemeDensity, ThemeMode } from "@/types/theme";
+import type {
+  FontSpec,
+  StatusFamily,
+  StatusOverrides,
+  Theme,
+  ThemeDensity,
+  ThemeMode,
+} from "@/types/theme";
 import type { Oklch } from "culori";
 
 import { clampChroma, converter, inGamut, wcagContrast } from "culori";
@@ -48,6 +55,9 @@ export interface ThemeGenerationInput {
   density: ThemeDensity;
   /** Optional font stack; when present, overrides `--font-family-sans/-body`. */
   fontFamily?: string;
+  /** Structured font choice (C3, google-only). When present it derives the
+   *  `--font-family-*` value; else the legacy `fontFamily` string is used. */
+  fontSpec?: FontSpec;
   /**
    * Per-family status overrides (Track A A1b). Absent → today's fixed hue
    * families (byte-identical output). A present override re-points the hue and
@@ -56,6 +66,20 @@ export interface ThemeGenerationInput {
   statusOverrides?: StatusOverrides;
   name: string;
   description?: string;
+}
+
+/** "'Family Name', <fallback>" — quotes multi-word families, appends fallback.
+ *  Inputs are already Zod-/allowlist-validated (no injection possible). */
+function composeStack(family: string, fallback?: string): string {
+  const quoted = /\s/.test(family) ? `'${family}'` : family;
+  const fb = (fallback ?? "system-ui, sans-serif").trim();
+  return fb ? `${quoted}, ${fb}` : quoted;
+}
+/** Body/sans CSS value: fontSpec (google-only in C3) wins; else the legacy
+ *  fontFamily string VERBATIM (byte-identity for pre-C3 themes). */
+function fontFamilyValue(input: ThemeGenerationInput): string | undefined {
+  if (input.fontSpec) return composeStack(input.fontSpec.family, input.fontSpec.fallback);
+  return input.fontFamily || undefined;
 }
 
 /** One checked color pair and whether it cleared its required ratio. */
@@ -464,9 +488,14 @@ export function generateTheme(input: ThemeGenerationInput): ThemeGenerationResul
     "--tooltip-text": css(surfaceBase),
   };
 
-  if (input.fontFamily) {
-    tokens["--font-family-sans"] = input.fontFamily;
-    tokens["--font-family-body"] = input.fontFamily;
+  // --- Font roles (C3) — body/sans only; heading is C2-owned. -----------------
+  // Emitting nothing when neither fontSpec nor fontFamily is set keeps output
+  // byte-identical to pre-C3 for fontless themes (§3c). Verbatim passthrough of a
+  // legacy fontFamily string preserves byte-identity for pre-C3 themes (§3i).
+  const bodyStack = fontFamilyValue(input);
+  if (bodyStack) {
+    tokens["--font-family-sans"] = bodyStack;
+    tokens["--font-family-body"] = bodyStack;
   }
 
   // --- Additive status-border + toast keys (only when a status override is
