@@ -79,11 +79,14 @@ const editedCount = computed(() => Object.keys(props.overrides).length);
       </Button>
     </div>
 
-    <!-- Body -->
-    <div class="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-3 pb-3">
+    <!-- Body. No horizontal padding here — the section headers are a full-bleed
+         band and the rows carry their own `px-3`, so they line up left↔right.
+         `scrollbar-gutter: stable` reserves the scrollbar's space so the controls
+         never hide under it. -->
+    <div class="min-h-0 flex-1 [scrollbar-gutter:stable] overflow-x-hidden overflow-y-auto pb-3">
       <section v-for="group in sections" :key="group.section">
         <h3
-          class="bg-surface text-faint sticky top-0 z-10 py-1.5 text-[10px] font-semibold tracking-wider uppercase"
+          class="bg-surface text-faint sticky top-0 z-10 px-3 py-1.5 text-[10px] font-semibold tracking-wider uppercase"
         >
           {{ group.label }}
         </h3>
@@ -103,7 +106,7 @@ const editedCount = computed(() => Object.keys(props.overrides).length);
 
       <div
         v-if="sections.length === 0"
-        class="text-muted flex flex-col items-center gap-1 py-8 text-sm"
+        class="text-muted flex flex-col items-center gap-1 px-3 py-8 text-sm"
       >
         <span>No tokens match “{{ search }}”.</span>
         <Button size="sm" variant="secondary" @click="search = ''">Clear search</Button>

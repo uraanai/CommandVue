@@ -62,18 +62,30 @@ watch(
   { immediate: true },
 );
 
+/** A control commits on blur, so focusing then leaving it must NOT mark the token
+ *  edited unless the value actually changed from the resolved value. */
+function unchanged(value: string): boolean {
+  return value === (props.resolvedValue ?? "").trim();
+}
 function emitLength(value: number | null): void {
   if (value !== null) lengthNum.value = value;
-  emit("set", props.entry.name, `${lengthNum.value}${lengthUnit.value}`);
+  const composed = `${lengthNum.value}${lengthUnit.value}`;
+  if (!unchanged(composed)) emit("set", props.entry.name, composed);
 }
 function emitLengthUnit(): void {
-  emit("set", props.entry.name, `${lengthNum.value}${lengthUnit.value}`);
+  const composed = `${lengthNum.value}${lengthUnit.value}`;
+  if (!unchanged(composed)) emit("set", props.entry.name, composed);
 }
 function emitNumber(value: number | null): void {
-  emit("set", props.entry.name, String(value ?? 0));
+  const s = String(value ?? 0);
+  if (!unchanged(s)) emit("set", props.entry.name, s);
 }
 function emitFreeText(): void {
   const v = freeText.value.trim();
+  if (unchanged(v)) {
+    freeTextError.value = false;
+    return;
+  }
   if (!TokenValueSchema.safeParse(v).success) {
     freeTextError.value = true;
     return;
@@ -83,7 +95,8 @@ function emitFreeText(): void {
 }
 function emitFont(value: string | number | null): void {
   const v = value == null ? "" : String(value);
-  if (v.trim().length > 0) emit("set", props.entry.name, v);
+  if (v.trim().length === 0 || unchanged(v)) return;
+  emit("set", props.entry.name, v);
 }
 
 // --- WCAG advisory chip -----------------------------------------------------
@@ -107,7 +120,7 @@ const isDensity = computed(() => props.entry.section === "density");
 
 <template>
   <div
-    class="border-border-subtle grid grid-cols-[1fr_10rem] items-center gap-x-3 gap-y-0.5 border-b py-1.5 last:border-b-0"
+    class="border-border-subtle grid grid-cols-[1fr_10rem] items-center gap-x-3 gap-y-0.5 border-b px-3 py-1.5 last:border-b-0"
     :title="entry.name"
   >
     <!-- Column 1 — label / raw name / advisory chip (min-w-0; no width pressure) -->
