@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 
+import EditableSelect from "@/components/ui/EditableSelect.vue";
 import Select from "@/components/ui/Select.vue";
 import AutoComplete from "@/volt/AutoComplete.vue";
 import Checkbox from "@/volt/Checkbox.vue";
@@ -36,6 +37,11 @@ const UNIT_NAMES: string[] = UNITS.map((u) => u.name);
 // Select ---------------------------------------------------------------------
 const selectVal = ref<null | string>("AL");
 const SELECT_OPTIONS = UNITS.map((u) => ({ label: u.name, value: u.code }));
+
+// EditableSelect -------------------------------------------------------------
+const editableUnit = ref<string>("rem");
+const EDITABLE_UNITS: string[] = ["rem", "px", "em", "%"];
+const editableSelectHover = ref<boolean>(false);
 
 // Checkbox + RadioButton -----------------------------------------------------
 const checkVal = ref<boolean>(true);
@@ -93,6 +99,29 @@ const ratingVal = ref<number>(3);
           <span class="text-faint w-20 text-xs">disabled state</span>
           <Select model-value="AL" :options="SELECT_OPTIONS" disabled class="sm:w-48" />
         </div>
+      </div>
+    </Fieldset>
+
+    <Fieldset legend="EditableSelect (click-to-edit)">
+      <div class="flex flex-col gap-3">
+        <span class="text-faint text-xs"
+          >click to edit · type-to-filter or pick · only the listed options commit · the box width
+          stays constant (no jerk)</span
+        >
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="w-24">
+            <EditableSelect
+              v-model="editableUnit"
+              :options="EDITABLE_UNITS"
+              :hoverable="editableSelectHover"
+            />
+          </div>
+          <span class="text-muted font-mono text-xs tabular-nums">{{ editableUnit }}</span>
+        </div>
+        <label class="flex items-center gap-2 text-sm">
+          <Checkbox v-model="editableSelectHover" :binary="true" />
+          <span>Hover affordance ({{ editableSelectHover ? "on" : "off" }})</span>
+        </label>
       </div>
     </Fieldset>
 

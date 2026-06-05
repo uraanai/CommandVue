@@ -5,8 +5,10 @@ import { ref } from "vue";
 import Button from "@/components/ui/Button.vue";
 import ColorPicker from "@/components/ui/ColorPicker.vue";
 import ColorSwatchPicker from "@/components/ui/ColorSwatchPicker.vue";
+import EditableLabel from "@/components/ui/EditableLabel.vue";
 import FileUpload from "@/components/ui/FileUpload.vue";
 import Input from "@/components/ui/Input.vue";
+import Checkbox from "@/volt/Checkbox.vue";
 import DatePicker from "@/volt/DatePicker.vue";
 import Fieldset from "@/volt/Fieldset.vue";
 import FloatLabel from "@/volt/FloatLabel.vue";
@@ -35,6 +37,10 @@ import Textarea from "@/volt/Textarea.vue";
 const inputVal = ref<string>("");
 const voltInputVal = ref<string>("");
 const textareaVal = ref<string>("");
+
+// --- EditableLabel ---------------------------------------------------------
+const editableLabelVal = ref<string>("Sector 7");
+const editableHover = ref<boolean>(false);
 
 // --- Password --------------------------------------------------------------
 const passwordVal = ref<string>("");
@@ -95,6 +101,31 @@ const fileLabel = ref<string>("no file chosen");
         </div>
         <InputText v-model="voltInputVal" placeholder="Volt InputText…" class="w-full" />
         <Textarea v-model="textareaVal" rows="3" placeholder="Notes…" class="w-full" />
+      </div>
+    </Fieldset>
+
+    <Fieldset legend="EditableLabel (click-to-edit)">
+      <div class="flex flex-col gap-3">
+        <span class="text-faint text-xs"
+          >click the value to edit · Enter / blur commits · Esc reverts · the box width stays
+          constant (no jerk)</span
+        >
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="w-48">
+            <EditableLabel
+              v-model="editableLabelVal"
+              :hoverable="editableHover"
+              placeholder="Set a name…"
+            />
+          </div>
+          <span class="text-muted font-mono text-xs tabular-nums">{{
+            editableLabelVal || "—"
+          }}</span>
+        </div>
+        <label class="flex items-center gap-2 text-sm">
+          <Checkbox v-model="editableHover" :binary="true" />
+          <span>Hover affordance ({{ editableHover ? "on" : "off" }})</span>
+        </label>
       </div>
     </Fieldset>
 

@@ -1,0 +1,165 @@
+<script setup lang="ts">
+import { nextTick, onBeforeUnmount, ref } from "vue";
+
+import { cn } from "@/utils/cn";
+import AutoComplete from "@/volt/AutoComplete.vue";
+
+/**
+ * EditableSelect — click-to-edit label constrained to a fixed option set.
+ *
+ * Resting state is a plain label; clicking it swaps in a combobox *in the exact
+ * same box* (same padding/height/font/radius + a 1px border, transparent at
+ * rest). Tailwind is border-box, so the footprint never changes — no jerk when
+ * toggling. The N options drop down on focus (`completeOnFocus`); click one or
+ * type to filter. Only a value present in `options` commits; anything else
+ * reverts. Enter / selecting commits, Escape reverts.
+ *
+ * The toggle is hand-rolled (not PrimeVue `Inplace`) so the resting box matches
+ * the combobox box and the hover affordance is opt-in. The combobox itself is
+ * the already-installed `volt/AutoComplete`. For free text, use
+ * {@link EditableLabel}.
+ */
+interface Props {
+  modelValue: string;
+  /** The only values that may be committed. */
+  options: string[];
+  placeholder?: string;
+  disabled?: boolean;
+  /** Opt-in hover affordance on the resting label. Off by default. */
+  hoverable?: boolean;
+}
+const props = withDefaults(defineProps<Props>(), {
+  placeholder: undefined,
+  disabled: false,
+  hoverable: false,
+});
+const emit = defineEmits<{ "update:modelValue": [value: string] }>();
+
+const editing = ref(false);
+const draft = ref<string>(props.modelValue);
+const suggestions = ref<string[]>([]);
+const acRef = ref<{ $el?: HTMLElement } | null>(null);
+
+// Picking an option blurs the input *before* the selection registers, so a
+// synchronous blur-close would unmount the combobox mid-click. We defer the
+// close on blur; a selection (which updates the draft) is committed by the
+// deferred handler, and a true click-away reverts.
+let blurTimer: ReturnType<typeof setTimeout> | undefined;
+function clearBlurTimer(): void {
+  if (blurTimer !== undefined) {
+    clearTimeout(blurTimer);
+    blurTimer = undefined;
+  }
+}
+onBeforeUnmount(clearBlurTimer);
+
+/**
+ * completeOnFocus + typing both route here. On focus the query is the current
+ * value (a complete option), so an empty query OR an exact-option match lists
+ * every option; a partial query filters. The full list shows the moment the
+ * combobox opens, then narrows as the user types.
+ */
+function filter(event: { query: string }): void {
+  const q = event.query.trim().toLowerCase();
+  if (!q || props.options.some((o) => o.toLowerCase() === q)) {
+    suggestions.value = [...props.options];
+    return;
+  }
+  suggestions.value = props.options.filter((o) => o.toLowerCase().includes(q));
+}
+
+function startEdit(): void {
+  if (props.disabled) return;
+  clearBlurTimer();
+  draft.value = props.modelValue;
+  suggestions.value = [...props.options];
+  editing.value = true;
+  void nextTick(() => {
+    acRef.value?.$el?.querySelector("input")?.focus();
+  });
+}
+
+/** Commit only an allowed value; otherwise leave the model untouched. Closes. */
+function commit(value: string): void {
+  clearBlurTimer();
+  if (!editing.value) return;
+  editing.value = false;
+  if (props.options.includes(value) && value !== props.modelValue) {
+    emit("update:modelValue", value);
+  } else {
+    draft.value = props.modelValue;
+  }
+}
+
+/** Fast path when AutoComplete reports a selection directly. */
+function onItemSelect(event: { value: string }): void {
+  commit(event.value);
+}
+
+/**
+ * Blur defers: a pending option-click updates the draft moments later, so we
+ * commit the draft after a short delay. A real click-away leaves the draft at
+ * the current value and commits it (a no-op revert when nothing changed).
+ */
+function onBlur(): void {
+  clearBlurTimer();
+  blurTimer = setTimeout(() => {
+    blurTimer = undefined;
+    commit(draft.value);
+  }, 150);
+}
+
+function cancel(): void {
+  clearBlurTimer();
+  editing.value = false;
+  draft.value = props.modelValue;
+}
+
+/**
+ * Shared footprint — the display matches the combobox's border-box. `leading-6`
+ * (24px) matches the Volt AutoComplete input baseline so the resting label and
+ * the combobox are the same height as well as width: zero jerk on toggle.
+ */
+const BOX =
+  "w-full box-border rounded-md border leading-6 " +
+  "px-[var(--density-cell-padding-x)] py-[var(--density-cell-padding-y)] " +
+  "min-h-[var(--density-control-height)] text-[length:var(--density-font-size)]";
+</script>
+
+<template>
+  <div class="w-full">
+    <!-- eslint-disable-next-line vue/no-restricted-html-elements -- inline-edit display affordance, not a Button surface; matched to the combobox box -->
+    <button
+      v-if="!editing"
+      type="button"
+      :disabled="disabled"
+      :class="
+        cn(
+          BOX,
+          'text-foreground flex cursor-text items-center border-transparent bg-transparent text-left',
+          hoverable && !disabled && 'hover:bg-surface-sunken',
+          disabled && 'cursor-not-allowed opacity-50',
+        )
+      "
+      @click="startEdit"
+    >
+      <span :class="modelValue ? 'truncate' : 'text-faint truncate'">{{
+        modelValue || placeholder || "—"
+      }}</span>
+    </button>
+    <AutoComplete
+      v-else
+      ref="acRef"
+      v-model="draft"
+      :suggestions="suggestions"
+      :placeholder="placeholder"
+      complete-on-focus
+      fluid
+      class="w-full"
+      @complete="filter"
+      @item-select="onItemSelect"
+      @keyup.escape="cancel"
+      @blur="onBlur"
+    />
+  </div>
+</template>

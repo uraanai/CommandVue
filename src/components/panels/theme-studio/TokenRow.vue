@@ -6,6 +6,7 @@ import { wcagContrast } from "culori";
 import { computed, ref, watch } from "vue";
 
 import TokenColorField from "@/components/panels/theme-studio/TokenColorField.vue";
+import EditableSelect from "@/components/ui/EditableSelect.vue";
 import IconButton from "@/components/ui/IconButton.vue";
 import Input from "@/components/ui/Input.vue";
 import Select from "@/components/ui/Select.vue";
@@ -35,7 +36,7 @@ const props = defineProps<Props>();
 const emit = defineEmits<{ set: [token: string, value: string]; reset: [token: string] }>();
 
 const FONT_OPTIONS = CURATED_FONTS.map((f) => ({ label: f.label, value: f.value }));
-const UNIT_OPTIONS = ["rem", "px", "em", "%"].map((u) => ({ label: u, value: u }));
+const UNIT_VALUES = ["rem", "px", "em", "%"];
 
 // --- length / number parsing ----------------------------------------------
 const LENGTH_RE = /^(-?[\d.]+)\s*(rem|px|em|%)?$/;
@@ -172,9 +173,9 @@ const isDensity = computed(() => props.entry.section === "density");
             fluid
             @update:model-value="emitLength"
           />
-          <Select
+          <EditableSelect
             v-model="lengthUnit"
-            :options="UNIT_OPTIONS"
+            :options="UNIT_VALUES"
             @update:model-value="emitLengthUnit"
           />
         </div>
