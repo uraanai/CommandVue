@@ -94,6 +94,7 @@ backoff
 heartbeat
 hotkey
 hotkeys
+hoverable
 dropdown
 dropdowns
 favicons

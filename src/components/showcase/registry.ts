@@ -65,6 +65,7 @@ export interface ShowcaseExclusion {
 export const SHOWCASE_PRIMITIVES: readonly ShowcaseEntry[] = [
   // --- Form Inputs ---------------------------------------------------------
   { source: "ui", id: "Input", label: "Input (text)", tab: "form-inputs" },
+  { source: "ui", id: "EditableLabel", label: "EditableLabel (click-to-edit)", tab: "form-inputs" },
   { source: "volt", id: "InputText", label: "InputText (Volt)", tab: "form-inputs" },
   { source: "volt", id: "Textarea", label: "Textarea", tab: "form-inputs" },
   { source: "volt", id: "Password", label: "Password (strength meter)", tab: "form-inputs" },
@@ -83,6 +84,7 @@ export const SHOWCASE_PRIMITIVES: readonly ShowcaseEntry[] = [
   { source: "ui", id: "FileUpload", label: "FileUpload", tab: "form-inputs" },
   // --- Selection -----------------------------------------------------------
   { source: "ui", id: "Select", label: "Select", tab: "selection" },
+  { source: "ui", id: "EditableSelect", label: "EditableSelect (click-to-edit)", tab: "selection" },
   { source: "volt", id: "Checkbox", label: "Checkbox", tab: "selection" },
   { source: "volt", id: "RadioButton", label: "RadioButton", tab: "selection" },
   { source: "volt", id: "MultiSelect", label: "MultiSelect", tab: "selection" },

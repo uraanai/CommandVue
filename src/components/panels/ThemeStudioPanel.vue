@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PanelApiProps } from "@/composables/usePanelApi";
 
-import { LayoutPanelTop, SlidersHorizontal, Sparkles, Type } from "@lucide/vue";
+import { LayoutPanelTop, Sparkles, Type } from "@lucide/vue";
 import { useDebounceFn, useElementSize } from "@vueuse/core";
 // PrimeVue's Splitter identifies its panes by child component TYPE, so SplitterPanel
 // can't be wrapped in a Volt component (a wrapper breaks pane detection → empty
@@ -12,6 +12,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
 import StudioTabPlaceholder from "@/components/panels/theme-studio/StudioTabPlaceholder.vue";
 import { STUDIO_L1_TABS } from "@/components/panels/theme-studio/studioTabs";
+import TokensTabEditor from "@/components/panels/theme-studio/TokensTabEditor.vue";
 import Button from "@/components/ui/Button.vue";
 import ColorSwatchPicker from "@/components/ui/ColorSwatchPicker.vue";
 import Input from "@/components/ui/Input.vue";
@@ -19,8 +20,10 @@ import Select from "@/components/ui/Select.vue";
 import Tabs from "@/components/ui/Tabs.vue";
 import { usePanelApi } from "@/composables/usePanelApi";
 import { useThemeAuthoring } from "@/composables/useThemeAuthoring";
+import { APP_ROOT } from "@/modules/themes/appRoot";
 import { ACCENT_COLOR_SWATCHES, BASE_COLOR_SWATCHES } from "@/modules/themes/curated-swatches";
 import { themeRegistry } from "@/modules/themes/registry";
+import { TOKEN_MANIFEST_LIST } from "@/modules/themes/tokenManifest";
 import { useThemeStore } from "@/stores/theme";
 import Checkbox from "@/volt/Checkbox.vue";
 import Slider from "@/volt/Slider.vue";
@@ -102,6 +105,7 @@ onMounted(() => {
     interacted = true;
     applyToApp();
   }
+  snapshotResolved();
 });
 
 watch(a.generationResult, () => {
@@ -118,6 +122,35 @@ watch(
   },
   { deep: false },
 );
+
+// --- Tokens tab (C1) — read-only resolved-values snapshot ------------------
+// Seeds the per-token color controls + WCAG chips from the COMPUTED values on
+// APP_ROOT (the generator emits only ~73 of the 138 tokens; the rest resolve
+// through var()/color-mix() chains the sparse map omits). This is NOT an apply
+// writer — the painting is C6's `watch(a.overrides, pushPreview)`. We only
+// re-read after that push settles, and when the user opens the Tokens tab.
+const resolvedTokens = ref<Record<string, string>>({});
+function snapshotResolved(): void {
+  const cs = getComputedStyle(APP_ROOT);
+  const out: Record<string, string> = {};
+  for (const e of TOKEN_MANIFEST_LIST) out[e.name] = cs.getPropertyValue(e.name).trim();
+  resolvedTokens.value = out;
+}
+watch(a.overrides, () => queueMicrotask(snapshotResolved), { deep: false });
+watch(activeTab, (t) => {
+  if (t === "tokens") snapshotResolved();
+});
+
+// Forward-only handlers: mutate the C6-owned override seam; C6's watcher applies.
+function onTokenSet(token: string, value: string): void {
+  a.setOverride(token, value);
+}
+function onTokenReset(token: string): void {
+  a.clearOverride(token);
+}
+function onTokenResetAll(): void {
+  a.clearAllOverrides();
+}
 
 watch(liveAcrossApp, (on) => {
   if (on) {
@@ -348,12 +381,13 @@ function onDiscard(): void {
                     {{ a.saveError.value }}
                   </p>
                 </div>
-                <StudioTabPlaceholder
+                <TokensTabEditor
                   v-else-if="active === 'tokens'"
-                  :icon="SlidersHorizontal"
-                  title="Tokens"
-                  phase="C1"
-                  note="Per-token editor — change any of the themeable tokens directly."
+                  :resolved="resolvedTokens"
+                  :overrides="a.overrides.value"
+                  @set="onTokenSet"
+                  @reset="onTokenReset"
+                  @reset-all="onTokenResetAll"
                 />
                 <StudioTabPlaceholder
                   v-else-if="active === 'typography'"
