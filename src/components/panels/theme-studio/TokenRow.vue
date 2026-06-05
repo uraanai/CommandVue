@@ -143,7 +143,14 @@ const isDensity = computed(() => props.entry.section === "density");
       <span v-if="isDensity" class="text-faint shrink-0 text-[10px]">overrides density attr</span>
     </div>
 
-    <!-- Column 2 — the kind-specific control + reset (fixed width; never overflows) -->
+    <!-- Column 2 — control + optional reset.
+         The control lives in a DEFINITE-WIDTH slot (`flex-1` block), and each
+         control fills it with `w-full`. This matters for the volt InputNumber:
+         its fluid mode sets the inner <input> to `w-[1%]`, which only expands
+         against a parent that already has a resolved width. Making the
+         InputNumber itself a `flex-1` flex-item (flex-basis 0) collapses it to a
+         few px — so the number lives inside this block/grid instead. The reset
+         button is a fixed-width sibling. -->
     <div class="col-start-2 row-span-2 flex w-40 shrink-0 items-center justify-end gap-1">
       <TokenColorField
         v-if="entry.kind === 'color'"
@@ -153,61 +160,64 @@ const isDensity = computed(() => props.entry.section === "density");
         @change="(v: string) => $emit('set', entry.name, v)"
       />
 
-      <div v-else-if="entry.kind === 'length'" class="flex min-w-0 flex-1 items-center gap-1">
-        <template v-if="isPlainLength">
+      <div v-else class="min-w-0 flex-1">
+        <!-- length · plain number + unit (grid tracks are definite-width) -->
+        <div
+          v-if="entry.kind === 'length' && isPlainLength"
+          class="grid grid-cols-[minmax(0,1fr)_3.5rem] items-center gap-1"
+        >
           <InputNumber
             :model-value="lengthNum"
             :max-fraction-digits="4"
             fluid
-            class="min-w-0 flex-1"
             @update:model-value="emitLength"
           />
           <Select
             v-model="lengthUnit"
             :options="UNIT_OPTIONS"
-            class="w-14 shrink-0"
             @update:model-value="emitLengthUnit"
           />
-        </template>
+        </div>
+
+        <!-- length · var()/calc() chain -->
         <Input
-          v-else
+          v-else-if="entry.kind === 'length'"
           v-model="freeText"
           :invalid="freeTextError"
-          class="min-w-0 flex-1"
           spellcheck="false"
           title="var()/calc() chain — edit raw"
           @keyup.enter="emitFreeText"
           @blur="emitFreeText"
         />
+
+        <!-- number -->
+        <InputNumber
+          v-else-if="entry.kind === 'number'"
+          :model-value="Number(resolvedValue) || 0"
+          fluid
+          @update:model-value="emitNumber"
+        />
+
+        <!-- font stack -->
+        <Select
+          v-else-if="entry.kind === 'font-stack'"
+          :model-value="resolvedValue"
+          :options="FONT_OPTIONS"
+          placeholder="Font…"
+          @update:model-value="emitFont"
+        />
+
+        <!-- shadow -->
+        <Input
+          v-else-if="entry.kind === 'shadow'"
+          v-model="freeText"
+          :invalid="freeTextError"
+          spellcheck="false"
+          title="box-shadow value"
+          @keyup.enter="emitFreeText"
+          @blur="emitFreeText"
+        />
       </div>
-
-      <InputNumber
-        v-else-if="entry.kind === 'number'"
-        :model-value="Number(resolvedValue) || 0"
-        fluid
-        class="min-w-0 flex-1"
-        @update:model-value="emitNumber"
-      />
-
-      <Select
-        v-else-if="entry.kind === 'font-stack'"
-        :model-value="resolvedValue"
-        :options="FONT_OPTIONS"
-        class="min-w-0 flex-1"
-        placeholder="Font…"
-        @update:model-value="emitFont"
-      />
-
-      <Input
-        v-else-if="entry.kind === 'shadow'"
-        v-model="freeText"
-        :invalid="freeTextError"
-        class="min-w-0 flex-1"
-        spellcheck="false"
-        title="box-shadow value"
-        @keyup.enter="emitFreeText"
-        @blur="emitFreeText"
-      />
 
       <IconButton
         v-if="edited"
