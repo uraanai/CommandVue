@@ -370,7 +370,7 @@ When multiple major bumps land in one session, plan to spend the **back half** o
 Every phase of every prompt ends with two verification stages, in this order:
 
 1. **Automated functional verification** — Claude Code uses Playwright MCP to drive a real browser through the changes and assert on observable state (DOM attributes, computed styles, console output, screenshots at named checkpoints). Binary pass/fail. No design judgment. **Claude Code does not open a PR until this stage is fully green.** If any assertion fails, fix the underlying issue and re-run until it passes; do not embed failing results in the PR description.
-2. **Human design review** — A short, focused checklist (3–7 items max) of subjective quality checks that automation cannot make: typography balance, color harmony, density feel, hover-state polish. The user runs this after the PR is open.
+2. **Human design review** — A short, focused **checkbox task-list** (`- [ ]`, 3–7 items max) of subjective quality checks that automation cannot make: typography balance, color harmony, density feel, hover-state polish. The user drives each item after the PR is open, ticks the boxes, and merges only when all are checked (see the "Stage 2 review section" rule below for the exact format).
 
 **Tool availability:** At the start of each phase's verification, Claude Code probes for `mcp__plugin_playwright_playwright__*` tools. If unavailable, run `ToolSearch` with `query: "playwright browser"` to load them. If still unavailable, fall back to a manual smoke-test checklist, state this explicitly in the PR description, and do not embed Stage 1 results.
 
@@ -378,7 +378,7 @@ Every phase of every prompt ends with two verification stages, in this order:
 
 **Stage 1 result table:** Embedded in every PR description as a structured Markdown table — assertion id, description, result, screenshot. Plus console-error count, console-warning count, and a PASS/FAIL summary line. The table reflects actual Playwright run results, never "expected pass."
 
-**Stage 2 review section:** Closes the PR description. 3–7 design-judgment checkboxes plus a 2–3 sentence "things to specifically scrutinize for this phase" callout.
+**Stage 2 review section:** Closes the PR description. The human-review items **MUST be a GitHub markdown task-list** — each item a `- [ ]` checkbox the maintainer literally ticks off in the PR UI, **never** a numbered or plain-bulleted list. It contains: 3–7 design-judgment items (subjective checks automation can't make — typography balance, color harmony, density feel, hover-state polish), a final `- [ ]` **Ready to merge** item, and a 2–3 sentence "things to specifically scrutinize for this phase" callout. The section is the explicit merge gate: the maintainer reviews each box, checks them all off, and merges only when every box (including "Ready to merge") is ticked. Lead the section with a one-line instruction telling the reviewer to tick each box and how to drive the review (e.g. `pnpm dev` + which panel/flow to open).
 
 **Rule:** This protocol applies to all current and future agent-driven work on CommandVue. No exceptions without explicit user override.
 
