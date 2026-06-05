@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, ref } from "vue";
+import { computed, nextTick, onBeforeUnmount, ref } from "vue";
 
 import { cn } from "@/utils/cn";
 import AutoComplete from "@/volt/AutoComplete.vue";
@@ -42,6 +42,12 @@ const editing = ref(false);
 const draft = ref<string>(props.modelValue);
 const suggestions = ref<string[]>([]);
 const acRef = ref<{ $el?: HTMLElement } | null>(null);
+
+/** Widest text the combobox must show — sizes the editor to the options, not
+ *  the available width. */
+const longestOption = computed(() =>
+  [props.modelValue, ...props.options].reduce((a, b) => (b.length > a.length ? b : a), ""),
+);
 
 // Picking an option blurs the input *before* the selection registers, so a
 // synchronous blur-close would unmount the combobox mid-click. We defer the
@@ -120,10 +126,10 @@ function cancel(): void {
 </script>
 
 <template>
-  <div class="w-full">
+  <span class="inline-flex max-w-full align-baseline">
     <!-- Resting state reads as a tight label (content width, minimal side
-         padding) rather than a boxed control; clicking opens the combobox, which
-         fills the parent's width. -->
+         padding) rather than a boxed control; clicking opens the combobox, sized
+         to the widest option (below) rather than the available width. -->
     <!-- eslint-disable-next-line vue/no-restricted-html-elements -- inline-edit display affordance, not a Button surface -->
     <button
       v-if="!editing"
@@ -143,19 +149,34 @@ function cancel(): void {
         modelValue || placeholder || "—"
       }}</span>
     </button>
-    <AutoComplete
-      v-else
-      ref="acRef"
-      v-model="draft"
-      :suggestions="suggestions"
-      :placeholder="placeholder"
-      complete-on-focus
-      fluid
-      class="w-full"
-      @complete="filter"
-      @item-select="onItemSelect"
-      @keyup.escape="cancel"
-      @blur="onBlur"
-    />
-  </div>
+    <!-- An invisible sizer mirrors the widest option in the combobox's own box,
+         so the inline-grid cell is exactly that wide; the AutoComplete overlays
+         it (absolute, out of flow) and therefore fits the options, not the
+         available width. -->
+    <span v-else class="relative inline-grid max-w-full align-baseline">
+      <span
+        class="invisible col-start-1 row-start-1 box-border rounded-md border px-[var(--density-cell-padding-x)] py-[var(--density-cell-padding-y)] text-[length:var(--density-font-size)] leading-6 whitespace-pre"
+        aria-hidden="true"
+        >{{ longestOption || "—" }}</span
+      >
+      <!-- Own absolute wrapper (PrimeVue forces position:relative on its root, so
+           the AutoComplete itself can't be taken out of flow). Out of flow ⇒ it
+           doesn't stretch the grid; the sizer above sets the width. -->
+      <span class="absolute inset-0 col-start-1 row-start-1">
+        <AutoComplete
+          ref="acRef"
+          v-model="draft"
+          :suggestions="suggestions"
+          :placeholder="placeholder"
+          complete-on-focus
+          fluid
+          class="h-full w-full"
+          @complete="filter"
+          @item-select="onItemSelect"
+          @keyup.escape="cancel"
+          @blur="onBlur"
+        />
+      </span>
+    </span>
+  </span>
 </template>

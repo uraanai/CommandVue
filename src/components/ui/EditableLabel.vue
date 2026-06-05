@@ -88,6 +88,7 @@ function cancel(): void {
         ref="inputRef"
         v-model="draft"
         type="text"
+        size="1"
         :placeholder="placeholder"
         spellcheck="false"
         class="text-foreground bg-surface-sunken col-start-1 row-start-1 w-full min-w-0 rounded-sm border-0 p-0 align-baseline outline-none [font:inherit]"
