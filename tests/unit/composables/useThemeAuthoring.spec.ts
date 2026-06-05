@@ -116,4 +116,84 @@ describe("useThemeAuthoring", () => {
     expect(created).toBeNull();
     expect(a.saveError.value).toMatch(/name is required/i);
   });
+
+  // --- Per-token overrides seam (C6) ----------------------------------------
+
+  it("overrides CRUD: set/clear/clearAll replace immutably", () => {
+    const a = useThemeAuthoring();
+    a.seedFromTheme(null);
+    expect(a.overrides.value).toEqual({});
+    const before = a.overrides.value;
+    a.setOverride("--color-surface-base", "oklch(0.2 0.03 264)");
+    expect(a.overrides.value["--color-surface-base"]).toBe("oklch(0.2 0.03 264)");
+    expect(a.overrides.value).not.toBe(before); // new object identity (immutable replace)
+    a.setOverride("--color-text-primary", "oklch(0.98 0 0)");
+    expect(Object.keys(a.overrides.value)).toHaveLength(2);
+    a.clearOverride("--color-surface-base");
+    expect(a.overrides.value["--color-surface-base"]).toBeUndefined();
+    expect(Object.keys(a.overrides.value)).toHaveLength(1);
+    a.clearAllOverrides();
+    expect(a.overrides.value).toEqual({});
+  });
+
+  it("seeds overrides from a theme's sparse map; blank seeds {}", async () => {
+    const theme = await themeRepo.create({
+      name: "Has Overrides",
+      description: "",
+      author: "",
+      source: "generated",
+      mode: "dark",
+      density: "compact",
+      base: {
+        kind: "generated",
+        input: {
+          schemaVersion: 2,
+          baseColor: "oklch(0.16 0.03 285)",
+          accentColor: "oklch(0.7 0.16 320)",
+          contrast: 62,
+          mode: "dark",
+          density: "compact",
+        },
+      },
+      overrides: { "--color-surface-base": "oklch(0.18 0.02 264)" },
+    });
+    const a = useThemeAuthoring();
+    a.seedFromTheme(theme);
+    expect(a.overrides.value).toEqual({ "--color-surface-base": "oklch(0.18 0.02 264)" });
+    a.seedFromTheme(null);
+    expect(a.overrides.value).toEqual({});
+  });
+
+  it("save() persists the current overrides on the primary theme", async () => {
+    const a = useThemeAuthoring();
+    a.seedFromTheme(null);
+    a.name.value = "With Overrides";
+    a.applyAfterSave.value = false;
+    a.generatePaired.value = false;
+    a.setOverride("--color-interactive", "oklch(0.6 0.2 280)");
+    const created = await a.save();
+    expect(created).not.toBeNull();
+    const stored = (await themeRepo.getAll()).find((t) => t.id === created!.id)!;
+    expect(stored.overrides["--color-interactive"]).toBe("oklch(0.6 0.2 280)");
+  });
+
+  it("rejects an unknown override token key on save", async () => {
+    const a = useThemeAuthoring();
+    a.seedFromTheme(null);
+    a.name.value = "Bad Token";
+    a.setOverride("--not-a-real-token", "red");
+    const created = await a.save();
+    expect(created).toBeNull();
+    expect(a.saveError.value).toMatch(/unknown token/i);
+  });
+
+  it("rejects an injection-shaped override value on save", async () => {
+    const a = useThemeAuthoring();
+    a.seedFromTheme(null);
+    a.name.value = "Bad Value";
+    a.setOverride("--color-surface-base", "<script>alert(1)</script>");
+    const created = await a.save();
+    expect(created).toBeNull();
+    expect(a.saveError.value).toMatch(/invalid value/i);
+  });
 });

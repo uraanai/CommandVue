@@ -32,7 +32,7 @@ import { cn } from "@/utils/cn";
  * recolors that bar's thumb (any CSS color or `var(--token)`; theme border by
  * default).
  */
-interface Tab {
+export interface Tab {
   id: string;
   label: string;
   disabled?: boolean;
@@ -42,7 +42,8 @@ type TabVariant = "underline" | "segmented";
 
 interface Props {
   modelValue: string;
-  tabs: Tab[];
+  /** Readonly so callers can pass an `as const` tab list (e.g. a locked descriptor). */
+  tabs: readonly Tab[];
   variant?: TabVariant;
   /** One-line horizontal scroll + chevron nav buttons instead of wrapping. */
   scrollable?: boolean;
@@ -56,6 +57,12 @@ interface Props {
    * including a `var(--token)`). Defaults to the theme border.
    */
   scrollbarColor?: string;
+  /**
+   * Tailwind classes applied to the TabPanels container AND the active TabPanel,
+   * so a flex-column tab body can bound-scroll inside a height-constrained pane.
+   * Default keeps the original `pt-3` spacing untouched for existing call sites.
+   */
+  panelsClass?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -63,6 +70,7 @@ const props = withDefaults(defineProps<Props>(), {
   scrollable: false,
   scrollbar: false,
   scrollbarColor: "", // empty → theme-default thumb color
+  panelsClass: "",
 });
 
 defineEmits<{
@@ -197,8 +205,13 @@ const tabListPt = computed(() => {
         </slot>
       </PvTab>
     </PvTabList>
-    <PvTabPanels :pt="{ root: { class: 'pt-3' } }">
-      <PvTabPanel v-for="tab in tabs" :key="tab.id" :value="tab.id">
+    <PvTabPanels :pt="{ root: { class: cn('pt-3', panelsClass) } }">
+      <PvTabPanel
+        v-for="tab in tabs"
+        :key="tab.id"
+        :value="tab.id"
+        :pt="{ root: { class: panelsClass } }"
+      >
         <slot v-if="tab.id === modelValue" :active="tab.id" />
       </PvTabPanel>
     </PvTabPanels>
