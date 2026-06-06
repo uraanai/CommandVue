@@ -244,3 +244,72 @@ describe("useThemeAuthoring — fontSpec (C3)", () => {
     expect(a.fontSpec.value).toBeNull();
   });
 });
+
+describe("useThemeAuthoring — typeScale (C2)", () => {
+  it("is null until enabled; enableTypeScale materializes the default scale", () => {
+    const a = useThemeAuthoring();
+    a.seedFromTheme(null);
+    expect(a.typeScale.value).toBeNull();
+    expect(a.typeScaleEnabled.value).toBe(false);
+    a.enableTypeScale();
+    expect(a.typeScale.value).toEqual({ baseSize: 16, ratio: 1.2 });
+    expect(a.typeScaleEnabled.value).toBe(true);
+  });
+
+  it("a slider setter materializes the scale and drives generationResult --text-*", () => {
+    const a = useThemeAuthoring();
+    a.seedFromTheme(null);
+    expect(a.generationResult.value?.tokens["--text-base"]).toBeUndefined();
+    a.baseSize.value = 18; // first edit materializes the lazy-null scale
+    expect(a.typeScale.value).toEqual({ baseSize: 18, ratio: 1.2 });
+    expect(a.generationResult.value?.tokens["--text-base"]).toBe("1.125rem");
+  });
+
+  it("buildGenerationInput carries typeScale when enabled and omits it when null", () => {
+    const a = useThemeAuthoring();
+    a.seedFromTheme(null);
+    expect(a.buildGenerationInput("light").typeScale).toBeUndefined();
+    a.enableTypeScale();
+    a.ratio.value = 1.25;
+    expect(a.buildGenerationInput("light").typeScale).toEqual({ baseSize: 16, ratio: 1.25 });
+  });
+
+  it("matchCurrentTypeScale enables the scale + seeds the fixed ramp as overrides", () => {
+    const a = useThemeAuthoring();
+    a.seedFromTheme(null);
+    a.matchCurrentTypeScale();
+    expect(a.typeScaleEnabled.value).toBe(true);
+    expect(a.overrides.value["--text-base"]).toBe("1rem");
+    expect(a.overrides.value["--text-4xl"]).toBe("2.25rem");
+  });
+
+  it("seeds typeScale from a generated theme and nulls it on a blank seed", async () => {
+    const typeScale = { baseSize: 17, ratio: 1.2 };
+    const theme = await themeRepo.create({
+      name: "Has Scale",
+      description: "",
+      author: "",
+      source: "generated",
+      mode: "dark",
+      density: "compact",
+      base: {
+        kind: "generated",
+        input: {
+          schemaVersion: 2,
+          baseColor: "oklch(0.16 0.03 285)",
+          accentColor: "oklch(0.7 0.16 320)",
+          contrast: 62,
+          mode: "dark",
+          density: "compact",
+          typeScale,
+        },
+      },
+      overrides: {},
+    });
+    const a = useThemeAuthoring();
+    a.seedFromTheme(theme);
+    expect(a.typeScale.value).toEqual(typeScale);
+    a.seedFromTheme(null);
+    expect(a.typeScale.value).toBeNull();
+  });
+});

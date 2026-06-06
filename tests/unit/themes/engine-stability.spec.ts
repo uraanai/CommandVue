@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { generateTheme } from "@/modules/themes/generate";
 import { migrateThemeV1ToV2, type ThemeV1Record } from "@/modules/themes/migrate";
 import { __clearResolveCacheForTests, resolve } from "@/modules/themes/resolve";
-import { ENGINE_VERSION } from "@/types/theme";
+import { ENGINE_VERSION, type GenerationInputV2, THEME_SCHEMA_VERSION } from "@/types/theme";
 
 /**
  * §3i engine-stability contract. The diff-into-overrides migration promises that
@@ -34,6 +34,33 @@ function generatedV1(tokens: Record<string, string>): ThemeV1Record {
 describe("engine-stability (§3i)", () => {
   it("exposes a numeric ENGINE_VERSION the resolve memo is keyed on", () => {
     expect(typeof ENGINE_VERSION).toBe("number");
+  });
+
+  it("re-resolves a typeScale theme byte-identically (additive keys stable, no math bump)", () => {
+    __clearResolveCacheForTests();
+    const input: GenerationInputV2 = {
+      schemaVersion: 2,
+      baseColor: BASE,
+      accentColor: ACCENT,
+      contrast: 60,
+      mode: "dark",
+      density: "comfortable",
+      typeScale: { baseSize: 18, ratio: 1.25 },
+    };
+    const first = resolve({ base: { kind: "generated", input }, overrides: {}, name: "T" });
+    __clearResolveCacheForTests();
+    const second = resolve({
+      base: { kind: "generated", input: { ...input, typeScale: { baseSize: 18, ratio: 1.25 } } },
+      overrides: {},
+      name: "T",
+    });
+    expect(second).toEqual(first);
+    expect(first["--text-base"]).toBe("1.125rem");
+  });
+
+  it("keeps ENGINE_VERSION + THEME_SCHEMA_VERSION pinned (C2 is additive)", () => {
+    expect(ENGINE_VERSION).toBe(1);
+    expect(THEME_SCHEMA_VERSION).toBe(2);
   });
 
   it("re-resolves a freshly-generated migrated theme to byte-identical tokens (no drift)", () => {

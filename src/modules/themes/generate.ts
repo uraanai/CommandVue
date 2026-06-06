@@ -34,10 +34,13 @@ import type {
   Theme,
   ThemeDensity,
   ThemeMode,
+  TypeScaleInput,
 } from "@/types/theme";
 import type { Oklch } from "culori";
 
 import { clampChroma, converter, inGamut, wcagContrast } from "culori";
+
+import { deriveTypeScale } from "./typeScale";
 
 const toOklch = converter("oklch");
 const isInSrgb = inGamut("rgb");
@@ -58,6 +61,8 @@ export interface ThemeGenerationInput {
   /** Structured font choice (C3, google-only). When present it derives the
    *  `--font-family-*` value; else the legacy `fontFamily` string is used. */
   fontSpec?: FontSpec;
+  /** Modular type-scale input (Track A C2). Emits the ramp + line-heights only when set. */
+  typeScale?: TypeScaleInput;
   /**
    * Per-family status overrides (Track A A1b). Absent → today's fixed hue
    * families (byte-identical output). A present override re-points the hue and
@@ -498,6 +503,15 @@ export function generateTheme(input: ThemeGenerationInput): ThemeGenerationResul
     tokens["--font-family-body"] = bodyStack;
   }
 
+  // --- Type scale (Track A C2). When `typeScale` is set, derive the 8-step
+  // `--text-*` ramp + their `--text-*--line-height` companions (deriver lives in
+  // typeScale.ts, unit-tested in isolation). Emitted ONLY when present — absent →
+  // the fixed tokens.css ramp/leading is the cascade fallback and output is
+  // byte-identical to pre-C2 (§3i additive contract). No ENGINE_VERSION bump. -----
+  if (input.typeScale) {
+    Object.assign(tokens, deriveTypeScale(input.typeScale));
+  }
+
   // --- Additive status-border + toast keys (only when a status override is
   // present). Pinned to the resolved status values so a re-pointed hue carries
   // its border/toast through and the exported theme is self-contained. Without
@@ -576,6 +590,8 @@ export function generatePairedVariant(theme: Theme): ThemeGenerationResult {
     // Carry status overrides so the paired variant re-points the same hues and
     // emits the same border/toast key set (keeping token coverage symmetric).
     statusOverrides: input.statusOverrides,
+    // Carry the type scale so both variants emit the same `--text-*` key set.
+    ...(input.typeScale !== undefined ? { typeScale: input.typeScale } : {}),
     name: `${theme.name} (${flipped === "dark" ? "Dark" : "Light"})`,
   });
 }

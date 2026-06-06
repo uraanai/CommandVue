@@ -13,8 +13,10 @@
  *
  * Memoization is keyed on `${ENGINE_VERSION}:${JSON.stringify(base.input)}` so a
  * stale base cache is never served across an engine math bump (§3i). The input
- * string includes `statusHues` + `statusOverrides`, so two themes that differ
- * only in a status override do not collide.
+ * string includes `statusHues` + `statusOverrides` + `fontSpec` + `typeScale`, so
+ * two themes that differ only in a status override or type scale do not collide;
+ * an absent `typeScale` serializes identically to a pre-C2 theme (same key →
+ * cache hit → no recompute).
  *
  * Note: `resolve()` on a `generated` base calls `generateTheme`, which throws on
  * an unparseable color. Callers that handle legacy/untrusted data (the IndexedDB
@@ -55,6 +57,7 @@ export function toGenInput(input: GenerationInputV2, name: string): ThemeGenerat
   };
   if (input.fontFamily !== undefined) out.fontFamily = input.fontFamily;
   if (input.fontSpec !== undefined) out.fontSpec = input.fontSpec;
+  if (input.typeScale !== undefined) out.typeScale = input.typeScale;
   if (input.statusOverrides !== undefined) out.statusOverrides = input.statusOverrides;
   return out;
 }

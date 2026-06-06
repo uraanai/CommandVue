@@ -106,16 +106,17 @@ Chrome heights: `--spacing-titlebar: 3rem`, `--spacing-statusbar: 1.75rem`. Surf
 ```
 --font-family-sans     Inter Variable + system fallbacks
 --font-family-mono     ui-monospace + JetBrains Mono / Cascadia Code
---font-family-display  alias of sans (themes can override)
+--font-family-display  alias of sans (internal alias; not themeable directly)
+--font-family-heading  alias of display (Track A C2; consumed by h1–h6, themeable)
 
---text-xs              0.75rem
---text-sm              0.875rem
---text-base            1rem
---text-lg              1.125rem
---text-xl              1.25rem
---text-2xl             1.5rem
---text-3xl             1.875rem
---text-4xl             2.25rem
+--text-xs              0.75rem   (+ --text-xs--line-height)
+--text-sm              0.875rem  (+ --text-sm--line-height)
+--text-base            1rem      (+ --text-base--line-height)
+--text-lg              1.125rem  (+ --text-lg--line-height)
+--text-xl              1.25rem   (+ --text-xl--line-height)
+--text-2xl             1.5rem    (+ --text-2xl--line-height)
+--text-3xl             1.875rem  (+ --text-3xl--line-height)
+--text-4xl             2.25rem   (+ --text-4xl--line-height)
 
 --font-weight-regular   400
 --font-weight-medium    500
@@ -126,6 +127,11 @@ Chrome heights: `--spacing-titlebar: 3rem`, `--spacing-statusbar: 1.75rem`. Surf
 --leading-normal   1.5
 --leading-relaxed  1.625
 ```
+
+The `--text-*` ramp and its `--text-*--line-height` companions are themeable: the
+Theme Studio's Typography tab generates the whole ramp from a base size + ratio
+(the `typeScale` input), or you can override individual steps. `--font-family-heading`
+is a first-class role consumed by `h1`–`h6`; it defaults to the display alias.
 
 ### Border radii
 

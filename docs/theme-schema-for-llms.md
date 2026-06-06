@@ -121,7 +121,13 @@ the accent border `--color-border-accent`; the accent triad
 composed shadows `--shadow-bevel-raised`, `--shadow-bevel-sunken`, and
 `--shadow-accent-glow` reference those colors and are usually left to inherit.
 
-**Typography (optional):** `--font-family-sans`, `--font-family-mono`
+**Typography (optional):** `--font-family-body`, `--font-family-sans`,
+`--font-family-mono`, `--font-family-heading`. Font sizes — the type scale —
+are `--text-xs`, `--text-sm`, `--text-base`, `--text-lg`, `--text-xl`,
+`--text-2xl`, `--text-3xl`, `--text-4xl` (length values like `0.875rem`), each
+with a paired line-height companion (`--text-xs--line-height` through
+`--text-4xl--line-height`, unitless). Set them to override individual steps, or
+let the in-app generator derive the whole ramp from a base size + ratio.
 
 There are additional component-level keys (datatable, menubar, dialog, etc.)
 and a `--color-p-surface-*` scale; most themes don't need them because they

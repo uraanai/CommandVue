@@ -9,6 +9,7 @@ import {
   type ThemeGenerationInput,
 } from "@/modules/themes/generate";
 import { ALL_KNOWN_TOKEN_NAMES } from "@/modules/themes/knownTokens";
+import { deriveTypeScale } from "@/modules/themes/typeScale";
 
 const toOklch = converter("oklch");
 const isInSrgb = inGamut("rgb");
@@ -37,6 +38,36 @@ describe("generateTheme", () => {
     const count = Object.keys(tokens).length;
     expect(count).toBeGreaterThanOrEqual(70);
     expect(count).toBeLessThanOrEqual(85);
+  });
+
+  it("emits the type-scale ramp + line-height companions only when typeScale is set", () => {
+    const textKeys = (t: Record<string, string>) =>
+      Object.keys(t).filter((k) => k.startsWith("--text-"));
+    expect(textKeys(generateTheme(input()).tokens)).toEqual([]);
+
+    const ts = { baseSize: 18, ratio: 1.25 };
+    const withScale = generateTheme(input({ typeScale: ts }));
+    const expected = deriveTypeScale(ts);
+    expect(textKeys(withScale.tokens)).toHaveLength(16);
+    for (const [k, v] of Object.entries(expected)) {
+      expect(withScale.tokens[k]).toBe(v);
+      expect(KNOWN.has(k)).toBe(true);
+    }
+    // The 16 keys are the only delta vs. the same input without a scale.
+    expect(Object.keys(withScale.tokens)).toHaveLength(
+      Object.keys(generateTheme(input()).tokens).length + 16,
+    );
+  });
+
+  it("emits the same --text-* key set in both paired modes", () => {
+    const ts = { baseSize: 16, ratio: 1.2 };
+    const tk = (t: Record<string, string>) =>
+      Object.keys(t)
+        .filter((k) => k.startsWith("--text-"))
+        .sort();
+    const light = generateTheme(input({ mode: "light", typeScale: ts }));
+    const dark = generateTheme(input({ mode: "dark", typeScale: ts }));
+    expect(tk(light.tokens)).toEqual(tk(dark.tokens));
   });
 
   it("emits the full --color-p-surface-0..950 scale (Volt component backgrounds)", () => {
