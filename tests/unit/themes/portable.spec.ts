@@ -6,6 +6,7 @@ import { themeRepo } from "@/modules/storage/themeRepo";
 import { buildExportFilename, downloadThemeFile, exportThemeToJson } from "@/modules/themes/export";
 import { importThemeFromJson } from "@/modules/themes/import";
 import { themeRegistry } from "@/modules/themes/registry";
+import { resolve } from "@/modules/themes/resolve";
 
 import { resetStorage } from "../storage/helpers";
 
@@ -35,6 +36,55 @@ function makeTheme(over: Partial<Theme> = {}): Theme {
     updatedAt: now,
   };
 }
+
+describe("portable typeScale (C2)", () => {
+  beforeEach(async () => {
+    await resetStorage();
+    themeRegistry.__resetForTests();
+  });
+
+  const genInput = (ts: { baseSize: number; ratio: number }) =>
+    ({
+      schemaVersion: 2,
+      baseColor: "oklch(0.16 0.03 285)",
+      accentColor: "oklch(0.7 0.16 320)",
+      contrast: 62,
+      mode: "dark",
+      density: "compact",
+      typeScale: ts,
+    }) as const;
+
+  function seedWithTypeScale(ts: { baseSize: number; ratio: number }): Theme {
+    const input = genInput(ts);
+    return makeTheme({
+      source: "generated",
+      mode: "dark",
+      density: "compact",
+      base: { kind: "generated", input },
+      tokens: resolve({ base: { kind: "generated", input }, overrides: {}, name: "TS" }),
+    });
+  }
+
+  it("round-trips a generated theme's typeScale through export → import", async () => {
+    const ts = { baseSize: 18, ratio: 1.25 };
+    const result = await importThemeFromJson(exportThemeToJson(seedWithTypeScale(ts)));
+    expect(result.success).toBe(true);
+    const stored = result.theme!;
+    expect(stored.base.kind === "generated" && stored.base.input.typeScale).toEqual(ts);
+    expect(stored.tokens["--text-base"]).toBe("1.125rem");
+  });
+
+  it("rejects an out-of-range typeScale on import (rejected, never clamped)", async () => {
+    const json = JSON.parse(
+      exportThemeToJson(seedWithTypeScale({ baseSize: 18, ratio: 1.25 })),
+    ) as {
+      theme: { base: { input: { typeScale: { baseSize: number } } } };
+    };
+    json.theme.base.input.typeScale.baseSize = 30; // out of [10, 24]
+    const bad = await importThemeFromJson(JSON.stringify(json));
+    expect(bad.success).toBe(false);
+  });
+});
 
 describe("exportThemeToJson", () => {
   it("wraps a theme in the PortableTheme envelope", () => {

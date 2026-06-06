@@ -10,6 +10,7 @@ import {
   resolveBaseTokens,
   toGenInput,
 } from "@/modules/themes/resolve";
+import { deriveTypeScale } from "@/modules/themes/typeScale";
 
 function genInput(over: Partial<GenerationInputV2> = {}): GenerationInputV2 {
   return {
@@ -28,6 +29,22 @@ beforeEach(() => {
 });
 
 describe("resolve", () => {
+  it("forwards typeScale through toGenInput when present, omits it when absent", () => {
+    expect(toGenInput(genInput(), "X").typeScale).toBeUndefined();
+    const ts = { baseSize: 16, ratio: 1.2 };
+    expect(toGenInput(genInput({ typeScale: ts }), "X").typeScale).toEqual(ts);
+  });
+
+  it("resolves the derived --text-base for a generated base carrying typeScale", () => {
+    const ts = { baseSize: 18, ratio: 1.2 };
+    const tokens = resolve({
+      base: { kind: "generated", input: genInput({ typeScale: ts }) },
+      overrides: {},
+      name: "G",
+    });
+    expect(tokens["--text-base"]).toBe(deriveTypeScale(ts)["--text-base"]);
+  });
+
   it("returns a static base's tokens verbatim when there are no overrides", () => {
     const base: ThemeBase = { kind: "static", tokens: { "--color-surface-base": "#101010" } };
     const tokens = resolve({ base, overrides: {}, name: "Static" });

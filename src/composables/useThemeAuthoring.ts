@@ -7,6 +7,7 @@ import type {
   ThemeDensity,
   ThemeId,
   ThemeMode,
+  TypeScaleInput,
 } from "@/types/theme";
 
 import { computed, ref, watch } from "vue";
@@ -21,6 +22,11 @@ import { generateTheme } from "@/modules/themes/generate";
 import { isKnownToken } from "@/modules/themes/knownTokens";
 import { TokenValueSchema } from "@/modules/themes/portableSchema";
 import { themeRegistry } from "@/modules/themes/registry";
+import {
+  DEFAULT_TYPE_SCALE,
+  FIXED_RAMP_FALLBACK,
+  TYPE_SCALE_BOUNDS,
+} from "@/modules/themes/typeScale";
 import { useThemeStore } from "@/stores/theme";
 import { useWorkspaceStore } from "@/stores/workspace";
 
@@ -93,6 +99,10 @@ export function useThemeAuthoring() {
   // of truth for the body/sans family; the quick-stack `fontFamily` above stays
   // for the System / curated-stack picks (§0.4).
   const fontSpec = ref<FontSpec | null>(null);
+  // C2 — modular type scale. Lazy-null: a theme opened-but-not-touched introduces
+  // no `base.input.typeScale`, so pre-C2 themes stay byte-identical. The first
+  // edit (enable / slider move) materializes it.
+  const typeScale = ref<TypeScaleInput | null>(null);
   const generatePaired = ref(true);
   const applyAfterSave = ref(true);
 
@@ -170,6 +180,7 @@ export function useThemeAuthoring() {
     contrast.value = BLANK_DEFAULTS.contrast;
     fontFamily.value = BLANK_DEFAULTS.fontFamily;
     fontSpec.value = null;
+    typeScale.value = null;
     applyStatusOverridesToSwatches(undefined);
   }
 
@@ -204,6 +215,36 @@ export function useThemeAuthoring() {
     if (id) loadFromGenerated(id);
   });
 
+  // --- Type scale (C2) -----------------------------------------------------
+  // `typeScale` is a generation INPUT, so changing baseSize/ratio recomputes
+  // `generationResult` and re-fires the panel's single live-apply writer (C6) —
+  // no second preview path. Per-step / per-role tweaks go through `overrides`.
+  const typeScaleEnabled = computed(() => typeScale.value !== null);
+  const baseSize = computed({
+    get: () => typeScale.value?.baseSize ?? TYPE_SCALE_BOUNDS.baseSize.default,
+    set: (v: number) => {
+      typeScale.value = { ...(typeScale.value ?? DEFAULT_TYPE_SCALE), baseSize: v };
+    },
+  });
+  const ratio = computed({
+    get: () => typeScale.value?.ratio ?? TYPE_SCALE_BOUNDS.ratio.default,
+    set: (v: number) => {
+      typeScale.value = { ...(typeScale.value ?? DEFAULT_TYPE_SCALE), ratio: v };
+    },
+  });
+  function enableTypeScale(): void {
+    if (!typeScale.value) typeScale.value = { ...DEFAULT_TYPE_SCALE };
+  }
+  function disableTypeScale(): void {
+    typeScale.value = null;
+  }
+  /** "Match current": enable the scale + seed the fixed ramp as overrides so
+   *  turning it on is visually neutral until a slider moves. */
+  function matchCurrentTypeScale(): void {
+    enableTypeScale();
+    for (const [k, v] of Object.entries(FIXED_RAMP_FALLBACK)) setOverride(k, v);
+  }
+
   // --- Generation result (live preview + contrast report) ------------------
   const generationResult = computed(() => {
     try {
@@ -216,6 +257,7 @@ export function useThemeAuthoring() {
         density: density.value,
         fontFamily: fontFamily.value || undefined,
         fontSpec: fontSpec.value ?? undefined,
+        typeScale: typeScale.value ?? undefined,
         statusOverrides: statusOverrides.value,
       });
     } catch {
@@ -250,6 +292,7 @@ export function useThemeAuthoring() {
       density.value = t.density;
       // Never read `.input` on a static base.
       fontSpec.value = t.base.kind === "generated" ? (t.base.input.fontSpec ?? null) : null;
+      typeScale.value = t.base.kind === "generated" ? (t.base.input.typeScale ?? null) : null;
       applyStatusOverridesToSwatches(gen.statusOverrides);
       generatePaired.value = !!gen.paired;
       startFromMode.value = "custom";
@@ -284,6 +327,7 @@ export function useThemeAuthoring() {
     };
     if (fontFamily.value) input.fontFamily = fontFamily.value;
     if (fontSpec.value) input.fontSpec = fontSpec.value;
+    if (typeScale.value) input.typeScale = typeScale.value;
     if (statusOverrides.value) input.statusOverrides = statusOverrides.value;
     return input;
   }
@@ -401,6 +445,15 @@ export function useThemeAuthoring() {
     density,
     fontFamily,
     fontSpec,
+    // type scale (C2)
+    typeScale,
+    typeScaleEnabled,
+    baseSize,
+    ratio,
+    enableTypeScale,
+    disableTypeScale,
+    matchCurrentTypeScale,
+    TYPE_SCALE_BOUNDS,
     generatePaired,
     applyAfterSave,
     // status
