@@ -20,6 +20,7 @@ import Input from "@/components/ui/Input.vue";
 import Select from "@/components/ui/Select.vue";
 import Tabs from "@/components/ui/Tabs.vue";
 import { ensureFontSpecLoaded } from "@/composables/useFontLoader";
+import { useNotify } from "@/composables/useNotify";
 import { usePanelApi } from "@/composables/usePanelApi";
 import { useThemeAuthoring } from "@/composables/useThemeAuthoring";
 import { APP_ROOT } from "@/modules/themes/appRoot";
@@ -58,6 +59,7 @@ usePanelApi(props);
 
 const themeStore = useThemeStore();
 const a = useThemeAuthoring();
+const notify = useNotify();
 
 const activeTab = ref<string>("generate");
 
@@ -178,10 +180,18 @@ onUnmounted(() => {
 });
 
 async function onSave(): Promise<void> {
-  const saved = a.isEditMode.value ? await a.updateExisting() : await a.save();
+  const editing = a.isEditMode.value;
+  const saved = editing ? await a.updateExisting() : await a.save();
   if (saved) {
     themeStore.endPreview();
     interacted = false;
+    notify.success(editing ? "Theme updated" : "Theme saved", {
+      detail: `“${saved.name}” ${editing ? "updated" : "created"}.`,
+    });
+  } else {
+    notify.danger("Couldn’t save theme", {
+      detail: a.saveError.value ?? "Check the inputs and try again.",
+    });
   }
 }
 

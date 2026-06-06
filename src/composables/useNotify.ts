@@ -17,7 +17,7 @@ import { useNotificationStore } from "@/stores/notification";
  *
  * Design notes:
  *   - **Every outlet is grouped; there is no ungrouped/default sink.** `show`
- *     always resolves `position` (default `bottom-right`) to a group id via
+ *     always resolves `position` (default `top-right`) to a group id via
  *     `POSITION_TO_GROUP` and sets `group`, so a `<Toast>` outlet with that group
  *     receives it. Firing into a position whose outlet isn't mounted silently
  *     no-ops in PrimeVue — `NotificationOutlets` renders exactly the key set of
@@ -46,7 +46,7 @@ export const POSITION_TO_GROUP: Record<ToastPosition, string> = {
 /** Default auto-dismiss (ms) for non-sticky toasts. */
 export const DEFAULT_LIFE = 5000;
 /** Default position when a caller doesn't specify one. */
-export const DEFAULT_POSITION: ToastPosition = "bottom-right";
+export const DEFAULT_POSITION: ToastPosition = "top-right";
 
 export interface NotifyOptions {
   severity?: NotifySeverity;

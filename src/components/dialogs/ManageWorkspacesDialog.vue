@@ -6,6 +6,7 @@ import { ref, watch } from "vue";
 
 import Button from "@/components/ui/Button.vue";
 import Input from "@/components/ui/Input.vue";
+import { useNotify } from "@/composables/useNotify";
 import { layoutRepo } from "@/modules/storage/layoutRepo";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { cn } from "@/utils/cn";
@@ -19,6 +20,7 @@ const props = defineProps<Props>();
 const emit = defineEmits<{ "update:visible": [value: boolean] }>();
 
 const workspace = useWorkspaceStore();
+const notify = useNotify();
 const newName = ref("");
 const error = ref<string | null>(null);
 // DataTable row-edit state — PrimeVue tracks edit by row id when v-model:editingRows is bound.
@@ -44,8 +46,10 @@ async function create(): Promise<void> {
     // can switch in — auto-create a "Default" layout.
     await layoutRepo.create({ workspaceId: ws.id, name: "Default" });
     newName.value = "";
+    notify.success("Workspace created", { detail: `“${ws.name}” is ready.` });
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e);
+    notify.danger("Couldn’t create workspace", { detail: error.value });
   }
 }
 
@@ -53,19 +57,33 @@ async function onRowEditSave(event: DataTableRowEditSaveEvent): Promise<void> {
   const { newData } = event;
   const next = newData as { id: string; name: string };
   if (!next.name?.trim()) return;
-  await workspace.renameWorkspace(next.id, { name: next.name.trim() });
+  try {
+    const ws = await workspace.renameWorkspace(next.id, { name: next.name.trim() });
+    notify.success("Workspace renamed", { detail: `Now “${ws.name}”.` });
+  } catch (e) {
+    notify.danger("Couldn’t rename workspace", {
+      detail: e instanceof Error ? e.message : String(e),
+    });
+  }
 }
 
 async function makeDefault(id: string): Promise<void> {
-  await workspace.setGlobalDefault(id);
+  try {
+    await workspace.setGlobalDefault(id);
+    notify.success("Default workspace updated");
+  } catch (e) {
+    notify.danger("Couldn’t set default", { detail: e instanceof Error ? e.message : String(e) });
+  }
 }
 
 async function remove(id: string): Promise<void> {
   error.value = null;
   try {
     await workspace.deleteWorkspace(id);
+    notify.success("Workspace deleted");
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e);
+    notify.danger("Couldn’t delete workspace", { detail: error.value });
   }
 }
 </script>
