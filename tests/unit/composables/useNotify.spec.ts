@@ -43,11 +43,11 @@ describe("useNotify — routing + severity", () => {
     expect(lastAdd().severity).toBe("error"); // danger → error
   });
 
-  it("defaults to info severity, bottom-right group, and DEFAULT_LIFE", () => {
+  it("defaults to info severity, top-right group, and DEFAULT_LIFE", () => {
     useNotify().show({ summary: "hi" });
     const msg = lastAdd();
     expect(msg.severity).toBe("info");
-    expect(msg.group).toBe(POSITION_TO_GROUP["bottom-right"]);
+    expect(msg.group).toBe(POSITION_TO_GROUP["top-right"]);
     expect(msg.life).toBe(DEFAULT_LIFE);
   });
 
