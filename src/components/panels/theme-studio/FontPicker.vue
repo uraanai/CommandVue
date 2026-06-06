@@ -3,9 +3,13 @@ import type { FontLoadStatus } from "@/composables/useFontLoader";
 import type { FontCatalogEntry } from "@/modules/themes/fontCatalog";
 import type { FontSpec } from "@/types/theme";
 
-import { computed, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 
-import { CURATED_OFFLINE_FAMILIES, ensureFontLoaded } from "@/composables/useFontLoader";
+import {
+  CURATED_OFFLINE_FAMILIES,
+  ensureFontLoaded,
+  FAMILY_NAME_RE,
+} from "@/composables/useFontLoader";
 import { getCatalogEntry, searchFamilies } from "@/modules/themes/fontCatalog";
 import Checkbox from "@/volt/Checkbox.vue";
 import Select from "@/volt/Select.vue";
@@ -13,10 +17,11 @@ import Select from "@/volt/Select.vue";
 /**
  * FontPicker — Studio control for picking a Google font (Track A C3, body/sans).
  *
- * Built on the Volt `Select` (filterable, grouped by category). Emits a
- * `FontSpec` (or null to clear); it does NOT persist. Selecting a family loads
- * it for live preview via `useFontLoader` and surfaces a status line. The
- * catalog is lazily `import()`-ed on first open (code-split off the boot path).
+ * Built on the Volt `Select` (filterable, grouped by category, themed to the
+ * project tokens). Each dropdown option previews in its OWN face (lazy preview
+ * `<link>`s injected on first open). Selecting a family **loads it first, then
+ * emits** the `FontSpec` — so the live preview only flips once the glyphs are
+ * ready (no system-font flash) and the status line shows a real Loading→Loaded.
  * Presentation only — no store imports.
  */
 interface Props {
@@ -43,8 +48,10 @@ const family = ref<null | string>(props.modelValue?.family ?? null);
 const variants = ref<number[]>([]);
 const weights = ref<number[]>(props.modelValue?.weights ?? DEFAULT_WEIGHTS);
 const status = ref<FontLoadStatus>("idle");
+// Monotonic guard so a slow load can't clobber a newer pick (and the "Loading…"
+// state of a superseded pick can't win).
+let pickToken = 0;
 
-/** Group the catalog by category, in a stable order, for the Select's optionGroup. */
 const grouped = computed(() => {
   const byCat = new Map<string, FontCatalogEntry[]>();
   for (const e of families.value) {
@@ -58,56 +65,83 @@ const grouped = computed(() => {
   }));
 });
 
-/** Lazily pull the bundled catalog on first overlay open. */
+/**
+ * Inject lazy preview `<link>`s so each option renders in its own font. Only the
+ * non-curated families need them (curated ship via @fontsource); requested at
+ * weight 400, chunked. `font-display: swap` keeps the woff2 lazy — only the
+ * options actually painted download. Cosmetic, origin-locked to googleapis.
+ */
+function loadPreviewFaces(entries: FontCatalogEntry[]): void {
+  if (typeof document === "undefined" || navigator.onLine === false) return;
+  const names = entries
+    .map((e) => e.family)
+    .filter((f) => !CURATED_OFFLINE_FAMILIES.has(f) && FAMILY_NAME_RE.test(f));
+  const CHUNK = 24;
+  for (let i = 0; i < names.length; i += CHUNK) {
+    const key = `pv-${i}`;
+    if (document.head.querySelector(`link[data-cv-font-preview="${key}"]`)) continue;
+    const q = names
+      .slice(i, i + CHUNK)
+      .map((f) => `family=${f.replace(/ /g, "+")}`)
+      .join("&");
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = `https://fonts.googleapis.com/css2?${q}&display=swap`;
+    link.crossOrigin = "anonymous";
+    link.dataset.cvFontPreview = key;
+    document.head.appendChild(link);
+  }
+}
+
+/** Lazily pull the bundled catalog on first overlay open + arm the previews. */
 async function ensureCatalog(): Promise<void> {
   if (catalogLoaded.value) return;
   loading.value = true;
   families.value = await searchFamilies("", 1000);
   catalogLoaded.value = true;
   loading.value = false;
+  loadPreviewFaces(families.value);
 }
 
-function buildSpec(): FontSpec | null {
-  if (!family.value) return null;
-  return {
-    family: family.value,
+/** Load the chosen family BEFORE flipping the app token, so the swap is clean. */
+async function applyFamily(fam: string, token: number): Promise<void> {
+  const spec: FontSpec = {
+    family: fam,
     source: "google",
     weights: [...weights.value],
     fallback: FALLBACK,
   };
-}
-
-async function loadActive(): Promise<void> {
-  const spec = buildSpec();
-  if (!spec) {
-    status.value = "idle";
-    return;
-  }
   status.value = "loading";
-  status.value = (await ensureFontLoaded(spec)).status;
+  await nextTick(); // let "Loading…" paint before we await the (possibly fast) load
+  if (token !== pickToken) return;
+  const result = await ensureFontLoaded(spec);
+  if (token !== pickToken) return; // a newer pick superseded this one
+  status.value = result.status;
+  emit("update:modelValue", spec); // NOW flip the token — glyphs are ready
 }
 
 watch(family, async (fam) => {
+  const token = ++pickToken;
   if (!fam) {
     variants.value = [];
     status.value = "idle";
     emit("update:modelValue", null);
     return;
   }
-  variants.value = (await getCatalogEntry(fam))?.variants ?? [];
+  const entry = await getCatalogEntry(fam);
+  if (token !== pickToken) return;
+  variants.value = entry?.variants ?? [];
   const intersect = DEFAULT_WEIGHTS.filter((w) => variants.value.includes(w));
   weights.value = intersect.length > 0 ? intersect : [400];
-  emit("update:modelValue", buildSpec());
-  void loadActive();
+  await applyFamily(fam, token);
 });
 
 function toggleWeight(w: number): void {
-  const next = weights.value.includes(w)
+  weights.value = weights.value.includes(w)
     ? weights.value.filter((x) => x !== w)
     : [...weights.value, w].sort((a, b) => a - b);
-  weights.value = next.length > 0 ? next : [400];
-  emit("update:modelValue", buildSpec());
-  void loadActive();
+  if (weights.value.length === 0) weights.value = [400];
+  if (family.value) void applyFamily(family.value, ++pickToken);
 }
 
 const isCurated = computed(() =>
@@ -118,9 +152,9 @@ const statusLine = computed<{ text: string; tone: string }>(() => {
     case "error":
       return { text: "Couldn't load — using fallback", tone: "text-status-warning" };
     case "loaded":
-      return { text: "Loaded", tone: "text-faint" };
+      return { text: isCurated.value ? "Loaded (offline-ready)" : "Loaded", tone: "text-faint" };
     case "loading":
-      return { text: "Loading…", tone: "text-faint" };
+      return { text: "Loading…", tone: "text-muted" };
     case "offline-fallback":
       return { text: "Needs network — using system fallback", tone: "text-status-warning" };
     default:
@@ -151,7 +185,9 @@ const statusLine = computed<{ text: string; tone: string }>(() => {
       @before-show="ensureCatalog"
     >
       <template #option="{ option }">
-        <span :style="{ fontFamily: `'${option.family}', ${FALLBACK}` }">{{ option.family }}</span>
+        <span class="truncate" :style="{ fontFamily: `'${option.family}', ${FALLBACK}` }">{{
+          option.family
+        }}</span>
       </template>
     </Select>
 

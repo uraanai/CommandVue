@@ -13,10 +13,10 @@
       <SpinnerIcon class="animate-spin" />
     </template>
     <template #filtericon>
-      <SearchIcon class="text-surface-400" />
+      <SearchIcon class="text-faint" />
     </template>
     <template #clearicon="{ clearCallback }">
-      <TimesIcon class="text-surface-400 absolute end-10 top-1/2 -mt-2" @click="clearCallback" />
+      <TimesIcon class="text-faint absolute end-10 top-1/2 -mt-2" @click="clearCallback" />
     </template>
     <template v-for="(_, slotName) in $slots" #[slotName]="slotProps">
       <slot :name="slotName" v-bind="slotProps ?? {}" />
@@ -25,6 +25,8 @@
 </template>
 
 <script setup lang="ts">
+// Themed to the project's SEMANTIC tokens (bg-surface*/border-border/text-foreground),
+// NOT the Volt surface-0..950 palette, so it matches ui/Select + the live theme.
 import ChevronDownIcon from "@primevue/icons/chevrondown";
 import SearchIcon from "@primevue/icons/search";
 import SpinnerIcon from "@primevue/icons/spinner";
@@ -38,63 +40,47 @@ interface Props extends /* @vue-ignore */ SelectProps {}
 defineProps<Props>();
 
 const theme = ref<SelectPassThroughOptions>({
-  root: `inline-flex cursor-pointer relative select-none rounded-md p-fluid:flex
-        bg-surface-0 dark:bg-surface-950
-        border border-surface-300 hover:border-surface-400 dark:border-surface-700 dark:hover:border-surface-600
-        p-focus:border-primary
-        p-filled:bg-surface-50 dark:p-filled:bg-surface-800
-        p-invalid:border-[var(--color-status-danger)]
-        p-disabled:bg-surface-200 p-disabled:text-surface-500 dark:p-disabled:bg-surface-700 dark:p-disabled:text-surface-400 p-disabled:pointer-events-none
-        shadow-[0_1px_2px_0_rgba(18,18,23,0.05)]
-        transition-colors duration-200`,
-  label: `block whitespace-nowrap overflow-hidden flex-auto w-[1%]
-        py-2 px-3 overflow-ellipsis
-        p-clearable:pe-7 p-empty:overflow-hidden p-empty:opacity-0 p-editable:cursor-default
-        text-surface-700 dark:text-surface-0 bg-transparent border-none outline-none
-        p-placeholder:text-surface-500 dark:p-placeholder:text-surface-400
-        p-disabled:text-surface-500 dark:p-disabled:text-surface-400
-        p-small:text-sm p-small:px-[0.625rem] p-small:py-[0.375rem]
-        p-large:text-lg p-large:px-[0.875rem] p-large:py-[0.625rem]`,
-  dropdown: `flex items-center justify-center shrink-0 bg-transparent
-        text-surface-400 w-10 rounded-e-md`,
-  overlay: `absolute top-0 left-0 rounded-md p-portal-self:min-w-full
-        bg-surface-0 dark:bg-surface-900
-        border border-surface-200 dark:border-surface-700
-        text-surface-700 dark:text-surface-0
-        shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-2px_rgba(0,0,0,0.1)]`,
-  header: `pt-2 pb-1 px-4`,
+  root: `relative inline-flex w-full cursor-pointer select-none items-center rounded-md p-fluid:flex
+        border border-border bg-surface text-foreground
+        p-focus:border-[color:var(--color-focus-ring)]
+        p-invalid:border-[color:var(--color-status-danger)]
+        p-disabled:cursor-not-allowed p-disabled:opacity-50 p-disabled:pointer-events-none
+        min-h-[var(--density-control-height)] transition-colors duration-200`,
+  label: `block w-[1%] flex-auto truncate border-none bg-transparent text-foreground outline-none
+        px-[var(--density-cell-padding-x)] py-[var(--density-cell-padding-y)]
+        text-[length:var(--density-font-size)]
+        p-clearable:pe-7 p-empty:opacity-0 p-editable:cursor-default
+        p-placeholder:text-faint p-disabled:text-faint`,
+  dropdown: `flex w-9 shrink-0 items-center justify-center rounded-e-md bg-transparent text-faint`,
+  overlay: `absolute left-0 top-0 z-[100] mt-1 rounded-md p-portal-self:min-w-full
+        border border-border bg-surface-raised text-foreground shadow-lg`,
+  header: `px-2 pb-1 pt-2`,
   pcFilterContainer: {
     root: `relative`,
   },
   pcFilter: {
-    root: `w-full appearance-none rounded-md outline-hidden
-            bg-surface-0 dark:bg-surface-950
-            text-surface-700 dark:text-surface-0
-            placeholder:text-surface-500 dark:placeholder:text-surface-400
-            border border-surface-300 dark:border-surface-700
-            enabled:hover:border-surface-400 dark:enabled:hover:border-surface-600
-            enabled:focus:border-primary
-            disabled:bg-surface-200 disabled:text-surface-500
-            dark:disabled:bg-surface-700 dark:disabled:text-surface-400
-            ps-3 pe-10 py-2 p-fluid:w-full
-            transition-colors duration-200 shadow-[0_1px_2px_0_rgba(18,18,23,0.05)]`,
+    root: `w-full appearance-none rounded-md p-fluid:w-full outline-none
+            border border-border bg-surface text-foreground placeholder:text-faint
+            focus:border-[color:var(--color-focus-ring)]
+            ps-3 pe-9 py-2 text-[length:var(--density-font-size)]
+            transition-colors duration-200`,
   },
   pcFilterIconContainer: {
-    root: `absolute top-1/2 -mt-2 leading-none end-3 z-1`,
+    root: `absolute end-3 top-1/2 z-1 -mt-2 leading-none text-faint`,
   },
-  listContainer: `overflow-auto`,
-  list: `m-0 p-1 list-none gap-[2px] flex flex-col`,
-  optionGroup: `m-0 px-3 py-2 bg-transparent text-surface-500 dark:text-surface-400 font-semibold`,
+  listContainer: `max-h-60 overflow-auto`,
+  list: `m-0 flex list-none flex-col gap-[2px] p-1`,
+  optionGroup: `m-0 bg-transparent px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-faint`,
   optionGroupLabel: ``,
-  option: `cursor-pointer font-normal whitespace-nowrap relative overflow-hidden flex items-center
-        px-3 py-2 border-none text-surface-700 dark:text-surface-0 bg-transparent rounded-sm
-        p-focus:bg-surface-100 dark:p-focus:bg-surface-800 p-focus:text-surface-800 dark:p-focus:text-surface-0
-        p-selected:bg-highlight p-focus:p-selected:bg-highlight-emphasis
+  option: `relative flex cursor-pointer items-center overflow-hidden whitespace-nowrap rounded-sm
+        border-none bg-transparent px-3 py-2 text-foreground
+        hover:bg-surface-sunken p-focus:bg-surface-sunken
+        p-selected:bg-surface-sunken p-selected:text-foreground p-focus:p-selected:bg-surface-sunken
         transition-colors duration-200`,
   optionLabel: ``,
-  optionCheckIcon: `relative -ms-[0.375rem] me-[0.375rem] text-surface-700 dark:text-surface-0`,
+  optionCheckIcon: `relative -ms-1 me-1 text-foreground`,
   optionBlankIcon: ``,
-  emptyMessage: `px-3 py-2`,
+  emptyMessage: `px-3 py-2 text-faint`,
   virtualScroller: ``,
   transition: {
     enterFromClass: "opacity-0 scale-y-75",
