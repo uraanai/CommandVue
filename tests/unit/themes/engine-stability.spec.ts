@@ -58,6 +58,47 @@ describe("engine-stability (§3i)", () => {
     expect(first["--text-base"]).toBe("1.125rem");
   });
 
+  it("re-resolves an effects theme byte-identically (additive keys stable, no math bump)", () => {
+    __clearResolveCacheForTests();
+    const input: GenerationInputV2 = {
+      schemaVersion: 2,
+      baseColor: BASE,
+      accentColor: ACCENT,
+      contrast: 60,
+      mode: "dark",
+      density: "comfortable",
+      effects: { depth: 70, glowAlpha: 0.5, blurRadius: 10 },
+    };
+    const first = resolve({ base: { kind: "generated", input }, overrides: {}, name: "T" });
+    __clearResolveCacheForTests();
+    const second = resolve({
+      base: {
+        kind: "generated",
+        input: { ...input, effects: { depth: 70, glowAlpha: 0.5, blurRadius: 10 } },
+      },
+      overrides: {},
+      name: "T",
+    });
+    expect(second).toEqual(first);
+    expect(first["--shadow-1"]).toBeDefined();
+    expect(first["--dockpanel-glass-blur"]).toBe("10px");
+  });
+
+  it("an effects-less theme emits no --shadow-1..5 (the if-guard prevents leakage)", () => {
+    __clearResolveCacheForTests();
+    const input: GenerationInputV2 = {
+      schemaVersion: 2,
+      baseColor: BASE,
+      accentColor: ACCENT,
+      contrast: 60,
+      mode: "dark",
+      density: "comfortable",
+    };
+    const tokens = resolve({ base: { kind: "generated", input }, overrides: {}, name: "T" });
+    expect(tokens["--shadow-1"]).toBeUndefined();
+    expect(tokens["--shadow-5"]).toBeUndefined();
+  });
+
   it("keeps ENGINE_VERSION + THEME_SCHEMA_VERSION pinned (C2 is additive)", () => {
     expect(ENGINE_VERSION).toBe(1);
     expect(THEME_SCHEMA_VERSION).toBe(2);
