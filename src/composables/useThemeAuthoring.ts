@@ -396,6 +396,15 @@ export function useThemeAuthoring() {
       if (applyAfterSave.value) {
         await themeStore.setTheme(created.id, workspaceStore.currentWorkspaceId);
       }
+      // Adopt the just-saved theme as the edit target so the Studio flips into
+      // "Update theme" mode in place. Without this, `themeToEdit` stays null,
+      // `isEditMode` stays false, and a second save re-`create`s the same name and
+      // hits the uniqueness collision — forcing the user to close + reopen via
+      // "Edit current theme…". Re-fetch so the `paired` cross-link written above is
+      // reflected on the adopted record.
+      themeToEdit.value = (await themeRepo.getById(created.id)) ?? created;
+      startFromMode.value = "custom";
+      startFromCustomId.value = created.id;
       return created;
     } catch (e) {
       saveError.value = (e as Error).message;
