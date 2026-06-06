@@ -123,6 +123,14 @@ export interface FontSpec {
   heading?: { family: string; source: FontSource; weights?: number[]; fallback?: string };
 }
 
+/** Inputs to the modular type-scale deriver (Track A C2). */
+export interface TypeScaleInput {
+  /** Base font size in px for the `--text-base` step. Range 10–24 (out-of-range rejected by Zod, not clamped). */
+  baseSize: number;
+  /** Modular ratio (e.g. 1.2 = minor third). Range 1.0–1.333 (out-of-range rejected by Zod, not clamped). */
+  ratio: number;
+}
+
 /**
  * Inputs to the generation engine, persisted as a generated theme's `base`
  * (Track A data-model v2). Unlike the legacy {@link ThemeGenerationMeta}, this
@@ -145,6 +153,13 @@ export interface GenerationInputV2 {
   statusHues?: StatusHues;
   /** Per-family status overrides (A1b live hue lever). */
   statusOverrides?: StatusOverrides;
+  /**
+   * Modular type-scale generator input (Track A C2). When present the engine
+   * derives the `--text-xs … --text-4xl` ramp AND their `--text-*--line-height`
+   * companions via baseSize × ratio^step; when absent the fixed tokens.css ramp
+   * is the cascade fallback (additive — §3i). Per-step tweaks live in `overrides`.
+   */
+  typeScale?: TypeScaleInput;
   /**
    * Structured font choice (C3). When present it is the source of truth; the
    * engine derives `fontFamily` from `fontSpec` so the legacy token-emit path
