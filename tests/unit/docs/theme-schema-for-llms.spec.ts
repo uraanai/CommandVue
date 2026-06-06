@@ -49,6 +49,18 @@ describe("docs/theme-schema-for-llms.md", () => {
     }
   });
 
+  it("documents the type-scale + font-role typography tokens (C2)", () => {
+    for (const t of [
+      "--font-family-heading",
+      "--text-xs",
+      "--text-base",
+      "--text-4xl",
+      "--text-4xl--line-height",
+    ]) {
+      expect(doc.includes(t), `doc should mention ${t}`).toBe(true);
+    }
+  });
+
   it("the example envelope is valid, parseable JSON with the right shape", () => {
     // Pull the first ```json block (the envelope example) and parse it.
     const match = doc.match(/```json\n([\s\S]*?)```/);

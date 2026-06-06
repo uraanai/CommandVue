@@ -128,6 +128,16 @@ const GenerationInputV2Schema = z.object({
   fontFamily: z.string().min(1).max(200).optional(),
   statusHues: StatusHuesSchema.optional(),
   statusOverrides: StatusOverridesSchema.optional(),
+  // C2 — modular type-scale input. Bounds == TYPE_SCALE_BOUNDS (the deriver
+  // range); the Zod edge is the SINGLE enforcement point — out-of-range is
+  // REJECTED here (never clamped), so a persisted value always equals what the
+  // deriver renders. Plain z.object (strip unknowns) for forward-compat.
+  typeScale: z
+    .object({
+      baseSize: z.number().min(10).max(24),
+      ratio: z.number().min(1).max(1.333),
+    })
+    .optional(),
   fontSpec: FontSpecSchema.optional(),
 });
 

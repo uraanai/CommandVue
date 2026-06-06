@@ -366,6 +366,51 @@ export const TOKEN_MANIFEST_LIST: readonly TokenManifestEntry[] = [
   { name: "--font-family-body", section: "typography", label: "Font · body", kind: "font-stack" },
   { name: "--font-family-sans", section: "typography", label: "Font · sans", kind: "font-stack" },
   { name: "--font-family-mono", section: "typography", label: "Font · mono", kind: "font-stack" },
+  // Heading role + the modular type scale (Track A C2). Sizes are rem lengths;
+  // line-height companions are UNITLESS scalars → kind "number" (the C1 editor
+  // gives "length" a px/rem unit picker, which is wrong for a line-height).
+  {
+    name: "--font-family-heading",
+    section: "typography",
+    label: "Font · heading",
+    kind: "font-stack",
+  },
+  { name: "--text-xs", section: "typography", label: "Size · xs", kind: "length" },
+  { name: "--text-sm", section: "typography", label: "Size · sm", kind: "length" },
+  { name: "--text-base", section: "typography", label: "Size · base", kind: "length" },
+  { name: "--text-lg", section: "typography", label: "Size · lg", kind: "length" },
+  { name: "--text-xl", section: "typography", label: "Size · xl", kind: "length" },
+  { name: "--text-2xl", section: "typography", label: "Size · 2xl", kind: "length" },
+  { name: "--text-3xl", section: "typography", label: "Size · 3xl", kind: "length" },
+  { name: "--text-4xl", section: "typography", label: "Size · 4xl", kind: "length" },
+  { name: "--text-xs--line-height", section: "typography", label: "Leading · xs", kind: "number" },
+  { name: "--text-sm--line-height", section: "typography", label: "Leading · sm", kind: "number" },
+  {
+    name: "--text-base--line-height",
+    section: "typography",
+    label: "Leading · base",
+    kind: "number",
+  },
+  { name: "--text-lg--line-height", section: "typography", label: "Leading · lg", kind: "number" },
+  { name: "--text-xl--line-height", section: "typography", label: "Leading · xl", kind: "number" },
+  {
+    name: "--text-2xl--line-height",
+    section: "typography",
+    label: "Leading · 2xl",
+    kind: "number",
+  },
+  {
+    name: "--text-3xl--line-height",
+    section: "typography",
+    label: "Leading · 3xl",
+    kind: "number",
+  },
+  {
+    name: "--text-4xl--line-height",
+    section: "typography",
+    label: "Leading · 4xl",
+    kind: "number",
+  },
   // ── accent-scale ──────────────────────────────────────────────────────────
   { name: "--color-accent-50", section: "accent-scale", label: "Accent · 50", kind: "color" },
   { name: "--color-accent-100", section: "accent-scale", label: "Accent · 100", kind: "color" },

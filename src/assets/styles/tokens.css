@@ -227,6 +227,9 @@
     "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-family-mono: ui-monospace, "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
   --font-family-display: var(--font-family-sans);
+  /* Heading role (Track A C2). Defaults to the display alias so existing
+   * built-ins render headings in the sans face until a theme sets it. */
+  --font-family-heading: var(--font-family-display);
 
   /* Legacy aliases — keep `font-sans` / `font-mono` Tailwind utilities. */
   --font-sans: var(--font-family-sans);
@@ -240,6 +243,17 @@
   --text-2xl: 1.5rem;
   --text-3xl: 1.875rem;
   --text-4xl: 2.25rem;
+  /* Type-scale line-height companions (Track A C2). Fixed fallbacks match the
+   * default Tailwind v4 per-step leading; the engine overrides these only when
+   * `typeScale` is set, keeping headings from clipping as sizes grow. */
+  --text-xs--line-height: 1.5;
+  --text-sm--line-height: 1.5;
+  --text-base--line-height: 1.5;
+  --text-lg--line-height: 1.5;
+  --text-xl--line-height: 1.375;
+  --text-2xl--line-height: 1.25;
+  --text-3xl--line-height: 1.2;
+  --text-4xl--line-height: 1.1;
 
   --font-weight-regular: 400;
   --font-weight-medium: 500;
@@ -645,4 +659,25 @@ html[data-theme="dark"] {
   --tooltip-bg: var(--color-slate-50);
   --tooltip-text: var(--color-slate-900);
   --dialog-backdrop: rgb(0 0 0 / 0.7);
+}
+
+/* ==========================================================================
+ * BASE-LAYER CONSUMERS
+ *
+ * Live element rules that read the tokens above. Tailwind v4 orders `base`
+ * before `utilities`, so a `font-sans` utility on a heading still overrides
+ * this default — exactly the override semantics we want.
+ * ========================================================================== */
+
+@layer base {
+  /* Heading role (Track A C2). Makes `--font-family-heading` live end-to-end so
+   * a theme's heading font reaches real <h1>..<h6>, not just the Studio preview. */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-family-heading);
+  }
 }
