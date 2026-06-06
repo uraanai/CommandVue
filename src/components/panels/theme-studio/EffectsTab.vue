@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { ThemeAuthoring } from "@/composables/useThemeAuthoring";
 
-import { computed } from "vue";
+import { useDebounceFn } from "@vueuse/core";
+import { ref, watch } from "vue";
 
 import { EFFECTS_DEFAULTS } from "@/modules/themes/effects";
 import InputNumber from "@/volt/InputNumber.vue";
@@ -15,8 +16,9 @@ import Slider from "@/volt/Slider.vue";
  * on the shared `useThemeAuthoring` instance: each knob materializes `a.effects`
  * (lazy-null → `{ ...EFFECTS_DEFAULTS, [knob]: v }` on first touch), the panel's
  * existing `generationResult` watch applies the change (no second writer here).
- * Setters are immediate — the panel's `pushPreview` is already debounced, so a
- * knob-level debounce would only make the slider fight a stale getter.
+ * Each knob binds to a LOCAL ref (instant, smooth drag) and commits to `effects`
+ * on a trailing debounce, so dragging a slider doesn't run the engine on every
+ * pointermove (which froze + stuck the drag); the live preview updates ~16/s.
  *
  * Token-pure: the ramp strip / glow chip read `var(--shadow-N)` /
  * `var(--shadow-accent-glow)` live (so Tokens-tab overrides reflect too); no raw
@@ -26,12 +28,22 @@ const props = defineProps<{ authoring: ThemeAuthoring }>();
 const a = props.authoring;
 
 function knob<K extends "depth" | "glowAlpha" | "blurRadius">(k: K) {
-  return computed<number>({
-    get: () => a.effects.value?.[k] ?? EFFECTS_DEFAULTS[k],
-    set: (v: number) => {
-      a.effects.value = { ...(a.effects.value ?? EFFECTS_DEFAULTS), [k]: v };
+  const local = ref<number>(a.effects.value?.[k] ?? EFFECTS_DEFAULTS[k]);
+  // Back-sync when `effects` changes externally (seedFromTheme / reset).
+  watch(
+    () => a.effects.value?.[k],
+    (v) => {
+      if (v !== undefined && v !== local.value) local.value = v;
     },
-  });
+  );
+  // Commit to the shared store on a trailing debounce — the heavy generateTheme
+  // cascade runs ~16/s during a drag, not on every pointermove. Materializes
+  // `effects` from EFFECTS_DEFAULTS on first touch.
+  const commit = useDebounceFn((v: number) => {
+    a.effects.value = { ...(a.effects.value ?? EFFECTS_DEFAULTS), [k]: v };
+  }, 60);
+  watch(local, (v) => commit(v));
+  return local;
 }
 const depth = knob("depth");
 const glowAlpha = knob("glowAlpha");

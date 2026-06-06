@@ -337,7 +337,13 @@ export function useThemeAuthoring() {
     if (typeScale.value) input.typeScale = typeScale.value;
     if (effects.value) input.effects = effects.value;
     if (statusOverrides.value) input.statusOverrides = statusOverrides.value;
-    return input;
+    // The nested values above (fontSpec / typeScale / effects / statusOverrides)
+    // are reactive-ref proxies, which IndexedDB cannot structured-clone
+    // ("could not be cloned" on save). Deep plain-clone the whole input — it is
+    // pure JSON data (numbers / strings / nested plain objects) — so `base.input`
+    // is a fully-plain, serializable object. (Mirrors the `{ ...overrides.value }`
+    // plain-copy in save() — same proxy-vs-IDB hazard, all input fields at once.)
+    return JSON.parse(JSON.stringify(input)) as GenerationInputV2;
   }
 
   function validate(): boolean {

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { isReactive } from "vue";
 
 import { useThemeAuthoring } from "@/composables/useThemeAuthoring";
 import { themeRepo } from "@/modules/storage/themeRepo";
@@ -384,5 +385,17 @@ describe("useThemeAuthoring — effects (C5)", () => {
     a.effects.value = { ...EFFECTS_DEFAULTS, depth: 90 };
     a.reset();
     expect(a.effects.value).toBeNull();
+  });
+
+  it("buildGenerationInput deep-clones inputs to plain objects (IDB-cloneable, no proxy)", () => {
+    const a = useThemeAuthoring();
+    a.seedFromTheme(null);
+    a.effects.value = { ...EFFECTS_DEFAULTS, depth: 70 }; // reactive-ref proxy
+    const built = a.buildGenerationInput("light");
+    expect(built.effects).toEqual({ ...EFFECTS_DEFAULTS, depth: 70 });
+    // Must be a plain object, not a reactive proxy — IndexedDB can't clone a proxy
+    // ("could not be cloned" on save), which is exactly the bug this guards.
+    expect(isReactive(built.effects)).toBe(false);
+    expect(() => structuredClone(built)).not.toThrow();
   });
 });
