@@ -108,6 +108,26 @@ describe("useThemeAuthoring", () => {
     expect(await themeRepo.getAll()).toHaveLength(1); // no duplicate
   });
 
+  it("save() adopts the new theme into edit mode so a second save updates in place", async () => {
+    const a = useThemeAuthoring();
+    a.seedFromTheme(null);
+    a.name.value = "Adopt Me";
+    a.applyAfterSave.value = false;
+    a.generatePaired.value = false;
+    const created = await a.save();
+    expect(created).not.toBeNull();
+    // The session now edits the just-created theme — button flips to "Update theme".
+    expect(a.isEditMode.value).toBe(true);
+    expect(a.themeToEdit.value?.id).toBe(created!.id);
+    // A second save (the panel routes to updateExisting in edit mode) updates the
+    // SAME record — no name-collision, no duplicate.
+    a.contrast.value = 80;
+    const updated = await a.updateExisting();
+    expect(updated!.id).toBe(created!.id);
+    expect(updated!.base.kind === "generated" && updated!.base.input.contrast).toBe(80);
+    expect(await themeRepo.getAll()).toHaveLength(1);
+  });
+
   it("surfaces a name-required error rather than throwing", async () => {
     const a = useThemeAuthoring();
     a.seedFromTheme(null);
