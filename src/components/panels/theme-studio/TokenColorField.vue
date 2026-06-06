@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { onClickOutside } from "@vueuse/core";
 import { converter, formatCss, formatHex } from "culori";
-import { nextTick, onBeforeUnmount, ref, watch } from "vue";
+import { nextTick, onBeforeUnmount, ref, type Ref, watch } from "vue";
 
 import Input from "@/components/ui/Input.vue";
+import { type ElementLike, useOverlayTarget } from "@/composables/useOverlayTarget";
 import { TokenValueSchema } from "@/modules/themes/portableSchema";
 import { cn } from "@/utils/cn";
 import InputNumber from "@/volt/InputNumber.vue";
@@ -43,6 +44,13 @@ const open = ref(false);
 const triggerRef = ref<HTMLElement | null>(null);
 const popoverRef = ref<HTMLElement | null>(null);
 const popStyle = ref<Record<string, string>>({});
+
+// Pop-out: teleport the popover into the panel's OWN window (the swatch trigger
+// moves with the panel on pop-out; the teleported popover does not, so bind the
+// target to the trigger and re-resolve at open time).
+const { target: overlayTarget, resolve: resolveOverlay } = useOverlayTarget(
+  triggerRef as Ref<ElementLike>,
+);
 
 onClickOutside(triggerRef, () => closePopover(), { ignore: [popoverRef] });
 
@@ -116,6 +124,7 @@ function reposition(): void {
 
 function openPopover(): void {
   seed();
+  resolveOverlay(); // resolve the owning-window body before the teleport mounts
   open.value = true;
   void nextTick(() => {
     reposition();
@@ -189,7 +198,7 @@ function commitAdvanced(): void {
       @click="toggle"
     />
 
-    <Teleport to="body">
+    <Teleport :to="overlayTarget">
       <div
         v-if="open"
         ref="popoverRef"

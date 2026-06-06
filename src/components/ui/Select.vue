@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import PvSelect from "primevue/select";
+import { ref } from "vue";
 
+import { type ElementLike, useOverlayTarget } from "@/composables/useOverlayTarget";
 import { cn } from "@/utils/cn";
 
 /**
@@ -33,10 +35,15 @@ withDefaults(defineProps<Props>(), {
 defineEmits<{
   "update:modelValue": [value: null | number | string];
 }>();
+
+// Pop-out aware: mount the overlay in THIS component's window, not the opener's.
+const rootRef = ref<ElementLike>();
+const { target: overlayTarget, resolve: resolveOverlay } = useOverlayTarget(rootRef);
 </script>
 
 <template>
   <PvSelect
+    ref="rootRef"
     :model-value="modelValue"
     :options="options"
     option-label="label"
@@ -45,6 +52,7 @@ defineEmits<{
     :placeholder="placeholder"
     :disabled="disabled"
     :show-clear="showClear"
+    :append-to="overlayTarget"
     :pt="{
       root: {
         class: cn(
@@ -73,6 +81,7 @@ defineEmits<{
         ),
       },
     }"
+    @before-show="resolveOverlay"
     @update:model-value="(v) => $emit('update:modelValue', v)"
   />
 </template>

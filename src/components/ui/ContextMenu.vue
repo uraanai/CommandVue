@@ -5,6 +5,8 @@ import PvContextMenu from "primevue/contextmenu";
 import { twMerge } from "tailwind-merge";
 import { computed, ref } from "vue";
 
+import { useOverlayTarget } from "@/composables/useOverlayTarget";
+
 /**
  * ContextMenu — thin wrapper over PrimeVue `ContextMenu` in Unstyled mode.
  *
@@ -30,9 +32,11 @@ interface Props {
   model: MenuItem[];
   pt?: Record<string, PtSlot>;
   /**
-   * Where PrimeVue mounts the overlay (default `body`). Pass another window's
-   * `document.body` to render the menu inside a dockview pop-out window instead of
-   * teleporting it to the opener's monitor (Track B Phase 6c).
+   * Where PrimeVue mounts the overlay. When omitted, the wrapper defaults to the
+   * OWNING window's `document.body` (resolved at open time from the trigger
+   * event), so a right-click inside a dockview pop-out window renders the menu in
+   * that window rather than teleporting it to the opener's monitor (Track B).
+   * Pass an explicit value to override — it always takes precedence.
    */
   appendTo?: HTMLElement | "body" | "self";
 }
@@ -41,7 +45,26 @@ const props = defineProps<Props>();
 
 const cm = ref<InstanceType<typeof PvContextMenu> | null>(null);
 
+// Window-aware default mount target. `useOverlayTarget` reads its anchor's
+// `ownerDocument.body` at open time; we feed it the trigger event's target (the
+// element the user right-clicked) since that element is guaranteed to live in
+// the correct window — including a dockview pop-out. An explicit `appendTo`
+// prop always wins over this default.
+const triggerEl = ref<HTMLElement | null>(null);
+const { target: ownerBody, resolve: resolveOwnerBody } = useOverlayTarget(triggerEl);
+
+const effectiveAppendTo = computed<HTMLElement | "body" | "self">(
+  () => props.appendTo ?? ownerBody.value,
+);
+
 function show(event: MouseEvent): void {
+  // Capture the right-clicked element and resolve its owning-window body BEFORE
+  // delegating — PrimeVue mounts the overlay Portal synchronously on show(), so
+  // `effectiveAppendTo` must already point at the correct window's body.
+  if (event.target instanceof HTMLElement) {
+    triggerEl.value = event.target;
+    resolveOwnerBody();
+  }
   cm.value?.show(event);
 }
 
@@ -92,7 +115,7 @@ const mergedPt = computed(() => {
 </script>
 
 <template>
-  <PvContextMenu ref="cm" :model="model" unstyled :pt="mergedPt" :append-to="appendTo">
+  <PvContextMenu ref="cm" :model="model" unstyled :pt="mergedPt" :append-to="effectiveAppendTo">
     <template v-if="$slots.item" #item="slotProps">
       <slot name="item" v-bind="slotProps" />
     </template>

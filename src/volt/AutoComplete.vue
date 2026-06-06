@@ -1,10 +1,13 @@
 <template>
   <AutoComplete
+    ref="rootRef"
     unstyled
     :pt="theme"
     :pt-options="{
       mergeProps: ptViewMerge,
     }"
+    :append-to="overlayTarget"
+    @before-show="resolveOverlay"
   >
     <template #dropdownicon>
       <ChevronDownIcon />
@@ -23,10 +26,16 @@ import AutoComplete, {
 } from "primevue/autocomplete";
 import { ref } from "vue";
 
+import { type ElementLike, useOverlayTarget } from "@/composables/useOverlayTarget";
+
 import { ptViewMerge } from "./utils";
 
 interface Props extends /* @vue-ignore */ AutoCompleteProps {}
 defineProps<Props>();
+
+// Pop-out aware: mount the overlay in THIS component's window, not the opener's.
+const rootRef = ref<ElementLike>();
+const { target: overlayTarget, resolve: resolveOverlay } = useOverlayTarget(rootRef);
 
 const theme = ref<AutoCompletePassThroughOptions>({
   root: `inline-flex p-fluid:flex`,
