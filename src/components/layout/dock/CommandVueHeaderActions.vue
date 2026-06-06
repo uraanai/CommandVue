@@ -3,9 +3,9 @@ import { Eye, EyeOff, Maximize2, Minimize2, Minus, X } from "@lucide/vue";
 import { computed, ref, watch } from "vue";
 
 import IconButton from "@/components/ui/IconButton.vue";
+import Slider from "@/components/ui/Slider.vue";
 import { useMinimizedStore } from "@/stores/minimized";
 import { useSessionStore } from "@/stores/session";
-import Slider from "@/volt/Slider.vue";
 
 import GroupCloseConfirm from "./GroupCloseConfirm.vue";
 import { panelsThatWillClose } from "./groupCloseControls";
