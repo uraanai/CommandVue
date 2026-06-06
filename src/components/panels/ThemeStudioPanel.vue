@@ -91,7 +91,7 @@ const pushPreview = useDebounceFn(() => {
   if (disposed) return;
   const tokens = { ...(a.generationResult.value?.tokens ?? {}), ...a.overrides.value };
   if (Object.keys(tokens).length > 0 && liveAcrossApp.value) {
-    themeStore.previewThemeTokens(tokens, a.density.value);
+    themeStore.previewThemeTokens(tokens, a.density.value, a.mode.value);
   }
 }, 120);
 

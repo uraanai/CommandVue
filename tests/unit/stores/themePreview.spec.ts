@@ -22,6 +22,8 @@ afterEach(() => {
   ROOT.style.cssText = "";
   ROOT.removeAttribute("data-theme-applied");
   ROOT.removeAttribute("data-theme-preview-applied");
+  ROOT.removeAttribute("data-theme");
+  ROOT.removeAttribute("data-density");
 });
 
 describe("theme store — live preview draft (A2a)", () => {
@@ -108,5 +110,22 @@ describe("theme store — live preview draft (A2a)", () => {
     store.beginPreview();
     store.setPreviewToken("--color-surface-base", "#111");
     await expect(store.commitPreview()).rejects.toThrow(/built-in/i);
+  });
+
+  it("previewThemeTokens mirrors the previewed mode onto data-theme so dark: chrome follows", () => {
+    const store = useThemeStore();
+    ROOT.setAttribute("data-theme", "light");
+    store.previewThemeTokens({ "--color-surface-base": "#222" }, "compact", "dark");
+    // Token VALUE applied AND the mode mirrored, so Volt/dark:-keyed controls flip too.
+    expect(ROOT.style.getPropertyValue("--color-surface-base")).toBe("#222");
+    expect(ROOT.getAttribute("data-theme")).toBe("dark");
+    expect(ROOT.getAttribute("data-density")).toBe("compact");
+  });
+
+  it("previewThemeTokens leaves data-theme untouched when no mode is passed", () => {
+    const store = useThemeStore();
+    ROOT.setAttribute("data-theme", "light");
+    store.previewThemeTokens({ "--color-surface-base": "#222" }, "compact");
+    expect(ROOT.getAttribute("data-theme")).toBe("light");
   });
 });

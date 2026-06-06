@@ -1,4 +1,4 @@
-import type { Theme, ThemeDensity, ThemeId } from "@/types/theme";
+import type { Theme, ThemeDensity, ThemeId, ThemeMode } from "@/types/theme";
 import type { Ulid } from "@/types/workspace";
 
 import { defineStore } from "pinia";
@@ -231,7 +231,11 @@ export const useThemeStore = defineStore("theme", () => {
    * emits a stable key set each pass, so values overwrite in place (no clear-gap
    * flash) and the change fans out to every pop-out via the mirror observer.
    */
-  function previewThemeTokens(tokens: Record<string, string>, density?: ThemeDensity): void {
+  function previewThemeTokens(
+    tokens: Record<string, string>,
+    density?: ThemeDensity,
+    mode?: ThemeMode,
+  ): void {
     isPreviewing.value = true;
     previewDraft.value = { ...tokens };
     // Clear any previously-pushed preview key NOT in the new set, then apply.
@@ -244,6 +248,13 @@ export const useThemeStore = defineStore("theme", () => {
     // it onto the root during preview so spacing changes live too. Restored on
     // cancel/commit via `applyTheme`, which re-sets the committed theme's density.
     if (density) APP_ROOT.setAttribute("data-density", density);
+    // Mirror the previewed MODE onto `data-theme` too. Token VALUES alone flip the
+    // semantic surfaces, but the `dark:` variant — and the Volt surface-rung
+    // selection behind every Select / InputNumber / Checkbox — keys off
+    // `data-theme`. Without this, the Studio panel's own chrome stays in the
+    // committed mode while the rest of the app follows the preview. Restored on
+    // commit/cancel by `applyTheme`, which re-sets the committed theme's data-theme.
+    if (mode) APP_ROOT.setAttribute("data-theme", mode);
   }
 
   /**
