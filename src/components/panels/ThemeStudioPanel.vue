@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PanelApiProps } from "@/composables/usePanelApi";
 
-import { LayoutPanelTop, Sparkles } from "@lucide/vue";
+import { LayoutPanelTop } from "@lucide/vue";
 import { useDebounceFn, useElementSize } from "@vueuse/core";
 // PrimeVue's Splitter identifies its panes by child component TYPE, so SplitterPanel
 // can't be wrapped in a Volt component (a wrapper breaks pane detection → empty
@@ -10,6 +10,7 @@ import { useDebounceFn, useElementSize } from "@vueuse/core";
 import SplitterPanel from "primevue/splitterpanel"; // eslint-disable-line @typescript-eslint/no-restricted-imports
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
+import EffectsTab from "@/components/panels/theme-studio/EffectsTab.vue";
 import StudioTabPlaceholder from "@/components/panels/theme-studio/StudioTabPlaceholder.vue";
 import { STUDIO_L1_TABS } from "@/components/panels/theme-studio/studioTabs";
 import TokensTabEditor from "@/components/panels/theme-studio/TokensTabEditor.vue";
@@ -414,13 +415,7 @@ function onDiscard(): void {
                   phase="C4"
                   note="Dockview chrome tokens and per-panel appearance variants."
                 />
-                <StudioTabPlaceholder
-                  v-else-if="active === 'effects'"
-                  :icon="Sparkles"
-                  title="Effects"
-                  phase="C5"
-                  note="Elevation, glow, and blur."
-                />
+                <EffectsTab v-else-if="active === 'effects'" :authoring="a" />
               </template>
             </Tabs>
           </div>

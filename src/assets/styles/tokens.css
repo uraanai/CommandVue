@@ -425,6 +425,16 @@
     inset 0 1px 0 0 var(--color-surface-bevel-dark),
     inset 0 -1px 0 0 var(--color-surface-bevel-light);
   --shadow-accent-glow: 0 0 0 3px var(--color-interactive-glow);
+  /* Elevation scale (Track A C5) — a neutral, themeable depth ramp. Ink derives
+   * from --color-text-primary so a dark theme's elevation auto-inverts toward a
+   * subtle light glow (mode-adaptive — no dark block). The generator re-emits
+   * these from effects.depth; absent → these defaults apply (byte-identical).
+   * Foreground-class (box-shadow) → survive the float-transparency override. */
+  --shadow-1: 0 1px 2px 0 color-mix(in oklch, var(--color-text-primary) 8%, transparent);
+  --shadow-2: 0 2px 4px -1px color-mix(in oklch, var(--color-text-primary) 10%, transparent);
+  --shadow-3: 0 4px 8px -2px color-mix(in oklch, var(--color-text-primary) 12%, transparent);
+  --shadow-4: 0 8px 16px -4px color-mix(in oklch, var(--color-text-primary) 14%, transparent);
+  --shadow-5: 0 16px 32px -8px color-mix(in oklch, var(--color-text-primary) 18%, transparent);
 
   /* Semantic spacing — for layout-level usage (panels, forms, sections) */
   --space-panel-padding: var(--space-4);
@@ -551,6 +561,9 @@
   --dockpanel-tab-active-bg: var(--color-surface-base);
   --dockpanel-tab-border: var(--color-border-subtle);
   --dockpanel-padding: var(--space-panel-padding);
+  /* Glass blur radius (Track A C5) — owned by C5; consumed by C4 glass panels
+     via var(--dockpanel-glass-blur, 8px). Mode-independent. */
+  --dockpanel-glass-blur: 8px;
 
   /* Floating window (Track B Phase 3) — the see-through "glass" tint of an
      in-window floating pane. THEME-FOLLOWING so the float matches the rest of the
@@ -579,7 +592,7 @@
   /* Dialog */
   --dialog-bg: var(--color-surface-overlay);
   --dialog-backdrop: rgb(0 0 0 / 0.4);
-  --dialog-shadow: var(--shadow-xl);
+  --dialog-shadow: var(--shadow-4);
   --dialog-border: var(--color-border-default);
 
   /* Tooltip */

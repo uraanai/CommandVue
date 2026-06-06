@@ -121,6 +121,14 @@ the accent border `--color-border-accent`; the accent triad
 composed shadows `--shadow-bevel-raised`, `--shadow-bevel-sunken`, and
 `--shadow-accent-glow` reference those colors and are usually left to inherit.
 
+**Effects / elevation (optional — the depth ramp; defaults to a neutral
+`color-mix` ramp in `tokens.css`, so most themes omit them):** the five-step
+elevation scale `--shadow-1`, `--shadow-2`, `--shadow-3`, `--shadow-4`,
+`--shadow-5` (1 = subtle, 5 = dramatic), and the panel blur radius `--dockpanel-glass-blur`
+(a length, e.g. `8px`, used by glass panels). These follow the `effects` depth /
+glow / blur inputs on a generated theme; a static theme may override any of them
+directly.
+
 **Typography (optional):** `--font-family-body`, `--font-family-sans`,
 `--font-family-mono`, `--font-family-heading`. Font sizes — the type scale —
 are `--text-xs`, `--text-sm`, `--text-base`, `--text-lg`, `--text-xl`,

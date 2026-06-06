@@ -116,6 +116,14 @@ const FontSpecSchema = z.object({
     .optional(),
 });
 
+/** Effects / depth inputs (Track A C5). Plain z.object → unknown future sub-keys
+ *  are stripped (forward-compat), matching the GenerationInputV2Schema posture. */
+const EffectsSpecSchema = z.object({
+  depth: z.number().min(0).max(100).optional(),
+  glowAlpha: z.number().min(0).max(1).optional(),
+  blurRadius: z.number().min(0).max(24).optional(),
+});
+
 /** The v2 generation input persisted as a `generated` base. Lossless — carries
  *  fontFamily + status inputs so the theme is fully re-derivable. */
 const GenerationInputV2Schema = z.object({
@@ -139,6 +147,7 @@ const GenerationInputV2Schema = z.object({
     })
     .optional(),
   fontSpec: FontSpecSchema.optional(),
+  effects: EffectsSpecSchema.optional(),
 });
 
 /** Discriminated theme base (v2): re-derivable generated input, or frozen tokens. */

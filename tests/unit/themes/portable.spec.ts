@@ -86,6 +86,66 @@ describe("portable typeScale (C2)", () => {
   });
 });
 
+describe("portable effects (C5)", () => {
+  beforeEach(async () => {
+    await resetStorage();
+    themeRegistry.__resetForTests();
+  });
+
+  function seedWithEffects(effects: {
+    depth?: number;
+    glowAlpha?: number;
+    blurRadius?: number;
+  }): Theme {
+    const input = {
+      schemaVersion: 2,
+      baseColor: "oklch(0.16 0.03 285)",
+      accentColor: "oklch(0.7 0.16 320)",
+      contrast: 62,
+      mode: "dark",
+      density: "compact",
+      effects,
+    } as const;
+    return makeTheme({
+      source: "generated",
+      mode: "dark",
+      density: "compact",
+      base: { kind: "generated", input },
+      tokens: resolve({ base: { kind: "generated", input }, overrides: {}, name: "FX" }),
+    });
+  }
+
+  it("round-trips a generated theme's effects through export → import", async () => {
+    const fx = { depth: 70, glowAlpha: 0.5, blurRadius: 10 };
+    const result = await importThemeFromJson(exportThemeToJson(seedWithEffects(fx)));
+    expect(result.success).toBe(true);
+    const stored = result.theme!;
+    expect(stored.base.kind === "generated" && stored.base.input.effects).toEqual(fx);
+    expect(stored.tokens["--dockpanel-glass-blur"]).toBe("10px");
+  });
+
+  it("strips an unknown effects sub-key on import (forward-compat)", async () => {
+    const json = JSON.parse(exportThemeToJson(seedWithEffects({ depth: 60 }))) as {
+      theme: { base: { input: { effects: Record<string, unknown> } } };
+    };
+    json.theme.base.input.effects.futureKnob = 5;
+    const result = await importThemeFromJson(JSON.stringify(json));
+    expect(result.success).toBe(true);
+    const stored = result.theme!;
+    const fx = stored.base.kind === "generated" ? stored.base.input.effects : undefined;
+    expect(fx).toEqual({ depth: 60 }); // unknown sub-key dropped
+  });
+
+  it("rejects an out-of-range effects value on import (rejected, never clamped)", async () => {
+    const json = JSON.parse(exportThemeToJson(seedWithEffects({ depth: 60 }))) as {
+      theme: { base: { input: { effects: { depth: number } } } };
+    };
+    json.theme.base.input.effects.depth = 999; // out of [0, 100]
+    const bad = await importThemeFromJson(JSON.stringify(json));
+    expect(bad.success).toBe(false);
+  });
+});
+
 describe("exportThemeToJson", () => {
   it("wraps a theme in the PortableTheme envelope", () => {
     const theme = makeTheme();

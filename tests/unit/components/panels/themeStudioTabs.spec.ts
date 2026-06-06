@@ -60,7 +60,6 @@ describe("ThemeStudioPanel — C6 IA", () => {
     const w = mountPanel();
     for (const { label, title, phase } of [
       { label: "Panels & Chrome", title: "Panels & Chrome", phase: "C4" },
-      { label: "Effects", title: "Effects", phase: "C5" },
     ]) {
       await clickTab(w, label);
       expect(w.text()).toContain(title);
@@ -85,6 +84,15 @@ describe("ThemeStudioPanel — C6 IA", () => {
     expect(txt).toContain("Font roles"); // section A header
     expect(txt).toContain("Type scale"); // section B header
     expect(txt).not.toContain("Lands in C2"); // the placeholder is gone
+  });
+
+  it("renders the Effects tab body (C5) — not a placeholder", async () => {
+    const w = mountPanel();
+    await clickTab(w, "Effects");
+    const txt = w.text();
+    expect(txt).toContain("Elevation depth"); // depth section
+    expect(txt).toContain("Accent glow"); // glow section
+    expect(txt).not.toContain("Lands in C5"); // the placeholder is gone
   });
 
   it("keeps exactly one preview marker on every tab (preview lives outside Tabs)", async () => {

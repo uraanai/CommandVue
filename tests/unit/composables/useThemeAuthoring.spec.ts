@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { isReactive } from "vue";
 
 import { useThemeAuthoring } from "@/composables/useThemeAuthoring";
 import { themeRepo } from "@/modules/storage/themeRepo";
 import { __unregisterBuiltinThemesForTests, registerBuiltinThemes } from "@/modules/themes/builtin";
 import { BLANK_DEFAULTS } from "@/modules/themes/curated-swatches";
+import { EFFECTS_DEFAULTS } from "@/modules/themes/effects";
 
 import { resetForStoreTest } from "../stores/helpers";
 
@@ -331,5 +333,69 @@ describe("useThemeAuthoring — typeScale (C2)", () => {
     expect(a.typeScale.value).toEqual(typeScale);
     a.seedFromTheme(null);
     expect(a.typeScale.value).toBeNull();
+  });
+});
+
+describe("useThemeAuthoring — effects (C5)", () => {
+  it("effects starts null; a knob materializes it into both build paths", () => {
+    const a = useThemeAuthoring();
+    a.seedFromTheme(null);
+    expect(a.effects.value).toBeNull();
+    expect(a.generationResult.value?.tokens["--shadow-1"]).toBeUndefined();
+    expect(a.buildGenerationInput("light").effects).toBeUndefined();
+
+    a.effects.value = { ...EFFECTS_DEFAULTS, depth: 80 };
+    expect(a.generationResult.value?.tokens["--shadow-1"]).toBeDefined();
+    expect(a.buildGenerationInput("light").effects).toEqual({ ...EFFECTS_DEFAULTS, depth: 80 });
+  });
+
+  it("seeds effects from a generated theme and nulls it on a blank seed", async () => {
+    const effects = { depth: 70, glowAlpha: 0.5, blurRadius: 10 };
+    const theme = await themeRepo.create({
+      name: "Has Effects",
+      description: "",
+      author: "",
+      source: "generated",
+      mode: "dark",
+      density: "compact",
+      base: {
+        kind: "generated",
+        input: {
+          schemaVersion: 2,
+          baseColor: "oklch(0.16 0.03 285)",
+          accentColor: "oklch(0.7 0.16 320)",
+          contrast: 62,
+          mode: "dark",
+          density: "compact",
+          effects,
+        },
+      },
+      overrides: {},
+    });
+    const a = useThemeAuthoring();
+    a.seedFromTheme(theme);
+    expect(a.effects.value).toEqual(effects);
+    a.seedFromTheme(null);
+    expect(a.effects.value).toBeNull();
+  });
+
+  it("reset() clears effects to null", () => {
+    const a = useThemeAuthoring();
+    a.seedFromTheme(null);
+    a.effects.value = { ...EFFECTS_DEFAULTS, depth: 90 };
+    a.reset();
+    expect(a.effects.value).toBeNull();
+  });
+
+  it("buildGenerationInput deep-clones inputs to plain objects (IDB-cloneable, no proxy)", () => {
+    const a = useThemeAuthoring();
+    a.seedFromTheme(null);
+    a.effects.value = { ...EFFECTS_DEFAULTS, depth: 70 }; // reactive-ref proxy
+    const built = a.buildGenerationInput("light");
+    expect(built.effects).toEqual({ ...EFFECTS_DEFAULTS, depth: 70 });
+    // Must be a plain object, not a reactive proxy — IndexedDB can't clone a proxy
+    // ("could not be cloned" on save), which is exactly the bug this guards.
+    expect(isReactive(built.effects)).toBe(false);
+    expect(() => structuredClone(built)).not.toThrow();
   });
 });

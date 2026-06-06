@@ -35,6 +35,12 @@ describe("resolve", () => {
     expect(toGenInput(genInput({ typeScale: ts }), "X").typeScale).toEqual(ts);
   });
 
+  it("forwards effects through toGenInput when present, omits it when absent", () => {
+    expect(toGenInput(genInput(), "X").effects).toBeUndefined();
+    const fx = { depth: 70, glowAlpha: 0.5 };
+    expect(toGenInput(genInput({ effects: fx }), "X").effects).toEqual(fx);
+  });
+
   it("resolves the derived --text-base for a generated base carrying typeScale", () => {
     const ts = { baseSize: 18, ratio: 1.2 };
     const tokens = resolve({

@@ -70,6 +70,40 @@ describe("generateTheme", () => {
     expect(tk(light.tokens)).toEqual(tk(dark.tokens));
   });
 
+  it("emits the elevation ramp / glow / blur only for the effects sub-keys present", () => {
+    const base = generateTheme(input());
+    const shadowKeys = (t: Record<string, string>) =>
+      Object.keys(t).filter((k) => /^--shadow-[1-5]$/.test(k));
+    // No effects → no ramp keys, no blur key.
+    expect(shadowKeys(base.tokens)).toEqual([]);
+    expect(base.tokens["--dockpanel-glass-blur"]).toBeUndefined();
+
+    // depth-only → exactly the 5 ramp keys (no blur, no glow re-point).
+    const depthOnly = generateTheme(input({ effects: { depth: 80 } }));
+    expect(shadowKeys(depthOnly.tokens)).toHaveLength(5);
+    expect(depthOnly.tokens["--dockpanel-glass-blur"]).toBeUndefined();
+    expect(Object.keys(depthOnly.tokens)).toHaveLength(Object.keys(base.tokens).length + 5);
+    for (const k of shadowKeys(depthOnly.tokens)) expect(KNOWN.has(k)).toBe(true);
+
+    // depth + blur → +6 (adds --dockpanel-glass-blur).
+    const depthBlur = generateTheme(input({ effects: { depth: 80, blurRadius: 12 } }));
+    expect(depthBlur.tokens["--dockpanel-glass-blur"]).toBe("12px");
+    expect(Object.keys(depthBlur.tokens)).toHaveLength(Object.keys(base.tokens).length + 6);
+
+    // glow-only → re-points an EXISTING key (0 new keys), live accent ref kept.
+    const glow = generateTheme(input({ effects: { glowAlpha: 0.6 } }));
+    expect(shadowKeys(glow.tokens)).toEqual([]);
+    expect(glow.tokens["--color-interactive-glow"]).toBe(
+      "color-mix(in oklch, var(--color-interactive) 60%, transparent)",
+    );
+  });
+
+  it("flattens the ramp to none at depth 0", () => {
+    const flat = generateTheme(input({ effects: { depth: 0 } }));
+    expect(flat.tokens["--shadow-1"]).toBe("none");
+    expect(flat.tokens["--shadow-5"]).toBe("none");
+  });
+
   it("emits the full --color-p-surface-0..950 scale (Volt component backgrounds)", () => {
     const { tokens } = generateTheme(input({ baseColor: "oklch(0.98 0.006 145)" }));
     // All 12 steps present (0, 50, 100, 200, 300, ..., 900, 950)

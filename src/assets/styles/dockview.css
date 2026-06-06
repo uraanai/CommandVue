@@ -122,3 +122,12 @@
     background-color: Canvas;
   }
 }
+
+/* Elevation (Track A C5) — docked groups read the themeable depth ramp so the
+ * Effects depth knob is observable on real panels. Scoped to docked groups
+ * WITHOUT a C4 appearance variant: C4's per-variant box-shadow (raised / glass /
+ * flat) is more specific and takes over once assigned (Fix-E — avoids two
+ * stacked shadows). Floating panes keep their own glass treatment. */
+.dockview-theme-commandvue .dv-groupview:not(.dv-groupview-floating):not([data-cv-appearance]) {
+  box-shadow: var(--shadow-2);
+}

@@ -88,6 +88,13 @@ export const SEMANTIC_TOKEN_NAMES = [
   "--shadow-bevel-raised",
   "--shadow-bevel-sunken",
   "--shadow-accent-glow",
+  // Elevation ramp (Track A C5) — the depth knob derives these; static defaults
+  // (= depth-50) live in tokens.css so effects-less themes render the ramp too.
+  "--shadow-1",
+  "--shadow-2",
+  "--shadow-3",
+  "--shadow-4",
+  "--shadow-5",
   // Semantic spacing
   "--space-panel-padding",
   "--space-panel-gap",
@@ -126,6 +133,8 @@ export const COMPONENT_TOKEN_NAMES = [
   "--dockpanel-tab-active-bg",
   "--dockpanel-tab-border",
   "--dockpanel-padding",
+  // Glass blur radius (Track A C5; consumed by C4 glass panels). C5 owns this.
+  "--dockpanel-glass-blur",
   // MenuBar
   "--menubar-bg",
   "--menubar-fg",

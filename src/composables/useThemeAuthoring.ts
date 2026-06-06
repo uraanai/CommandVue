@@ -1,4 +1,5 @@
 import type {
+  EffectsSpec,
   FontSpec,
   GenerationInputV2,
   StatusFamily,
@@ -103,6 +104,9 @@ export function useThemeAuthoring() {
   // no `base.input.typeScale`, so pre-C2 themes stay byte-identical. The first
   // edit (enable / slider move) materializes it.
   const typeScale = ref<TypeScaleInput | null>(null);
+  /** Effects / depth inputs (C5). null until the user first touches a knob, so an
+   *  opened-but-untouched theme stays byte-identical (no `effects` key emitted). */
+  const effects = ref<EffectsSpec | null>(null);
   const generatePaired = ref(true);
   const applyAfterSave = ref(true);
 
@@ -181,6 +185,7 @@ export function useThemeAuthoring() {
     fontFamily.value = BLANK_DEFAULTS.fontFamily;
     fontSpec.value = null;
     typeScale.value = null;
+    effects.value = null;
     applyStatusOverridesToSwatches(undefined);
   }
 
@@ -258,6 +263,7 @@ export function useThemeAuthoring() {
         fontFamily: fontFamily.value || undefined,
         fontSpec: fontSpec.value ?? undefined,
         typeScale: typeScale.value ?? undefined,
+        effects: effects.value ?? undefined,
         statusOverrides: statusOverrides.value,
       });
     } catch {
@@ -293,6 +299,7 @@ export function useThemeAuthoring() {
       // Never read `.input` on a static base.
       fontSpec.value = t.base.kind === "generated" ? (t.base.input.fontSpec ?? null) : null;
       typeScale.value = t.base.kind === "generated" ? (t.base.input.typeScale ?? null) : null;
+      effects.value = t.base.kind === "generated" ? (t.base.input.effects ?? null) : null;
       applyStatusOverridesToSwatches(gen.statusOverrides);
       generatePaired.value = !!gen.paired;
       startFromMode.value = "custom";
@@ -328,8 +335,15 @@ export function useThemeAuthoring() {
     if (fontFamily.value) input.fontFamily = fontFamily.value;
     if (fontSpec.value) input.fontSpec = fontSpec.value;
     if (typeScale.value) input.typeScale = typeScale.value;
+    if (effects.value) input.effects = effects.value;
     if (statusOverrides.value) input.statusOverrides = statusOverrides.value;
-    return input;
+    // The nested values above (fontSpec / typeScale / effects / statusOverrides)
+    // are reactive-ref proxies, which IndexedDB cannot structured-clone
+    // ("could not be cloned" on save). Deep plain-clone the whole input — it is
+    // pure JSON data (numbers / strings / nested plain objects) — so `base.input`
+    // is a fully-plain, serializable object. (Mirrors the `{ ...overrides.value }`
+    // plain-copy in save() — same proxy-vs-IDB hazard, all input fields at once.)
+    return JSON.parse(JSON.stringify(input)) as GenerationInputV2;
   }
 
   function validate(): boolean {
@@ -454,6 +468,8 @@ export function useThemeAuthoring() {
     density,
     fontFamily,
     fontSpec,
+    // effects (C5)
+    effects,
     // type scale (C2)
     typeScale,
     typeScaleEnabled,
