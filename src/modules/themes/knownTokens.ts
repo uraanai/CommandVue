@@ -135,6 +135,14 @@ export const COMPONENT_TOKEN_NAMES = [
   "--dockpanel-padding",
   // Glass blur radius (Track A C5; consumed by C4 glass panels). C5 owns this.
   "--dockpanel-glass-blur",
+  // Dockview chrome (Track A C4) — panel frame geometry + tab strip.
+  "--dockpanel-radius",
+  "--dockpanel-border-width",
+  "--dockpanel-shadow",
+  "--dockpanel-gap",
+  "--dockpanel-tab-font-size",
+  "--dockpanel-tab-font-weight",
+  "--dockpanel-tab-active-indicator",
   // MenuBar
   "--menubar-bg",
   "--menubar-fg",

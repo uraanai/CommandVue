@@ -37,7 +37,21 @@ describe("generateTheme", () => {
     const { tokens } = generateTheme(input());
     const count = Object.keys(tokens).length;
     expect(count).toBeGreaterThanOrEqual(70);
-    expect(count).toBeLessThanOrEqual(85);
+    expect(count).toBeLessThanOrEqual(95);
+  });
+
+  it("emits the dockview chrome tokens unconditionally as var() chains (C4)", () => {
+    const { tokens } = generateTheme(input());
+    expect(tokens["--dockpanel-radius"]).toBe("var(--radius-md)");
+    expect(tokens["--dockpanel-border-width"]).toBe("1px");
+    expect(tokens["--dockpanel-shadow"]).toBe("var(--shadow-bevel-raised)");
+    expect(tokens["--dockpanel-gap"]).toBe("var(--space-1)");
+    expect(tokens["--dockpanel-tab-font-size"]).toBe("var(--density-font-size)");
+    expect(tokens["--dockpanel-tab-font-weight"]).toBe("var(--font-weight-medium)");
+    expect(tokens["--dockpanel-tab-active-indicator"]).toBe("var(--color-interactive)");
+    for (const k of Object.keys(tokens).filter((t) => t.startsWith("--dockpanel-"))) {
+      expect(KNOWN.has(k)).toBe(true);
+    }
   });
 
   it("emits the type-scale ramp + line-height companions only when typeScale is set", () => {
