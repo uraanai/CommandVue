@@ -34,6 +34,7 @@ export const TOKEN_SECTIONS = [
   "interactive",
   "status",
   "focus-and-depth",
+  "effects",
   "spacing",
   "radius",
   "typography",
@@ -58,6 +59,7 @@ export const TOKEN_SECTION_LABELS: Record<TokenSection, string> = {
   interactive: "Interactive",
   status: "Status",
   "focus-and-depth": "Focus & Depth",
+  effects: "Effects",
   spacing: "Spacing",
   radius: "Radius",
   typography: "Typography",
@@ -346,6 +348,13 @@ export const TOKEN_MANIFEST_LIST: readonly TokenManifestEntry[] = [
     label: "Shadow · accent glow",
     kind: "shadow",
   },
+  // ── effects ─────────────────────────────────────────────────────────────────
+  { name: "--shadow-1", section: "effects", label: "Elevation · 1", kind: "shadow" },
+  { name: "--shadow-2", section: "effects", label: "Elevation · 2", kind: "shadow" },
+  { name: "--shadow-3", section: "effects", label: "Elevation · 3", kind: "shadow" },
+  { name: "--shadow-4", section: "effects", label: "Elevation · 4", kind: "shadow" },
+  { name: "--shadow-5", section: "effects", label: "Elevation · 5", kind: "shadow" },
+  { name: "--dockpanel-glass-blur", section: "effects", label: "Panel blur", kind: "length" },
   // ── spacing ───────────────────────────────────────────────────────────────
   {
     name: "--space-panel-padding",

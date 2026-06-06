@@ -132,6 +132,23 @@ export interface TypeScaleInput {
 }
 
 /**
+ * Depth / glow / blur effect inputs (Track A C5). All optional; OMITTED when
+ * unset to keep the input honest (§3i) and the resolve memo key stable. Drives
+ * the elevation ramp, accent-glow strength, and panel blur radius. Absent → the
+ * engine emits NO effect tokens and the tokens.css static defaults apply
+ * (byte-identical output).
+ */
+export interface EffectsSpec {
+  /** 0–100. Depth of the --shadow-1..5 elevation ramp. 0 = flat (no shadow),
+   *  50 = neutral default (~ tokens.css baseline), 100 = dramatic. */
+  depth?: number;
+  /** 0–1. Alpha of --color-interactive-glow (re-points the glow color only). */
+  glowAlpha?: number;
+  /** 0–24 (px). Radius for --dockpanel-glass-blur (consumed by C4 glass panels). */
+  blurRadius?: number;
+}
+
+/**
  * Inputs to the generation engine, persisted as a generated theme's `base`
  * (Track A data-model v2). Unlike the legacy {@link ThemeGenerationMeta}, this
  * is **lossless**: it carries `fontFamily` and the status hue/override inputs so
@@ -167,6 +184,8 @@ export interface GenerationInputV2 {
    * the System/quick-stack picks that never needed a fontSpec).
    */
   fontSpec?: FontSpec;
+  /** Depth / glow / blur effect inputs (Track A C5). Additive, optional. */
+  effects?: EffectsSpec;
 }
 
 /**
