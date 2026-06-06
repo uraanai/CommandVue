@@ -28,6 +28,7 @@
  */
 
 import type {
+  EffectsSpec,
   FontSpec,
   StatusFamily,
   StatusOverrides,
@@ -40,6 +41,7 @@ import type { Oklch } from "culori";
 
 import { clampChroma, converter, inGamut, wcagContrast } from "culori";
 
+import { deriveBlur, deriveElevationRamp, deriveGlow } from "./effects";
 import { deriveTypeScale } from "./typeScale";
 
 const toOklch = converter("oklch");
@@ -63,6 +65,8 @@ export interface ThemeGenerationInput {
   fontSpec?: FontSpec;
   /** Modular type-scale input (Track A C2). Emits the ramp + line-heights only when set. */
   typeScale?: TypeScaleInput;
+  /** Depth / glow / blur effects (Track A C5). Emits the shadow ramp / glow / blur only when set. */
+  effects?: EffectsSpec;
   /**
    * Per-family status overrides (Track A A1b). Absent → today's fixed hue
    * families (byte-identical output). A present override re-points the hue and
@@ -537,6 +541,26 @@ export function generateTheme(input: ThemeGenerationInput): ThemeGenerationResul
       "--color-toast-danger-bg": sf.danger.subtle,
       "--color-toast-danger-fg": sf.danger.solid,
     });
+  }
+
+  // --- Effects / depth ramp (C5). Emitted ONLY when input.effects is present —
+  // additive keys, no ENGINE_VERSION bump (§3i). Absent → the tokens.css static
+  // defaults apply and output stays byte-identical for every existing theme. Each
+  // sub-key is independently guarded (honest input — one knob ≠ all three). ------
+  const fx = input.effects;
+  if (fx) {
+    if (fx.depth !== undefined) {
+      Object.assign(tokens, deriveElevationRamp(fx.depth));
+    }
+    if (fx.glowAlpha !== undefined) {
+      // Re-point the glow COLOR only, as a live color-mix against the accent (no
+      // baked literal). The --shadow-accent-glow SPREAD (3px, tokens.css) is NOT
+      // touched → no existing-key math change → ENGINE_VERSION stays 1.
+      tokens["--color-interactive-glow"] = deriveGlow(fx.glowAlpha);
+    }
+    if (fx.blurRadius !== undefined) {
+      tokens["--dockpanel-glass-blur"] = deriveBlur(fx.blurRadius);
+    }
   }
 
   // --- Contrast report. ------------------------------------------------------
