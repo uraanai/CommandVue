@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { PanelApiProps } from "@/composables/usePanelApi";
 
-import { LayoutPanelTop } from "@lucide/vue";
 import { useDebounceFn, useElementSize } from "@vueuse/core";
 // PrimeVue's Splitter identifies its panes by child component TYPE, so SplitterPanel
 // can't be wrapped in a Volt component (a wrapper breaks pane detection → empty
@@ -11,7 +10,7 @@ import SplitterPanel from "primevue/splitterpanel"; // eslint-disable-line @type
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
 import EffectsTab from "@/components/panels/theme-studio/EffectsTab.vue";
-import StudioTabPlaceholder from "@/components/panels/theme-studio/StudioTabPlaceholder.vue";
+import PanelsChromeTab from "@/components/panels/theme-studio/PanelsChromeTab.vue";
 import { STUDIO_L1_TABS } from "@/components/panels/theme-studio/studioTabs";
 import TokensTabEditor from "@/components/panels/theme-studio/TokensTabEditor.vue";
 import TypographyTab from "@/components/panels/theme-studio/TypographyTab.vue";
@@ -408,13 +407,7 @@ function onDiscard(): void {
                   @reset-all="onTokenResetAll"
                 />
                 <TypographyTab v-else-if="active === 'typography'" :authoring="a" />
-                <StudioTabPlaceholder
-                  v-else-if="active === 'panels'"
-                  :icon="LayoutPanelTop"
-                  title="Panels & Chrome"
-                  phase="C4"
-                  note="Dockview chrome tokens and per-panel appearance variants."
-                />
+                <PanelsChromeTab v-else-if="active === 'panels'" :authoring="a" />
                 <EffectsTab v-else-if="active === 'effects'" :authoring="a" />
               </template>
             </Tabs>
