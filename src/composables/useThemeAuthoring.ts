@@ -491,3 +491,7 @@ export function useThemeAuthoring() {
     clearAllOverrides,
   };
 }
+
+/** The surface returned by {@link useThemeAuthoring} — for tab-body props that
+ *  receive the shared authoring instance (e.g. TypographyTab). */
+export type ThemeAuthoring = ReturnType<typeof useThemeAuthoring>;

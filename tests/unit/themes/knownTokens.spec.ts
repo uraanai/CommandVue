@@ -33,7 +33,7 @@ describe("knownTokens registry", () => {
     expect(new Set(ALL_KNOWN_TOKEN_NAMES)).toEqual(new Set(union));
   });
 
-  it("recognises the C2 typography tokens (sizes, line-heights, heading role)", () => {
+  it("recognizes the C2 typography tokens (sizes, line-heights, heading role)", () => {
     expect(isKnownToken("--text-xs")).toBe(true);
     expect(isKnownToken("--text-4xl")).toBe(true);
     expect(isKnownToken("--text-base--line-height")).toBe(true);

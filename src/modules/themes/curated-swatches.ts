@@ -81,6 +81,8 @@ export const CURATED_FONTS: readonly CuratedFont[] = [
   { label: "Inter", value: "'Inter', system-ui, sans-serif" },
   { label: "IBM Plex Sans", value: "'IBM Plex Sans', system-ui, sans-serif" },
   { label: "Geist", value: "'Geist', system-ui, sans-serif" },
+  // Serif heading stack (Track A C2) — gives the Heading role a non-sans option.
+  { label: "Georgia (serif)", value: "Georgia, 'Times New Roman', serif" },
   { label: "JetBrains Mono", value: "'JetBrains Mono', ui-monospace, monospace" },
   { label: "IBM Plex Mono", value: "'IBM Plex Mono', ui-monospace, monospace" },
 ];

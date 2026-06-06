@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PanelApiProps } from "@/composables/usePanelApi";
 
-import { LayoutPanelTop, Sparkles, Type } from "@lucide/vue";
+import { LayoutPanelTop, Sparkles } from "@lucide/vue";
 import { useDebounceFn, useElementSize } from "@vueuse/core";
 // PrimeVue's Splitter identifies its panes by child component TYPE, so SplitterPanel
 // can't be wrapped in a Volt component (a wrapper breaks pane detection → empty
@@ -10,10 +10,10 @@ import { useDebounceFn, useElementSize } from "@vueuse/core";
 import SplitterPanel from "primevue/splitterpanel"; // eslint-disable-line @typescript-eslint/no-restricted-imports
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
-import FontPicker from "@/components/panels/theme-studio/FontPicker.vue";
 import StudioTabPlaceholder from "@/components/panels/theme-studio/StudioTabPlaceholder.vue";
 import { STUDIO_L1_TABS } from "@/components/panels/theme-studio/studioTabs";
 import TokensTabEditor from "@/components/panels/theme-studio/TokensTabEditor.vue";
+import TypographyTab from "@/components/panels/theme-studio/TypographyTab.vue";
 import Button from "@/components/ui/Button.vue";
 import ColorSwatchPicker from "@/components/ui/ColorSwatchPicker.vue";
 import Input from "@/components/ui/Input.vue";
@@ -371,19 +371,6 @@ function onDiscard(): void {
                     </div>
                   </div>
 
-                  <div class="flex flex-col gap-1">
-                    <span class="text-foreground font-medium">Font family</span>
-                    <!-- Quick-stack picker writes the legacy fontFamily; choosing one
-                         clears any Google fontSpec so the stack takes effect (§0.4). -->
-                    <Select
-                      v-model="a.fontFamily.value"
-                      :options="a.FONT_OPTIONS"
-                      @update:model-value="a.fontSpec.value = null"
-                    />
-                    <span class="text-faint mt-1 text-xs">…or pick any Google font</span>
-                    <FontPicker v-model="a.fontSpec.value" />
-                  </div>
-
                   <div class="border-border-subtle flex flex-col gap-2 border-t pt-3">
                     <label class="flex items-center gap-2">
                       <Checkbox v-model="a.generatePaired.value" :binary="true" />
@@ -409,13 +396,7 @@ function onDiscard(): void {
                   @reset="onTokenReset"
                   @reset-all="onTokenResetAll"
                 />
-                <StudioTabPlaceholder
-                  v-else-if="active === 'typography'"
-                  :icon="Type"
-                  title="Typography"
-                  phase="C2"
-                  note="Font roles, the modular type scale, and Google Fonts."
-                />
+                <TypographyTab v-else-if="active === 'typography'" :authoring="a" />
                 <StudioTabPlaceholder
                   v-else-if="active === 'panels'"
                   :icon="LayoutPanelTop"

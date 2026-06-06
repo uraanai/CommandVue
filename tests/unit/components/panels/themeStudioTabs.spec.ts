@@ -59,7 +59,6 @@ describe("ThemeStudioPanel — C6 IA", () => {
   it("renders the matching placeholder for each not-yet-built tab", async () => {
     const w = mountPanel();
     for (const { label, title, phase } of [
-      { label: "Typography", title: "Typography", phase: "C2" },
       { label: "Panels & Chrome", title: "Panels & Chrome", phase: "C4" },
       { label: "Effects", title: "Effects", phase: "C5" },
     ]) {
@@ -77,6 +76,15 @@ describe("ThemeStudioPanel — C6 IA", () => {
     expect(txt).toContain("Surface"); // first section header
     expect(txt).toContain("--color-interactive"); // a known token row subtitle
     expect(txt).not.toContain("Lands in C1"); // the old placeholder is gone
+  });
+
+  it("renders the Typography tab body (C2) — not a placeholder", async () => {
+    const w = mountPanel();
+    await clickTab(w, "Typography");
+    const txt = w.text();
+    expect(txt).toContain("Font roles"); // section A header
+    expect(txt).toContain("Type scale"); // section B header
+    expect(txt).not.toContain("Lands in C2"); // the placeholder is gone
   });
 
   it("keeps exactly one preview marker on every tab (preview lives outside Tabs)", async () => {
