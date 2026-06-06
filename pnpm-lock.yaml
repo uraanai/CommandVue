@@ -17,6 +17,30 @@ importers:
       '@fontsource-variable/inter':
         specifier: ^5.1.0
         version: 5.2.8
+      '@fontsource/ibm-plex-sans':
+        specifier: ^5.2.8
+        version: 5.2.8
+      '@fontsource/lato':
+        specifier: ^5.2.7
+        version: 5.2.7
+      '@fontsource/lora':
+        specifier: ^5.2.8
+        version: 5.2.8
+      '@fontsource/merriweather':
+        specifier: ^5.2.11
+        version: 5.2.11
+      '@fontsource/montserrat':
+        specifier: ^5.2.8
+        version: 5.2.8
+      '@fontsource/open-sans':
+        specifier: ^5.2.7
+        version: 5.2.7
+      '@fontsource/roboto':
+        specifier: ^5.2.10
+        version: 5.2.10
+      '@fontsource/source-sans-3':
+        specifier: ^5.2.9
+        version: 5.2.9
       '@heroicons/vue':
         specifier: ^2.2.0
         version: 2.2.0(vue@3.5.34(typescript@6.0.3))
@@ -1170,6 +1194,30 @@ packages:
 
   '@fontsource-variable/inter@5.2.8':
     resolution: {integrity: sha512-kOfP2D+ykbcX/P3IFnokOhVRNoTozo5/JxhAIVYLpea/UBmCQ/YWPBfWIDuBImXX/15KH+eKh4xpEUyS2sQQGQ==}
+
+  '@fontsource/ibm-plex-sans@5.2.8':
+    resolution: {integrity: sha512-eztSXjDhPhcpxNIiGTgMebdLP9qS4rWkysuE1V7c+DjOR0qiezaiDaTwQE7bTnG5HxAY/8M43XKDvs3cYq6ZYQ==}
+
+  '@fontsource/lato@5.2.7':
+    resolution: {integrity: sha512-k5mum1ADbDW5cTw1Ett1eQVWeoZ6gq0ct6SFBibEhB4LRxhniChJZTBgd6ph5yBxLkN1fcnsnmicBNA4S/3nbw==}
+
+  '@fontsource/lora@5.2.8':
+    resolution: {integrity: sha512-AQlfsHw4TP1x/eb2IZ6VjQ70ctKa39m9JN9A4zlvDOeKYLrCs+GaYIEQ86Y6YfSPGHn01bErXkRcyktOW0LOPQ==}
+
+  '@fontsource/merriweather@5.2.11':
+    resolution: {integrity: sha512-ZiIMeUh5iT8d73o6xlSF8GKgjV5pgiFrufYc5jZTVAfExtWKqM2vQHnsqXSFMv4ELhAcjt6Vf+5T3oVGXhAizQ==}
+
+  '@fontsource/montserrat@5.2.8':
+    resolution: {integrity: sha512-xTjLxSbSfCycDB0pwmNsfNvdfWPaDaRQ2LC6yt/ZI7SdvXG52zHnzNYC/09mzuAuWNJyShkteutfCoDgym56hQ==}
+
+  '@fontsource/open-sans@5.2.7':
+    resolution: {integrity: sha512-8yfgDYjE5O0vmTPdrcjV35y4yMnctsokmi9gN49Gcsr0sjzkMkR97AnKDe6OqZh2SFkYlR28fxOvi21bYEgMSw==}
+
+  '@fontsource/roboto@5.2.10':
+    resolution: {integrity: sha512-8HlA5FtSfz//oFSr2eL7GFXAiE7eIkcGOtx7tjsLKq+as702x9+GU7K95iDeWFapHC4M2hv9RrpXKRTGGBI8Zg==}
+
+  '@fontsource/source-sans-3@5.2.9':
+    resolution: {integrity: sha512-u3ymIq4rfmCCyB9MEw/sFR5lPVJ1yTNXmIMbUz+9kVCFIHvNtfzXOEBuvkg3Tk0zhmioPeJ28ZK5smZ7TurezQ==}
 
   '@heroicons/vue@2.2.0':
     resolution: {integrity: sha512-G3dbSxoeEKqbi/DFalhRxJU4mTXJn7GwZ7ae8NuEQzd1bqdd0jAbdaBZlHPcvPD2xI1iGzNVB4k20Un2AguYPw==}
@@ -4924,6 +4972,22 @@ snapshots:
   '@floating-ui/utils@0.2.11': {}
 
   '@fontsource-variable/inter@5.2.8': {}
+
+  '@fontsource/ibm-plex-sans@5.2.8': {}
+
+  '@fontsource/lato@5.2.7': {}
+
+  '@fontsource/lora@5.2.8': {}
+
+  '@fontsource/merriweather@5.2.11': {}
+
+  '@fontsource/montserrat@5.2.8': {}
+
+  '@fontsource/open-sans@5.2.7': {}
+
+  '@fontsource/roboto@5.2.10': {}
+
+  '@fontsource/source-sans-3@5.2.9': {}
 
   '@heroicons/vue@2.2.0(vue@3.5.34(typescript@6.0.3))':
     dependencies:

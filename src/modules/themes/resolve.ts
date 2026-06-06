@@ -54,6 +54,7 @@ export function toGenInput(input: GenerationInputV2, name: string): ThemeGenerat
     name,
   };
   if (input.fontFamily !== undefined) out.fontFamily = input.fontFamily;
+  if (input.fontSpec !== undefined) out.fontSpec = input.fontSpec;
   if (input.statusOverrides !== undefined) out.statusOverrides = input.statusOverrides;
   return out;
 }

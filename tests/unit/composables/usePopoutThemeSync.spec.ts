@@ -4,6 +4,8 @@ import {
   __popoutWindowCountForTests,
   __resetForTests,
   initPopoutThemeSync,
+  injectFontLinkIntoWindow,
+  mirrorFontLinkToAllPopouts,
   registerPopoutWindow,
   unregisterPopoutWindow,
 } from "@/composables/usePopoutThemeSync";
@@ -73,5 +75,42 @@ describe("usePopoutThemeSync (Track B Phase 6a)", () => {
     // A re-register triggers a sync; the closed window is pruned by syncWindow.
     registerPopoutWindow(win);
     expect(__popoutWindowCountForTests()).toBe(0);
+  });
+});
+
+describe("usePopoutThemeSync — font-face mirroring (C3)", () => {
+  beforeEach(() => __resetForTests());
+  afterEach(() => __resetForTests());
+
+  it("mirrors a newly-registered font link into every open pop-out", () => {
+    const win = makeFakeWindow();
+    registerPopoutWindow(win);
+    mirrorFontLinkToAllPopouts("https://fonts.googleapis.com/css2?family=Roboto", "Roboto");
+    const link = win.document.head.querySelector('link[data-cv-font-key="Roboto"]');
+    expect(link?.getAttribute("rel")).toBe("stylesheet");
+    expect(link?.getAttribute("crossorigin")).toBe("anonymous");
+  });
+
+  it("backfills already-registered fonts into a pop-out opened later", () => {
+    // Font registered BEFORE the pop-out opens.
+    mirrorFontLinkToAllPopouts("https://fonts.googleapis.com/css2?family=Open+Sans", "Open Sans");
+    const win = makeFakeWindow();
+    registerPopoutWindow(win);
+    expect(win.document.head.querySelector('link[data-cv-font-key="Open Sans"]')).not.toBeNull();
+  });
+
+  it("de-duplicates by font key (one link even if mirrored twice)", () => {
+    const win = makeFakeWindow();
+    registerPopoutWindow(win);
+    mirrorFontLinkToAllPopouts("https://fonts.googleapis.com/css2?family=Lora", "Lora");
+    mirrorFontLinkToAllPopouts("https://fonts.googleapis.com/css2?family=Lora", "Lora");
+    expect(win.document.head.querySelectorAll('link[data-cv-font-key="Lora"]').length).toBe(1);
+  });
+
+  it("injectFontLinkIntoWindow no-ops on a closed window", () => {
+    const win = makeFakeWindow();
+    (win as unknown as { closed: boolean }).closed = true;
+    injectFontLinkIntoWindow(win, "https://fonts.googleapis.com/css2?family=Lato", "Lato");
+    expect(win.document.head.querySelector("link")).toBeNull();
   });
 });

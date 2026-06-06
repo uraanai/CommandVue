@@ -53,3 +53,7 @@ Headerless
 headered
 groupview
 popout
+lato
+merriweather
+menlo
+montserrat

@@ -1,13 +1,49 @@
-import type { Theme } from "@/types/theme";
+import type { FontSpec, GenerationInputV2, Theme } from "@/types/theme";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ensureFontSpecLoaded } from "@/composables/useFontLoader";
 import {
   applyTheme,
   applyTokenOverrides,
   clearTheme,
   clearTokenOverrides,
 } from "@/modules/themes/apply";
+
+vi.mock("@/composables/useFontLoader", () => ({
+  ensureFontSpecLoaded: vi.fn().mockResolvedValue(undefined),
+}));
+
+// applyTheme's font hook is a fire-and-forget dynamic import().then(); a macrotask
+// tick flushes the import resolution + the .then chain.
+const flush = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
+
+function generatedFixture(fontSpec?: FontSpec): Theme {
+  const now = Date.now();
+  const input: GenerationInputV2 = {
+    schemaVersion: 2,
+    baseColor: "oklch(0.98 0.005 250)",
+    accentColor: "oklch(0.55 0.18 250)",
+    contrast: 50,
+    mode: "light",
+    density: "comfortable",
+    ...(fontSpec ? { fontSpec } : {}),
+  };
+  return {
+    id: "gen",
+    name: "gen",
+    description: "",
+    author: "",
+    source: "generated",
+    mode: "light",
+    density: "comfortable",
+    base: { kind: "generated", input },
+    overrides: {},
+    tokens: { "color-surface-base": "#fff" },
+    createdAt: now,
+    updatedAt: now,
+  };
+}
 
 function fixture(id: string, tokens: Record<string, string>): Theme {
   const now = Date.now();
@@ -186,5 +222,29 @@ describe("applyTheme reconciles a live preview overlay (no-flash commit)", () =>
     clearTokenOverrides(root);
     expect(root.style.getPropertyValue("--color-surface-base")).toBe("#fff");
     expect(root.style.getPropertyValue("--color-interactive")).toBe("");
+  });
+});
+
+describe("applyTheme — C3 font-load hook", () => {
+  beforeEach(() => vi.mocked(ensureFontSpecLoaded).mockClear());
+  afterEach(() => clearTheme());
+
+  it("triggers the font loader once for a generated theme with a fontSpec", async () => {
+    applyTheme(generatedFixture({ family: "Roboto", source: "google", weights: [400, 700] }));
+    await flush();
+    expect(vi.mocked(ensureFontSpecLoaded)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(ensureFontSpecLoaded).mock.calls[0]?.[0]).toMatchObject({ family: "Roboto" });
+  });
+
+  it("does NOT trigger the loader for a fontless generated theme", async () => {
+    applyTheme(generatedFixture());
+    await flush();
+    expect(vi.mocked(ensureFontSpecLoaded)).not.toHaveBeenCalled();
+  });
+
+  it("does NOT trigger the loader for a static theme", async () => {
+    applyTheme(fixture("static-one", { "color-surface-base": "#fff" }));
+    await flush();
+    expect(vi.mocked(ensureFontSpecLoaded)).not.toHaveBeenCalled();
   });
 });

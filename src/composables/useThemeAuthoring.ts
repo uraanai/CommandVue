@@ -1,4 +1,5 @@
 import type {
+  FontSpec,
   GenerationInputV2,
   StatusFamily,
   StatusOverrides,
@@ -88,6 +89,10 @@ export function useThemeAuthoring() {
   const contrast = ref<number>(BLANK_DEFAULTS.contrast);
   const density = ref<ThemeDensity>("comfortable");
   const fontFamily = ref<string>(BLANK_DEFAULTS.fontFamily);
+  // C3 — structured Google-font choice (google-only). When set it is the source
+  // of truth for the body/sans family; the quick-stack `fontFamily` above stays
+  // for the System / curated-stack picks (§0.4).
+  const fontSpec = ref<FontSpec | null>(null);
   const generatePaired = ref(true);
   const applyAfterSave = ref(true);
 
@@ -164,6 +169,7 @@ export function useThemeAuthoring() {
     accentColor.value = BLANK_DEFAULTS.accentColor;
     contrast.value = BLANK_DEFAULTS.contrast;
     fontFamily.value = BLANK_DEFAULTS.fontFamily;
+    fontSpec.value = null;
     applyStatusOverridesToSwatches(undefined);
   }
 
@@ -209,6 +215,7 @@ export function useThemeAuthoring() {
         mode: mode.value,
         density: density.value,
         fontFamily: fontFamily.value || undefined,
+        fontSpec: fontSpec.value ?? undefined,
         statusOverrides: statusOverrides.value,
       });
     } catch {
@@ -241,6 +248,8 @@ export function useThemeAuthoring() {
       contrast.value = gen.contrast;
       mode.value = t.mode;
       density.value = t.density;
+      // Never read `.input` on a static base.
+      fontSpec.value = t.base.kind === "generated" ? (t.base.input.fontSpec ?? null) : null;
       applyStatusOverridesToSwatches(gen.statusOverrides);
       generatePaired.value = !!gen.paired;
       startFromMode.value = "custom";
@@ -274,6 +283,7 @@ export function useThemeAuthoring() {
       density: density.value,
     };
     if (fontFamily.value) input.fontFamily = fontFamily.value;
+    if (fontSpec.value) input.fontSpec = fontSpec.value;
     if (statusOverrides.value) input.statusOverrides = statusOverrides.value;
     return input;
   }
@@ -390,6 +400,7 @@ export function useThemeAuthoring() {
     contrast,
     density,
     fontFamily,
+    fontSpec,
     generatePaired,
     applyAfterSave,
     // status
