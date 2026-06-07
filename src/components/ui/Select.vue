@@ -3,6 +3,7 @@ import PvSelect from "primevue/select";
 import { ref } from "vue";
 
 import { type ElementLike, useOverlayTarget } from "@/composables/useOverlayTarget";
+import { usePopoutOverlayDismiss } from "@/composables/usePopoutOverlayDismiss";
 import { cn } from "@/utils/cn";
 
 /**
@@ -39,6 +40,10 @@ defineEmits<{
 // Pop-out aware: mount the overlay in THIS component's window, not the opener's.
 const rootRef = ref<ElementLike>();
 const { target: overlayTarget, resolve: resolveOverlay } = useOverlayTarget(rootRef);
+// Pop-out aware: PrimeVue's outside-click close listener is bound to the opener
+// document, so it can't dismiss the overlay from a pop-out window. Close it from
+// the owning window instead (inert when docked). See usePopoutOverlayDismiss.
+const { onShow, onHide } = usePopoutOverlayDismiss(rootRef);
 </script>
 
 <template>
@@ -82,6 +87,8 @@ const { target: overlayTarget, resolve: resolveOverlay } = useOverlayTarget(root
       },
     }"
     @before-show="resolveOverlay"
+    @show="onShow"
+    @hide="onHide"
     @update:model-value="(v) => $emit('update:modelValue', v)"
   />
 </template>
