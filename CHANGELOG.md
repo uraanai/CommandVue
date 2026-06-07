@@ -6,6 +6,56 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-06-07
+
+The **windowing + dynamic theming** release. Completes the Track B dockview windowing system — clean (header-less) panes, a right-click tab/group context menu, in-window floating windows with see-through opacity, per-group maximize / close-all, minimize-to-tray, separate-browser-window pop-out with live theme mirroring, and cross-window "Send to window" relocation — and lands the Track A dynamic theming overhaul: a dockable, pop-out-able **Theme Studio** panel with live recolour, a v2 base-plus-overrides theme data model, themeable status / toast colours, a richer "less-flat" palette, Google-Fonts runtime loading, a modular type scale, an effects (depth / glow / blur) layer, panel-appearance + dockview chrome tokens, and an end-to-end density system. Also adds a toast notification system, an admin component showcase, scrollable / wheel-scrollable tabs, density-aware buttons, and a Cloudflare dev tunnel.
+
+### Added
+
+#### Dockview windowing (Track B — complete)
+
+- **Clean (header-less) panes** — any number of header-less content panes, freely arranged, with a per-group Hide / Show header toggle (#102).
+- **Right-click tab / group context menu** with Maximize / Restore and a tab-overflow dropdown fix (#103).
+- **In-window floating windows** — Float / Dock back (#105), with a **see-through opacity slider** so the Cesium / MapLibre map shows through (#107).
+- **Group header actions** — one-click **Close All** (#109) and a **float-header Maximize / Restore + Close** row (#110).
+- **Minimize to tray** — collapse a group into a bottom-left tray bar (#111), with a **collapsible tray** (overflow + recall handle) (#124) and **3D map-camera persistence** across minimize / restore (#123).
+- **Pop-out to a separate browser window** with live theme mirroring (#125), for a **single tab or a whole group** (#126), a **native context menu inside pop-outs** (#127), and **cross-window "Send to window"** relocation (#128).
+
+#### Dynamic theming & Theme Studio (Track A)
+
+- **Theme Studio panel** — a dockable / pop-out-able authoring surface with live recolour (#141), built on a **live-preview engine** (explicit-root apply + draft session) (#140) and a **Studio IA lock + density resolution** pass (#145).
+- **Theme data model v2** — generated base + sparse overrides + resolved cache (#138).
+- **Tokens tab** — per-token manifest editor (#147). **Typography tab** — font roles + modular type scale (#149). **Effects tab** — depth / glow / blur (#152). **Panels & Chrome tab** — appearance variants + dockview chrome tokens (#154), plus a **float / dock chrome split** for independent theming of floating vs docked panels (#156).
+- **Themeable status + toast colours** (#133), surfaced with **status tags in the entity list** (#134).
+- **Google Fonts dynamic runtime loading** (#148).
+- **Richer "less-flat" palette** — triple-layer surface bevel, accent borders, and per-accent triads (#139).
+- **Healed the Volt surface seam** so modals / menus match the rest of the app (#130).
+
+#### UI primitives & tooling
+
+- **Toast notification system** — `useNotify` + multi-position outlets (#136).
+- **Admin component showcase** gallery + theming polish (#137).
+- **Scrollable Tabs** — one-row horizontal scroll with chevron nav (#143), also scrollable by a vertical **mouse wheel** (#155).
+- **Density-aware button heights** with a `dense` opt-in variant (#158).
+- **`pnpm dev:tunnel`** — Cloudflare quick tunnel for remote testing (#108).
+
+### Fixed
+
+- Theme Studio mode-preview sync + top-right toasts + CRUD feedback (#150).
+- A saved theme now adopts into edit mode after save (#151).
+- Pop-out interactive components — overlays + sliders now render correctly inside child windows (#153).
+- Theme Studio controls + the minimized tray now follow the active density (#157).
+
+### Docs
+
+- User guide for the dockview windowing system (#131).
+- Internal specs / plans for Track A theming and Track B windowing, the CI single-source-of-truth guard + ADR-0004, and the Stage-2 human-review checklist process (#104, #106, #129, #132, #135, #142, #144, #146). `.internal/` planning docs are excluded from the public `main` by policy.
+
+### Verified
+
+- The full static gauntlet — `pnpm lint` · `pnpm type-check` · `pnpm test` · `pnpm spell` · `pnpm build` (+ `pnpm docs:build` where docs changed) — is green on `develop` at the release cut; every PR above passed the CI gauntlet (`Lint · Type-check · Test · Build` + `CSpell`) on merge.
+- `.internal/` private planning docs are **untracked on this release branch** (removed via `git rm --cached`) so the `no-internal-on-main` guard passes and they never land on the public `main`.
+
 ## [0.2.0] - 2026-05-30
 
 The **workspace + theming system** release. Adds a full runtime theme authoring system (Prompt 4: storage → OKLCH generation → registry → import/export → constrained customizer → per-workspace binding → import/export UI), the Light/Dark/Auto toggle with six built-in theme variants and a three-layer design-token foundation (Prompt 3), the PrimeVue-first UI-primitive migration via Volt (Prompt 2), the TanStack-based DataTable wrapper with governance (Prompt 1), and the GitFlow workflow setup (Prompt 0). Also bundles an app-wide confirmation modal (`useConfirm`) and assorted panel/chrome fixes.
@@ -371,6 +421,7 @@ locked stack is wired and demonstrated by at least one working panel.
 - `pnpm build` — clean; initial route ~63 KB gzipped + ~42 KB lazy dock shell (≈ 17 % of the 600 KB budget). Heavy chunks (Cesium 1.1 MB, MapLibre 285 KB, ECharts 165 KB, milsymbol 197 KB, markdown-it 47 KB) live in their own lazy chunks pulled in only when the corresponding panel mounts.
 - `pnpm docker:build` — produces `commandvue:local` (~150 MB on disk).
 
-[Unreleased]: https://github.com/uraanai/CommandVue/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/uraanai/CommandVue/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/uraanai/CommandVue/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/uraanai/CommandVue/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/uraanai/CommandVue/releases/tag/v0.1.0
