@@ -112,14 +112,23 @@ export function clearTokenOverrides(root: HTMLElement, except?: Set<string>): vo
   else root.removeAttribute(PREVIEW_KEYS_ATTR);
 }
 
-/** Drop committed keys from the preview tracking set (they're now owned by the
- *  committed theme), leaving any preview-only keys for a later clear. */
+/**
+ * A committed theme apply SUPERSEDES any live preview overlay. Overlapping keys
+ * were just written above with the committed value, so we only stop TRACKING them
+ * (a later `clearTokenOverrides` must not strip the committed value). Any
+ * non-overlapping preview keys are now stale, so we REMOVE them — otherwise an
+ * EXTERNAL committed apply (`setTheme` / workspace bind) made while a Theme Studio
+ * preview is active leaves a stale overlay masking the new theme until "Live across
+ * app" is toggled (the toggle's `cancelPreview` is what used to clear them). The
+ * Studio re-pushes its overlay on its next edit if it's still live.
+ */
 function reconcilePreviewAfterCommit(root: HTMLElement, committed: Set<string>): void {
   const tracked = readKeyList(root, PREVIEW_KEYS_ATTR);
   if (tracked.length === 0) return;
-  const remaining = tracked.filter((k) => !committed.has(k));
-  if (remaining.length > 0) root.setAttribute(PREVIEW_KEYS_ATTR, JSON.stringify(remaining));
-  else root.removeAttribute(PREVIEW_KEYS_ATTR);
+  for (const key of tracked) {
+    if (!committed.has(key)) root.style.removeProperty(key);
+  }
+  root.removeAttribute(PREVIEW_KEYS_ATTR);
 }
 
 /**

@@ -207,21 +207,22 @@ describe("applyTheme reconciles a live preview overlay (no-flash commit)", () =>
   });
   afterEach(() => clearTheme());
 
-  it("drops committed keys from the preview tracking so a later clear can't strip them", () => {
+  it("supersedes a live preview overlay: keeps committed keys, removes stale preview keys", () => {
     const root = document.documentElement;
     // Preview overlay touches two keys, one of which the committed theme also owns.
     applyTokenOverrides({ "color-surface-base": "#abc", "--color-interactive": "#0af" }, root);
     // Commit a theme that owns surface-base.
     applyTheme(fixture("committed", { "color-surface-base": "#fff" }));
-    // surface-base is now committed-owned (dropped from preview tracking);
-    // interactive remains a preview-only key.
-    expect(JSON.parse(root.getAttribute("data-theme-preview-applied")!)).toEqual([
-      "--color-interactive",
-    ]);
-    // Clearing the preview overlay must NOT remove the committed surface-base.
-    clearTokenOverrides(root);
+    // A committed apply supersedes the preview overlay: surface-base keeps the
+    // committed value, the stale preview-only `--color-interactive` is removed, and
+    // the preview tracking is fully torn down (so an external theme apply made while
+    // a Studio preview is active isn't masked by a lingering overlay).
+    expect(root.getAttribute("data-theme-preview-applied")).toBeNull();
     expect(root.style.getPropertyValue("--color-surface-base")).toBe("#fff");
     expect(root.style.getPropertyValue("--color-interactive")).toBe("");
+    // A later clear is a no-op and must NOT disturb the committed value.
+    clearTokenOverrides(root);
+    expect(root.style.getPropertyValue("--color-surface-base")).toBe("#fff");
   });
 });
 

@@ -30,8 +30,12 @@ const closeLabel = computed(() => `Close ${props.entry.title}`);
 </script>
 
 <template>
+  <!-- Inset RING (not a border) for the outline: a real border adds 2px to the
+       layout height, making the bar taller than the chevron handle in the tray; an
+       inset ring draws inside the box with zero layout impact, so the bar's height
+       matches the handle's (both driven by the same inner control height). -->
   <div
-    class="border-border bg-surface-raised pointer-events-auto flex items-center overflow-hidden rounded-md border shadow-md"
+    class="bg-surface-raised pointer-events-auto flex items-center overflow-hidden rounded-md shadow-md ring-1 ring-[color:var(--color-border)] ring-inset"
   >
     <Button
       variant="ghost"
