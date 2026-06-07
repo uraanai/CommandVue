@@ -3,8 +3,8 @@ import type { MapOverlayConfig } from "@/modules/presets/builtin";
 
 import ColorPicker from "@/components/ui/ColorPicker.vue";
 import Input from "@/components/ui/Input.vue";
+import Slider from "@/components/ui/Slider.vue";
 import Checkbox from "@/volt/Checkbox.vue";
-import Slider from "@/volt/Slider.vue";
 
 interface Props {
   modelValue: MapOverlayConfig;

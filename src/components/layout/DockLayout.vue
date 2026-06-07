@@ -12,7 +12,10 @@ import {
 import { onUnmounted, provide, ref, shallowRef } from "vue";
 
 import { usePopoutWindows } from "@/composables/usePopoutWindows";
+import { presetTypeRegistry } from "@/modules/presets/registry";
 import { useLayoutStore } from "@/stores/layout";
+import { usePanelStateStore } from "@/stores/panelState";
+import { usePresetStore } from "@/stores/preset";
 import { useSessionStore } from "@/stores/session";
 
 import DockContextMenu from "./dock/DockContextMenu.vue";
@@ -35,6 +38,39 @@ const popoutWindows = usePopoutWindows();
 
 const session = useSessionStore();
 const layoutStore = useLayoutStore();
+const panelStateStore = usePanelStateStore();
+const presetStore = usePresetStore();
+
+/**
+ * On-load apply path for `panel-appearance` presets (Track A C4) — the PRIMARY
+ * mechanism, not a fallback. Most built-in panels don't run a per-panel
+ * `watch(appliedPresetIds)` re-apply, so after a layout loads we sweep every
+ * panel-state, find its applied `panel-appearance` preset(s), and re-set the
+ * `data-cv-appearance` attribute on the dock group. Deferred to a frame so
+ * dockview has laid out its groups; one retry covers a late group layout.
+ */
+function sweepPanelAppearance(attempt = 0): void {
+  const def = presetTypeRegistry.get("panel-appearance");
+  if (!def) return;
+  const api = session.getDockviewApi();
+  if (!api) return;
+  let allResolved = true;
+  for (const ps of panelStateStore.listForLayout()) {
+    for (const presetId of ps.appliedPresetIds ?? []) {
+      const preset = presetStore.getPreset(presetId);
+      if (preset?.presetTypeId !== "panel-appearance") continue;
+      if (!api.getPanel(ps.id)?.api.group.element) {
+        allResolved = false;
+        continue;
+      }
+      void def.applyToPanel(ps.id, preset.config);
+    }
+  }
+  // dockview may not have laid out every group on the first frame — retry once.
+  if (!allResolved && attempt < 1) {
+    requestAnimationFrame(() => sweepPanelAppearance(attempt + 1));
+  }
+}
 
 async function onReady(event: DockviewReadyEvent) {
   session.bindDockview(event.api);
@@ -44,6 +80,9 @@ async function onReady(event: DockviewReadyEvent) {
   if (target) {
     await session.loadLayout(target);
   }
+
+  // Re-apply persisted panel-appearance variants once groups have rendered.
+  requestAnimationFrame(() => sweepPanelAppearance());
 
   // Every Dockview-side change (drag, split, resize, rename, close) marks
   // the session dirty. The user resolves dirty state via Save Layout

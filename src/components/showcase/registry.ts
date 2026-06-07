@@ -73,7 +73,7 @@ export const SHOWCASE_PRIMITIVES: readonly ShowcaseEntry[] = [
   { source: "volt", id: "InputMask", label: "InputMask", tab: "form-inputs" },
   { source: "volt", id: "InputOtp", label: "InputOtp", tab: "form-inputs" },
   { source: "volt", id: "DatePicker", label: "DatePicker (date + time)", tab: "form-inputs" },
-  { source: "volt", id: "Slider", label: "Slider", tab: "form-inputs" },
+  { source: "ui", id: "Slider", label: "Slider", tab: "form-inputs" },
   { source: "volt", id: "FloatLabel", label: "FloatLabel", tab: "form-inputs" },
   { source: "volt", id: "IftaLabel", label: "IftaLabel", tab: "form-inputs" },
   { source: "volt", id: "IconField", label: "IconField + InputIcon", tab: "form-inputs" },
@@ -161,6 +161,12 @@ export const SHOWCASE_EXCLUDE: readonly ShowcaseExclusion[] = [
     id: "Select",
     reason:
       "Filterable/grouped Select consumed by the Theme Studio FontPicker; the canonical Select primitive is ui/Select.",
+  },
+  {
+    source: "volt",
+    id: "Slider",
+    reason:
+      "Superseded by ui/Slider — a pointer-capture slider that works inside popped-out windows (PrimeVue's Slider can't; see ADR 0003). Kept for reference.",
   },
   {
     source: "volt",

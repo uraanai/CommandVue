@@ -2,6 +2,7 @@
   <Popover
     ref="el"
     unstyled
+    :append-to="overlayTarget"
     :pt="theme"
     :pt-options="{
       mergeProps: ptViewMerge,
@@ -16,6 +17,8 @@
 <script setup lang="ts">
 import Popover, { type PopoverPassThroughOptions, type PopoverProps } from "primevue/popover";
 import { ref } from "vue";
+
+import { useOverlayTarget } from "@/composables/useOverlayTarget";
 
 import { ptViewMerge } from "./utils";
 
@@ -44,9 +47,39 @@ const theme = ref<PopoverPassThroughOptions>({
 });
 
 const el = ref();
+
+// Pop-out support (Track B): teleport the overlay into the panel's OWNING
+// window instead of the opener's `document.body`.
+//
+// Anchor + timing: PrimeVue Popover renders only a `<Portal>` (no DOM while
+// closed) and emits ONLY `show` / `hide` — there is no `before-show`, and the
+// component instance has no stable in-window element to read `ownerDocument`
+// from. So we anchor `useOverlayTarget` to the TRIGGER element instead: the
+// opening DOM event's `currentTarget` is the button the user clicked, which is
+// guaranteed to live in the correct window (including a dockview pop-out).
+// We capture it and resolve INSIDE the imperative open methods, which run
+// synchronously BEFORE the Portal teleports (`show()` flips `visible` after our
+// resolve), so `appendTo` is correct on the very first open.
+const triggerEl = ref<HTMLElement | null>(null);
+const { target: overlayTarget, resolve: resolveOverlay } = useOverlayTarget(triggerEl);
+
+function captureTrigger(event: Event): void {
+  const node = (event.currentTarget ?? event.target) as unknown;
+  if (node instanceof HTMLElement) {
+    triggerEl.value = node;
+    resolveOverlay();
+  }
+}
+
 defineExpose({
-  toggle: (event: Event, target?: HTMLElement) => el.value.toggle(event, target),
-  show: (event: Event, target?: HTMLElement) => el.value.show(event, target),
+  toggle: (event: Event, target?: HTMLElement) => {
+    captureTrigger(event);
+    return el.value.toggle(event, target);
+  },
+  show: (event: Event, target?: HTMLElement) => {
+    captureTrigger(event);
+    return el.value.show(event, target);
+  },
   hide: () => el.value.toggle(),
 });
 </script>

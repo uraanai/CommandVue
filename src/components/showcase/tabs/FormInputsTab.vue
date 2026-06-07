@@ -8,6 +8,7 @@ import ColorSwatchPicker from "@/components/ui/ColorSwatchPicker.vue";
 import EditableLabel from "@/components/ui/EditableLabel.vue";
 import FileUpload from "@/components/ui/FileUpload.vue";
 import Input from "@/components/ui/Input.vue";
+import Slider from "@/components/ui/Slider.vue";
 import Checkbox from "@/volt/Checkbox.vue";
 import DatePicker from "@/volt/DatePicker.vue";
 import Fieldset from "@/volt/Fieldset.vue";
@@ -23,7 +24,6 @@ import InputOtp from "@/volt/InputOtp.vue";
 import InputText from "@/volt/InputText.vue";
 import Knob from "@/volt/Knob.vue";
 import Password from "@/volt/Password.vue";
-import Slider from "@/volt/Slider.vue";
 import Textarea from "@/volt/Textarea.vue";
 
 /**

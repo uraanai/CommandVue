@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { PanelApiProps } from "@/composables/usePanelApi";
 
-import { LayoutPanelTop } from "@lucide/vue";
 import { useDebounceFn, useElementSize } from "@vueuse/core";
 // PrimeVue's Splitter identifies its panes by child component TYPE, so SplitterPanel
 // can't be wrapped in a Volt component (a wrapper breaks pane detection → empty
@@ -11,7 +10,7 @@ import SplitterPanel from "primevue/splitterpanel"; // eslint-disable-line @type
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
 import EffectsTab from "@/components/panels/theme-studio/EffectsTab.vue";
-import StudioTabPlaceholder from "@/components/panels/theme-studio/StudioTabPlaceholder.vue";
+import PanelsChromeTab from "@/components/panels/theme-studio/PanelsChromeTab.vue";
 import { STUDIO_L1_TABS } from "@/components/panels/theme-studio/studioTabs";
 import TokensTabEditor from "@/components/panels/theme-studio/TokensTabEditor.vue";
 import TypographyTab from "@/components/panels/theme-studio/TypographyTab.vue";
@@ -19,6 +18,7 @@ import Button from "@/components/ui/Button.vue";
 import ColorSwatchPicker from "@/components/ui/ColorSwatchPicker.vue";
 import Input from "@/components/ui/Input.vue";
 import Select from "@/components/ui/Select.vue";
+import Slider from "@/components/ui/Slider.vue";
 import Tabs from "@/components/ui/Tabs.vue";
 import { ensureFontSpecLoaded } from "@/composables/useFontLoader";
 import { useNotify } from "@/composables/useNotify";
@@ -30,7 +30,6 @@ import { themeRegistry } from "@/modules/themes/registry";
 import { TOKEN_MANIFEST_LIST } from "@/modules/themes/tokenManifest";
 import { useThemeStore } from "@/stores/theme";
 import Checkbox from "@/volt/Checkbox.vue";
-import Slider from "@/volt/Slider.vue";
 import Splitter from "@/volt/Splitter.vue";
 
 /**
@@ -86,6 +85,22 @@ const liveAcrossApp = ref(true);
 let interacted = false;
 let disposed = false;
 
+// Resolved current value for every manifest token, read from getComputedStyle on
+// the captured app root (the generator emits a sparse map; the rest resolve via
+// the var()/color-mix() chains it omits). Seeds the per-token controls + WCAG
+// chips in the Tokens and Panels & Chrome tabs. NOT an apply writer. Refreshed
+// AFTER each push (read-after-write — see `pushPreview`), on tab switch, and on
+// mount, so a per-token RESET shows the reverted value, not the stale pre-reset
+// one (the bug: the swatch kept the old color because the snapshot was read
+// before the debounced push had applied).
+const resolvedTokens = ref<Record<string, string>>({});
+function snapshotResolved(): void {
+  const cs = getComputedStyle(APP_ROOT);
+  const out: Record<string, string> = {};
+  for (const e of TOKEN_MANIFEST_LIST) out[e.name] = cs.getPropertyValue(e.name).trim();
+  resolvedTokens.value = out;
+}
+
 // The SINGLE live-apply writer (integration §4): both the generator path and the
 // per-token override path push through one merged `previewThemeTokens`. Debounced
 // so a burst of edits coalesces into one apply. `disposed` blocks a trailing
@@ -96,6 +111,10 @@ const pushPreview = useDebounceFn(() => {
   if (Object.keys(tokens).length > 0 && liveAcrossApp.value) {
     themeStore.previewThemeTokens(tokens, a.density.value, a.mode.value);
   }
+  // Read-after-write: refresh the resolved-token snapshot from the just-applied
+  // root, so a per-token reset's reverted value reaches the controls (the color
+  // swatch / number inputs read getComputedStyle(APP_ROOT)).
+  snapshotResolved();
 }, 120);
 
 function applyToApp(): void {
@@ -138,23 +157,10 @@ watch(
   { deep: false },
 );
 
-// --- Tokens tab (C1) — read-only resolved-values snapshot ------------------
-// Seeds the per-token color controls + WCAG chips from the COMPUTED values on
-// APP_ROOT (the generator emits only ~73 of the 138 tokens; the rest resolve
-// through var()/color-mix() chains the sparse map omits). This is NOT an apply
-// writer — the painting is C6's `watch(a.overrides, pushPreview)`. We only
-// re-read after that push settles, and when the user opens the Tokens tab.
-const resolvedTokens = ref<Record<string, string>>({});
-function snapshotResolved(): void {
-  const cs = getComputedStyle(APP_ROOT);
-  const out: Record<string, string> = {};
-  for (const e of TOKEN_MANIFEST_LIST) out[e.name] = cs.getPropertyValue(e.name).trim();
-  resolvedTokens.value = out;
-}
-watch(a.overrides, () => queueMicrotask(snapshotResolved), { deep: false });
-watch(activeTab, (t) => {
-  if (t === "tokens") snapshotResolved();
-});
+// Resolved-values snapshot refresh (defined above, before `pushPreview`, which
+// refreshes it AFTER each live push — read-after-write). Also refresh when the
+// user switches into a token-displaying tab (Tokens / Panels & Chrome).
+watch(activeTab, () => snapshotResolved());
 
 // Forward-only handlers: mutate the C6-owned override seam; C6's watcher applies.
 function onTokenSet(token: string, value: string): void {
@@ -408,12 +414,10 @@ function onDiscard(): void {
                   @reset-all="onTokenResetAll"
                 />
                 <TypographyTab v-else-if="active === 'typography'" :authoring="a" />
-                <StudioTabPlaceholder
+                <PanelsChromeTab
                   v-else-if="active === 'panels'"
-                  :icon="LayoutPanelTop"
-                  title="Panels & Chrome"
-                  phase="C4"
-                  note="Dockview chrome tokens and per-panel appearance variants."
+                  :authoring="a"
+                  :resolved="resolvedTokens"
                 />
                 <EffectsTab v-else-if="active === 'effects'" :authoring="a" />
               </template>
