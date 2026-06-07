@@ -68,4 +68,32 @@ describe("TokenColorField (C1)", () => {
     await advanced.find("input").trigger("blur");
     expect(w.emitted("change")?.at(-1)).toEqual(["var(--color-blue-500)"]);
   });
+
+  // Pop-out close fix: the outside-click listener is bound (at open time) to the
+  // trigger's OWNING window — `ownerDocument.defaultView` — so a click inside a
+  // dockview pop-out window closes the popover instead of only the opener. jsdom
+  // is single-realm, so these prove the mechanism + docked behavior; the actual
+  // cross-window case is verified manually (Stage 2).
+  it("closes the popover when a pointerdown lands outside it", async () => {
+    const w = mountField();
+    await w.find("button").trigger("click"); // open (teleported to body)
+    await nextTick();
+    expect(document.querySelector('input[type="color"]')).toBeTruthy();
+
+    document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    await nextTick();
+    expect(document.querySelector('input[type="color"]')).toBeNull();
+  });
+
+  it("keeps the popover open when the pointerdown is inside it", async () => {
+    const w = mountField();
+    await w.find("button").trigger("click");
+    await nextTick();
+    const native = document.querySelector('input[type="color"]') as HTMLElement | null;
+    expect(native).toBeTruthy();
+
+    native!.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    await nextTick();
+    expect(document.querySelector('input[type="color"]')).toBeTruthy();
+  });
 });

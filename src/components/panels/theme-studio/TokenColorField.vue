@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { onClickOutside } from "@vueuse/core";
 import { converter, formatCss, formatHex } from "culori";
 import { nextTick, onBeforeUnmount, ref, type Ref, watch } from "vue";
 
@@ -52,7 +51,20 @@ const { target: overlayTarget, resolve: resolveOverlay } = useOverlayTarget(
   triggerRef as Ref<ElementLike>,
 );
 
-onClickOutside(triggerRef, () => closePopover(), { ignore: [popoverRef] });
+// Close-on-outside-click is bound to the panel's CURRENT window at open time
+// (see openPopover). @vueuse/core's onClickOutside can't serve the pop-out case:
+// it captures the setup-time (opener) window and exposes no way to redirect the
+// listener to the child window dockview moves the panel into — so an outside
+// click in a popped-out window never closed the popover (only clicking back on
+// the opener did). A pointerdown listener on the trigger's OWNING window fixes
+// that and is identical docked (owning window === opener).
+let outsideWindow: Window | null = null;
+function onOutsidePointer(event: Event): void {
+  const node = event.target as Node | null;
+  if (!node) return;
+  if (triggerRef.value?.contains(node) || popoverRef.value?.contains(node)) return;
+  closePopover();
+}
 
 const l = ref(0.7);
 const c = ref(0);
@@ -128,6 +140,11 @@ function openPopover(): void {
   open.value = true;
   void nextTick(() => {
     reposition();
+    // Bind outside-click to the window that owns the panel right now (pop-out
+    // aware). Read at open time: dockview's DOM move fires no reactive signal,
+    // so the owning window is only known once the popover is actually opening.
+    outsideWindow = triggerRef.value?.ownerDocument.defaultView ?? window;
+    outsideWindow.addEventListener("pointerdown", onOutsidePointer, true);
     // Keep the popover anchored to the swatch as the body scrolls / window resizes.
     window.addEventListener("scroll", reposition, true);
     window.addEventListener("resize", reposition);
@@ -136,6 +153,8 @@ function openPopover(): void {
 function closePopover(): void {
   if (!open.value) return;
   open.value = false;
+  (outsideWindow ?? window).removeEventListener("pointerdown", onOutsidePointer, true);
+  outsideWindow = null;
   window.removeEventListener("scroll", reposition, true);
   window.removeEventListener("resize", reposition);
 }
