@@ -1,10 +1,15 @@
 <template>
   <Select
+    ref="selectRef"
     unstyled
     :pt="theme"
     :pt-options="{
       mergeProps: ptViewMerge,
     }"
+    :append-to="overlayTarget"
+    @before-show="resolveOverlay"
+    @show="onShow"
+    @hide="onHide"
   >
     <template #dropdownicon>
       <ChevronDownIcon />
@@ -34,10 +39,20 @@ import TimesIcon from "@primevue/icons/times";
 import Select, { type SelectPassThroughOptions, type SelectProps } from "primevue/select";
 import { ref } from "vue";
 
+import { type ElementLike, useOverlayTarget } from "@/composables/useOverlayTarget";
+import { usePopoutOverlayDismiss } from "@/composables/usePopoutOverlayDismiss";
+
 import { ptViewMerge } from "./utils";
 
 interface Props extends /* @vue-ignore */ SelectProps {}
 defineProps<Props>();
+
+// Pop-out aware: mount the overlay in THIS component's window, not the opener's.
+const selectRef = ref<ElementLike>();
+const { target: overlayTarget, resolve: resolveOverlay } = useOverlayTarget(selectRef);
+// Pop-out aware: PrimeVue's outside-click close listener is bound to the opener
+// document; close from the owning window instead (inert when docked).
+const { onShow, onHide } = usePopoutOverlayDismiss(selectRef);
 
 const theme = ref<SelectPassThroughOptions>({
   root: `relative inline-flex w-full cursor-pointer select-none items-center rounded-md p-fluid:flex

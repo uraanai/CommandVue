@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { Search, X } from "@lucide/vue";
 import fuzzysort from "fuzzysort";
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, nextTick, ref, type Ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
 import IconButton from "@/components/ui/IconButton.vue";
 import Input from "@/components/ui/Input.vue";
+import { type ElementLike, useOverlayTarget } from "@/composables/useOverlayTarget";
 import { formatCombo, SHORTCUTS } from "@/modules/shortcuts/catalog";
 import { TOOLS } from "@/modules/tools";
 import { useToolsStore } from "@/stores/tools";
@@ -34,6 +35,15 @@ const router = useRouter();
 
 const query = ref("");
 const selectedIndex = ref(0);
+
+// Pop-out: the palette teleports to `<body>`. Anchor a non-teleported root
+// element so we can read the owning-window body at open time and mount the
+// overlay there (rather than the opener window) when hosted in a popped-out
+// realm.
+const rootRef = ref<HTMLElement | null>(null);
+const { target: overlayTarget, resolve: resolveOverlay } = useOverlayTarget(
+  rootRef as Ref<ElementLike>,
+);
 // The Input wrapper renders a PrimeVue InputText whose root IS the underlying
 // `<input>` element. `inputRef.value.$el` is the DOM input we focus on open.
 const inputRef = ref<{ $el?: HTMLElement } | null>(null);
@@ -127,6 +137,7 @@ watch(
   () => ui.commandPaletteOpen,
   (open) => {
     if (open) {
+      resolveOverlay(); // resolve the owning-window body before the teleport mounts
       query.value = "";
       selectedIndex.value = 0;
       void nextTick(() => focusInput());
@@ -167,7 +178,10 @@ function onInputKey(event: KeyboardEvent): void {
 </script>
 
 <template>
-  <Teleport to="body">
+  <!-- Non-teleported anchor: lets useOverlayTarget read the owning-window body
+       at open time so the teleported overlay mounts in the correct window. -->
+  <span ref="rootRef" hidden aria-hidden="true" />
+  <Teleport :to="overlayTarget">
     <div
       v-if="ui.commandPaletteOpen"
       class="bg-brand-950/70 fixed inset-0 z-50 flex items-start justify-center p-4 pt-[15vh] backdrop-blur-sm"

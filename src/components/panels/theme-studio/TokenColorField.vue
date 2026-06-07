@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { onClickOutside } from "@vueuse/core";
 import { converter, formatCss, formatHex } from "culori";
-import { nextTick, onBeforeUnmount, ref, watch } from "vue";
+import { nextTick, onBeforeUnmount, ref, type Ref, watch } from "vue";
 
 import Input from "@/components/ui/Input.vue";
+import { type ElementLike, useOverlayTarget } from "@/composables/useOverlayTarget";
 import { TokenValueSchema } from "@/modules/themes/portableSchema";
 import { cn } from "@/utils/cn";
 import InputNumber from "@/volt/InputNumber.vue";
@@ -44,7 +44,27 @@ const triggerRef = ref<HTMLElement | null>(null);
 const popoverRef = ref<HTMLElement | null>(null);
 const popStyle = ref<Record<string, string>>({});
 
-onClickOutside(triggerRef, () => closePopover(), { ignore: [popoverRef] });
+// Pop-out: teleport the popover into the panel's OWN window (the swatch trigger
+// moves with the panel on pop-out; the teleported popover does not, so bind the
+// target to the trigger and re-resolve at open time).
+const { target: overlayTarget, resolve: resolveOverlay } = useOverlayTarget(
+  triggerRef as Ref<ElementLike>,
+);
+
+// Close-on-outside-click is bound to the panel's CURRENT window at open time
+// (see openPopover). @vueuse/core's onClickOutside can't serve the pop-out case:
+// it captures the setup-time (opener) window and exposes no way to redirect the
+// listener to the child window dockview moves the panel into — so an outside
+// click in a popped-out window never closed the popover (only clicking back on
+// the opener did). A pointerdown listener on the trigger's OWNING window fixes
+// that and is identical docked (owning window === opener).
+let outsideWindow: Window | null = null;
+function onOutsidePointer(event: Event): void {
+  const node = event.target as Node | null;
+  if (!node) return;
+  if (triggerRef.value?.contains(node) || popoverRef.value?.contains(node)) return;
+  closePopover();
+}
 
 const l = ref(0.7);
 const c = ref(0);
@@ -116,9 +136,15 @@ function reposition(): void {
 
 function openPopover(): void {
   seed();
+  resolveOverlay(); // resolve the owning-window body before the teleport mounts
   open.value = true;
   void nextTick(() => {
     reposition();
+    // Bind outside-click to the window that owns the panel right now (pop-out
+    // aware). Read at open time: dockview's DOM move fires no reactive signal,
+    // so the owning window is only known once the popover is actually opening.
+    outsideWindow = triggerRef.value?.ownerDocument.defaultView ?? window;
+    outsideWindow.addEventListener("pointerdown", onOutsidePointer, true);
     // Keep the popover anchored to the swatch as the body scrolls / window resizes.
     window.addEventListener("scroll", reposition, true);
     window.addEventListener("resize", reposition);
@@ -127,6 +153,8 @@ function openPopover(): void {
 function closePopover(): void {
   if (!open.value) return;
   open.value = false;
+  (outsideWindow ?? window).removeEventListener("pointerdown", onOutsidePointer, true);
+  outsideWindow = null;
   window.removeEventListener("scroll", reposition, true);
   window.removeEventListener("resize", reposition);
 }
@@ -189,7 +217,7 @@ function commitAdvanced(): void {
       @click="toggle"
     />
 
-    <Teleport to="body">
+    <Teleport :to="overlayTarget">
       <div
         v-if="open"
         ref="popoverRef"

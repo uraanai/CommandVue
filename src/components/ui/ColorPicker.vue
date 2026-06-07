@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import PvColorPicker from "primevue/colorpicker";
-import { computed } from "vue";
+import { computed, ref, type Ref } from "vue";
 
+import { type ElementLike, useOverlayTarget } from "@/composables/useOverlayTarget";
 import { cn } from "@/utils/cn";
 
 import { defaultColors, type PaletteColor } from "./colors";
@@ -44,6 +45,18 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   "update:modelValue": [value: string];
 }>();
+
+// Pop-out: PrimeVue ColorPicker teleports its overlay panel to `appendTo`
+// (default `body` → the OPENER document). v4.5.5 has no `before-show` emit, so
+// resolve the owning-window body in the capture phase of the trigger's
+// click/keydown — that runs before PrimeVue's own handler flips the overlay
+// open. The PrimeVue Portal is a reactive `<Teleport :to>`, so the late-resolved
+// target is honored as the overlay mounts. (The `pickerRef` is the ColorPicker
+// root `<div>`, which moves with the panel into its own window on pop-out.)
+const pickerRef = ref<{ $el?: unknown } | null>(null);
+const { target: overlayTarget, resolve: resolveOverlay } = useOverlayTarget(
+  pickerRef as Ref<ElementLike>,
+);
 
 const currentName = computed(() => {
   const match = props.palette.find((c) => c.hex.toLowerCase() === props.modelValue.toLowerCase());
@@ -91,15 +104,19 @@ function onCustomChange(value: unknown): void {
     <div v-if="showCustom" class="flex items-center gap-2 text-xs">
       <span class="text-muted">Custom:</span>
       <PvColorPicker
+        ref="pickerRef"
         :model-value="modelValue.replace(/^#/, '')"
         :format="format"
         :disabled="disabled"
+        :append-to="overlayTarget"
         :pt="{
           root: { class: 'inline-flex items-center' },
           preview: {
             class: 'border-border h-5 w-8 cursor-pointer rounded border',
           },
         }"
+        @click.capture="resolveOverlay"
+        @keydown.capture="resolveOverlay"
         @update:model-value="onCustomChange"
       />
       <span class="text-foreground font-mono text-[11px]">{{ currentName }}</span>

@@ -15,6 +15,7 @@ import Button from "@/components/ui/Button.vue";
 import ColorSwatchPicker from "@/components/ui/ColorSwatchPicker.vue";
 import Input from "@/components/ui/Input.vue";
 import Select from "@/components/ui/Select.vue";
+import Slider from "@/components/ui/Slider.vue";
 import { themeRepo } from "@/modules/storage/themeRepo";
 import {
   ACCENT_COLOR_SWATCHES,
@@ -29,7 +30,6 @@ import { useThemeStore } from "@/stores/theme";
 import { useWorkspaceStore } from "@/stores/workspace";
 import Checkbox from "@/volt/Checkbox.vue";
 import Dialog from "@/volt/Dialog.vue";
-import Slider from "@/volt/Slider.vue";
 
 /**
  * Theme customizer dialog — the Linear-style authoring surface.

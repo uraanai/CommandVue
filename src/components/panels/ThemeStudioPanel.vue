@@ -19,6 +19,7 @@ import Button from "@/components/ui/Button.vue";
 import ColorSwatchPicker from "@/components/ui/ColorSwatchPicker.vue";
 import Input from "@/components/ui/Input.vue";
 import Select from "@/components/ui/Select.vue";
+import Slider from "@/components/ui/Slider.vue";
 import Tabs from "@/components/ui/Tabs.vue";
 import { ensureFontSpecLoaded } from "@/composables/useFontLoader";
 import { useNotify } from "@/composables/useNotify";
@@ -30,7 +31,6 @@ import { themeRegistry } from "@/modules/themes/registry";
 import { TOKEN_MANIFEST_LIST } from "@/modules/themes/tokenManifest";
 import { useThemeStore } from "@/stores/theme";
 import Checkbox from "@/volt/Checkbox.vue";
-import Slider from "@/volt/Slider.vue";
 import Splitter from "@/volt/Splitter.vue";
 
 /**
