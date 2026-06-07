@@ -341,3 +341,6 @@ macrotask
 dedupes
 gstatic
 footgun
+
+# Input devices (Track A — Tabs wheel→horizontal scroll)
+trackpad
