@@ -622,12 +622,26 @@
   --tooltip-radius: var(--radius-md);
   --tooltip-font-size: var(--text-xs);
 
-  /* Button */
+  /* Button — heights are DENSITY-AWARE, derived from --density-control-height with
+     fixed offsets that keep sm<md<lg distinct in every density (md tracks the control
+     height so buttons line up with inputs; sm one step down, lg one step up).
+
+     DEFAULT buttons gently FLOOR the compact density via max() so they don't get too
+     small (design call): comfortable + spacious track the control height, while
+     compact is nudged up (~29px md instead of 26px). The floors only bind in compact.
+
+     The DENSE variant (ui/Button `dense` prop) drops the floor for a fully
+     density-proportional, smaller compact button — for special dense surfaces only.
+     `--button-height-dense-*` are internal wiring (not themeable); a theme overrides
+     the default `--button-height-*`. */
   --button-radius: var(--radius-md);
   --button-font-weight: var(--font-weight-medium);
-  --button-height-sm: 1.5rem;
-  --button-height-md: 2rem;
-  --button-height-lg: 2.5rem;
+  --button-height-sm: max(calc(var(--density-control-height) - 0.375rem), 1.4375rem);
+  --button-height-md: max(var(--density-control-height), 1.8125rem);
+  --button-height-lg: max(calc(var(--density-control-height) + 0.5rem), 2.3125rem);
+  --button-height-dense-sm: calc(var(--density-control-height) - 0.375rem);
+  --button-height-dense-md: var(--density-control-height);
+  --button-height-dense-lg: calc(var(--density-control-height) + 0.5rem);
 }
 
 /* ==========================================================================

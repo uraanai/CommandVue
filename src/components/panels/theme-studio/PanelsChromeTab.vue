@@ -166,7 +166,11 @@ async function onRemove(panelId: string, presetId: string): Promise<void> {
       </div>
 
       <template v-else>
-        <div class="flex flex-wrap items-end gap-2">
+        <!-- items-stretch so the Apply column matches the labeled selects' height; an
+             invisible spacer label puts the button in the same stack as the selects,
+             and the flex-1 row centers the button against the SELECT (not the label) so
+             it lines up vertically with the controls (not bottom-aligned). -->
+        <div class="flex flex-wrap items-stretch gap-2">
           <label class="flex min-w-[10rem] flex-1 flex-col gap-1">
             <span class="text-faint text-[10px] tracking-[0.18em] uppercase">Panel</span>
             <Select
@@ -187,9 +191,18 @@ async function onRemove(panelId: string, presetId: string): Promise<void> {
               "
             />
           </label>
-          <Button size="sm" variant="primary" :disabled="!selectedPanelId" @click="onApply">
-            Apply
-          </Button>
+          <div class="flex flex-col gap-1">
+            <span
+              aria-hidden="true"
+              class="text-faint text-[10px] tracking-[0.18em] uppercase opacity-0 select-none"
+              >Apply</span
+            >
+            <div class="flex flex-1 items-center">
+              <Button size="sm" variant="primary" :disabled="!selectedPanelId" @click="onApply">
+                Apply
+              </Button>
+            </div>
+          </div>
         </div>
 
         <p v-if="selectedVariant === 'glass'" class="text-faint text-[11px]">
