@@ -1,10 +1,15 @@
 <template>
   <AutoComplete
+    ref="rootRef"
     unstyled
     :pt="theme"
     :pt-options="{
       mergeProps: ptViewMerge,
     }"
+    :append-to="overlayTarget"
+    @before-show="resolveOverlay"
+    @show="onShow"
+    @hide="onHide"
   >
     <template #dropdownicon>
       <ChevronDownIcon />
@@ -23,10 +28,20 @@ import AutoComplete, {
 } from "primevue/autocomplete";
 import { ref } from "vue";
 
+import { type ElementLike, useOverlayTarget } from "@/composables/useOverlayTarget";
+import { usePopoutOverlayDismiss } from "@/composables/usePopoutOverlayDismiss";
+
 import { ptViewMerge } from "./utils";
 
 interface Props extends /* @vue-ignore */ AutoCompleteProps {}
 defineProps<Props>();
+
+// Pop-out aware: mount the overlay in THIS component's window, not the opener's.
+const rootRef = ref<ElementLike>();
+const { target: overlayTarget, resolve: resolveOverlay } = useOverlayTarget(rootRef);
+// Pop-out aware: PrimeVue's outside-click close listener is bound to the opener
+// document; close from the owning window instead (inert when docked).
+const { onShow, onHide } = usePopoutOverlayDismiss(rootRef);
 
 const theme = ref<AutoCompletePassThroughOptions>({
   root: `inline-flex p-fluid:flex`,

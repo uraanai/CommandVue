@@ -4,9 +4,9 @@ import type { ThemeAuthoring } from "@/composables/useThemeAuthoring";
 import { useDebounceFn } from "@vueuse/core";
 import { ref, watch } from "vue";
 
+import Slider from "@/components/ui/Slider.vue";
 import { EFFECTS_DEFAULTS } from "@/modules/themes/effects";
 import InputNumber from "@/volt/InputNumber.vue";
-import Slider from "@/volt/Slider.vue";
 
 /**
  * EffectsTab — the Effects-tab body (Track A C5).
