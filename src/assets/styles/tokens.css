@@ -622,12 +622,16 @@
   --tooltip-radius: var(--radius-md);
   --tooltip-font-size: var(--text-xs);
 
-  /* Button */
+  /* Button — heights are DENSITY-AWARE: derived from --density-control-height (which
+     changes per data-density) with fixed offsets that keep the sm<md<lg progression
+     distinct in every density (md tracks the control height so buttons line up with
+     inputs/selects; sm is one step down, lg one step up). A theme may still override
+     any of these to a static value. */
   --button-radius: var(--radius-md);
   --button-font-weight: var(--font-weight-medium);
-  --button-height-sm: 1.5rem;
-  --button-height-md: 2rem;
-  --button-height-lg: 2.5rem;
+  --button-height-sm: calc(var(--density-control-height) - 0.375rem);
+  --button-height-md: var(--density-control-height);
+  --button-height-lg: calc(var(--density-control-height) + 0.5rem);
 }
 
 /* ==========================================================================

@@ -39,14 +39,16 @@ const variantClass: Record<Variant, string> = {
   danger: "bg-danger text-white hover:opacity-90 active:opacity-80",
 };
 
-// Three fixed, clearly-distinct sizes so `sm < md < lg` reads correctly in every
-// theme density. (`sm` previously pulled from the `--density-*` tokens, whose
-// comfortable/spacious values made its min-height match `md` — so a "small"
-// button didn't look small. A fixed scale keeps the progression unambiguous.)
+// Density-aware heights via the per-size `--button-height-*` tokens, which derive
+// from `--density-control-height` with fixed offsets (tokens.css) — so a compact app
+// gets compact buttons and a spacious one taller buttons, while `sm < md < lg` stays
+// distinct in EVERY density (the offsets keep them apart; the earlier bug where `sm`
+// matched `md` came from all sizes sharing the single control-height token). Height
+// is the `min-h` floor; horizontal padding + font stay per-size for the size character.
 const sizeClass: Record<Size, string> = {
-  sm: "px-2.5 py-1 text-xs",
-  md: "px-3.5 py-1.5 text-sm",
-  lg: "px-5 py-2.5 text-base",
+  sm: "min-h-[var(--button-height-sm)] px-2.5 text-xs",
+  md: "min-h-[var(--button-height-md)] px-3.5 text-sm",
+  lg: "min-h-[var(--button-height-lg)] px-5 text-base",
 };
 
 const rootClass = computed(() =>
