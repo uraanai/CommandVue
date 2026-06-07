@@ -4,6 +4,7 @@ import { storeToRefs } from "pinia";
 import { computed } from "vue";
 
 import Button from "@/components/ui/Button.vue";
+import { vHorizontalWheel } from "@/directives/horizontalWheel";
 import { useMinimizedStore } from "@/stores/minimized";
 
 import MinimizedBar from "./MinimizedBar.vue";
@@ -30,9 +31,13 @@ const hideLabel = computed(() => `Hide ${entries.value.length} minimized window$
 </script>
 
 <template>
+  <!-- `items-start`, not `items-end`: when the bars overflow, the scroll row gets a
+       horizontal scrollbar BELOW the bars, which adds to its height. Bottom-aligning
+       would drop the handle to the scrollbar line (lower than the bars); top-aligning
+       keeps the handle level with the bar row, with the scrollbar sitting below both. -->
   <div
     v-if="entries.length > 0"
-    class="pointer-events-none absolute bottom-0 left-0 z-30 flex max-w-full items-end gap-1.5 py-2 pr-2"
+    class="pointer-events-none absolute bottom-0 left-0 z-30 flex max-w-full items-start gap-1.5 py-2 pr-2"
   >
     <!-- Handle: flush to the left edge (square left corner), always visible (solid
          `secondary` fill, not ghost), and the count is shown in BOTH states so the
@@ -40,7 +45,7 @@ const hideLabel = computed(() => `Hide ${entries.value.length} minimized window$
     <Button
       variant="secondary"
       size="sm"
-      class="pointer-events-auto shrink-0 rounded-l-none shadow-md"
+      class="pointer-events-auto h-[var(--density-control-height)] shrink-0 rounded-l-none shadow-md"
       :title="collapsed ? showLabel : hideLabel"
       :aria-label="collapsed ? showLabel : hideLabel"
       :aria-expanded="!collapsed"
@@ -59,10 +64,17 @@ const hideLabel = computed(() => `Hide ${entries.value.length} minimized window$
       leave-from-class="translate-x-0 opacity-100"
       leave-to-class="-translate-x-3 opacity-0"
     >
+      <!-- `tab-scroll-bar` (main.css) is the shared 2px themed scrollbar used by the
+           scrollable Tabs strip — reused here so the overflow scrollbar is a thin
+           1–2px bar instead of the chunky default. -->
+      <!-- `v-horizontal-wheel`: a plain vertical mouse wheel over the row scrolls it
+           sideways (shared with the Tabs strip). `pb-px` insets the 2px scrollbar a
+           hair from the bars so it doesn't sit flush against them. -->
       <div
         v-if="!collapsed"
         id="minimized-tray-row"
-        class="pointer-events-auto flex min-w-0 items-end gap-2 overflow-x-auto"
+        v-horizontal-wheel
+        class="tab-scroll-bar pointer-events-auto flex min-w-0 items-start gap-2 overflow-x-auto pb-px"
       >
         <MinimizedBar
           v-for="entry in entries"

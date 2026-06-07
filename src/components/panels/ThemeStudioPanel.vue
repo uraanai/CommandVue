@@ -290,10 +290,12 @@ function onDiscard(): void {
         class="!h-full !rounded-none !border-0"
       >
         <SplitterPanel :size="44" :min-size="22">
-          <!-- §3E option (3): the editor chrome is pinned to a fixed `comfortable`
-               density so its controls never re-space with the AUTHORED density.
-               Only the preview pane (the other SplitterPanel) reflects a.density.value. -->
-          <div data-density="comfortable" class="flex min-h-0 w-full flex-col overflow-hidden">
+          <!-- The editor chrome INHERITS the ambient density (the app's committed
+               density, and the previewed density while "Live across app" is on) rather
+               than being pinned to a fixed size — so on a compact app the Studio
+               controls are compact too, and authoring a density previews it live in the
+               controls (matching the preview pane). -->
+          <div class="flex min-h-0 w-full flex-col overflow-hidden">
             <Tabs
               v-model="activeTab"
               :tabs="STUDIO_L1_TABS"
