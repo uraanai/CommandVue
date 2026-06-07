@@ -36,7 +36,7 @@ const closeLabel = computed(() => `Close ${props.entry.title}`);
     <Button
       variant="ghost"
       size="sm"
-      class="rounded-none"
+      class="min-h-[var(--density-control-height)] rounded-none text-[length:var(--density-font-size)]"
       :title="restoreLabel"
       :aria-label="restoreLabel"
       @click="emit('restore')"

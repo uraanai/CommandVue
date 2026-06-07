@@ -104,11 +104,14 @@ describe("ThemeStudioPanel — C6 IA", () => {
     }
   });
 
-  it("pins the editor chrome to comfortable density; the preview reflects authored density", () => {
+  it("does not pin the editor chrome density (inherits ambient); preview reflects authored density", () => {
     const w = mountPanel();
-    // The editor (controls) wrapper is pinned comfortable regardless of theme.
-    expect(w.find('[data-density="comfortable"]').exists()).toBe(true);
-    // The preview wrapper binds :data-density to the authored density (default comfortable).
+    // The editor controls no longer pin a fixed `comfortable` density — they inherit
+    // the app's ambient density (so a compact app shows compact Studio controls).
+    // The ONLY comfortable-density host is now the preview pane, which binds the
+    // AUTHORED density (default comfortable). Before the fix there were two such
+    // hosts (the controls wrapper + the preview); now there is exactly one.
+    expect(w.findAll('[data-density="comfortable"]')).toHaveLength(1);
     expect(w.find('[data-testid="studio-preview"]').attributes("data-density")).toBe("comfortable");
   });
 
