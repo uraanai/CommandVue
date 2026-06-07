@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import type { Directive } from "vue";
-
 import { ChevronLeft, ChevronRight } from "@lucide/vue";
 import PvTab from "primevue/tab";
 import PvTabList from "primevue/tablist";
@@ -9,6 +7,7 @@ import PvTabPanels from "primevue/tabpanels";
 import PvTabs from "primevue/tabs";
 import { computed } from "vue";
 
+import { vHorizontalWheel } from "@/directives/horizontalWheel";
 import { cn } from "@/utils/cn";
 
 /**
@@ -186,48 +185,6 @@ const tabListPt = computed(() => {
     nextButton: { class: cn(navButton, "right-0") },
   };
 });
-
-/**
- * Wheel → horizontal scroll for the `scrollable` strip. A plain VERTICAL mouse
- * wheel over the tab row scrolls the row sideways (like dockview's tabs) rather
- * than scrolling the page — but only while the row actually overflows, and only
- * for a predominantly-vertical wheel (a genuine horizontal wheel / trackpad
- * swipe is left to the native `overflow-x`). At the start/end edge it releases,
- * so over-scrolling falls through to the page. It targets the strip's own
- * `.tab-scroll-thin` viewport, so wheeling over the tab PANELS is untouched; and
- * it no-ops on non-scrollable strips (they render no such viewport), so it's
- * safe to attach to every TabList unconditionally. Non-passive listener — it
- * must be able to `preventDefault` the page scroll.
- */
-const wheelHandlers = new WeakMap<HTMLElement, (e: WheelEvent) => void>();
-const vHorizontalWheel: Directive<HTMLElement> = {
-  mounted(el) {
-    const onWheel = (e: WheelEvent): void => {
-      const vp = el.querySelector<HTMLElement>(".tab-scroll-thin");
-      if (!vp || vp.scrollWidth <= vp.clientWidth) return;
-      // Horizontal-dominant intent (tilt wheel / trackpad) → let native scroll it.
-      if (e.deltaY === 0 || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
-      let delta = e.deltaY;
-      if (e.deltaMode === 1)
-        delta *= 16; // lines → px (Firefox line mode)
-      else if (e.deltaMode === 2) delta *= vp.clientWidth; // pages
-      const atStart = vp.scrollLeft <= 0;
-      const atEnd = Math.ceil(vp.scrollLeft + vp.clientWidth) >= vp.scrollWidth;
-      if ((delta < 0 && atStart) || (delta > 0 && atEnd)) return; // release at edges
-      vp.scrollBy({ left: delta, behavior: "instant" });
-      e.preventDefault();
-    };
-    el.addEventListener("wheel", onWheel, { passive: false });
-    wheelHandlers.set(el, onWheel);
-  },
-  unmounted(el) {
-    const onWheel = wheelHandlers.get(el);
-    if (onWheel) {
-      el.removeEventListener("wheel", onWheel);
-      wheelHandlers.delete(el);
-    }
-  },
-};
 </script>
 
 <template>

@@ -4,6 +4,7 @@ import { storeToRefs } from "pinia";
 import { computed } from "vue";
 
 import Button from "@/components/ui/Button.vue";
+import { vHorizontalWheel } from "@/directives/horizontalWheel";
 import { useMinimizedStore } from "@/stores/minimized";
 
 import MinimizedBar from "./MinimizedBar.vue";
@@ -66,10 +67,14 @@ const hideLabel = computed(() => `Hide ${entries.value.length} minimized window$
       <!-- `tab-scroll-bar` (main.css) is the shared 2px themed scrollbar used by the
            scrollable Tabs strip — reused here so the overflow scrollbar is a thin
            1–2px bar instead of the chunky default. -->
+      <!-- `v-horizontal-wheel`: a plain vertical mouse wheel over the row scrolls it
+           sideways (shared with the Tabs strip). `pb-px` insets the 2px scrollbar a
+           hair from the bars so it doesn't sit flush against them. -->
       <div
         v-if="!collapsed"
         id="minimized-tray-row"
-        class="tab-scroll-bar pointer-events-auto flex min-w-0 items-start gap-2 overflow-x-auto"
+        v-horizontal-wheel
+        class="tab-scroll-bar pointer-events-auto flex min-w-0 items-start gap-2 overflow-x-auto pb-px"
       >
         <MinimizedBar
           v-for="entry in entries"
