@@ -3,7 +3,7 @@ import type { ThemeAuthoring } from "@/composables/useThemeAuthoring";
 import type { PanelAppearanceVariant } from "@/modules/presets/panelAppearance";
 import type { Preset } from "@/types/preset";
 
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, ref } from "vue";
 
 import TokenRow from "@/components/panels/theme-studio/TokenRow.vue";
 import Button from "@/components/ui/Button.vue";
@@ -11,7 +11,6 @@ import Select from "@/components/ui/Select.vue";
 import { useNotify } from "@/composables/useNotify";
 import { panelRegistry } from "@/modules/panels/registry";
 import { PANEL_APPEARANCE_VARIANTS } from "@/modules/presets/panelAppearance";
-import { APP_ROOT } from "@/modules/themes/appRoot";
 import { TOKEN_MANIFEST_LIST } from "@/modules/themes/tokenManifest";
 import { usePanelStateStore } from "@/stores/panelState";
 import { usePresetStore } from "@/stores/preset";
@@ -31,7 +30,17 @@ import { useSessionStore } from "@/stores/session";
  *      GLOBAL `panel-appearance` preset per variant, then applies it via the
  *      preset store (which writes panel-state AND sets `data-cv-appearance`).
  */
-const props = defineProps<{ authoring: ThemeAuthoring }>();
+const props = defineProps<{
+  authoring: ThemeAuthoring;
+  /**
+   * Resolved current value for every manifest token — the panel's shared
+   * getComputedStyle(APP_ROOT) snapshot. The panel refreshes it AFTER each live
+   * push, so a per-token reset shows the reverted value rather than the stale
+   * pre-reset one (the previous own-snapshot read the root before the debounced
+   * push had applied, so a reverted color kept showing the old value).
+   */
+  resolved: Record<string, string>;
+}>();
 const a = props.authoring;
 
 const notify = useNotify();
@@ -41,23 +50,8 @@ const session = useSessionStore();
 
 // --- Region (a): chrome token editors --------------------------------------
 // The "Dock panel" manifest section (the 5 legacy + 7 C4 chrome tokens). Static.
+// Resolved values come from the shared `resolved` prop (refreshed after the push).
 const CHROME_ENTRIES = TOKEN_MANIFEST_LIST.filter((e) => e.section === "component-dockpanel");
-
-// Resolved current values via getComputedStyle on the captured app root (the
-// generator emits a sparse map; the rest resolve through var()/color-mix chains).
-// Re-snapshot on mount and after an override settles — same pattern as the panel.
-const resolved = ref<Record<string, string>>({});
-function snapshotResolved(): void {
-  const cs = getComputedStyle(APP_ROOT);
-  const out: Record<string, string> = {};
-  for (const e of CHROME_ENTRIES) {
-    out[e.name] = cs.getPropertyValue(e.name).trim();
-    if (e.contrastAgainst) out[e.contrastAgainst] = cs.getPropertyValue(e.contrastAgainst).trim();
-  }
-  resolved.value = out;
-}
-onMounted(snapshotResolved);
-watch(a.overrides, () => queueMicrotask(snapshotResolved), { deep: false });
 
 // --- Region (b): per-panel appearance assignment ---------------------------
 const VARIANT_OPTIONS = PANEL_APPEARANCE_VARIANTS.map((v) => ({
