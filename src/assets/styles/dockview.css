@@ -116,8 +116,20 @@
   --color-surface: transparent;
   --color-surface-base: transparent;
   --color-surface-sunken: transparent;
-  --color-surface-raised: transparent;
   --color-surface-overlay: transparent;
+  --color-surface-raised: transparent;
+
+  /* Float/dock chrome split (Track A): re-point the --dv-panel-* wiring vars to the
+     --floatpanel-* family on floating groups, so an appearance variant on a FLOAT
+     reads float chrome while the SAME variant on a docked group still reads
+     --dockpanel-*. The variant rule blocks below are UNCHANGED — they read
+     --dv-panel-*, which resolves to the float values on this element and to the dock
+     values on docked groups. --floatpanel-* default to --dockpanel-* so floats match
+     docked chrome until a theme customizes them. */
+  --dv-panel-radius: var(--floatpanel-radius);
+  --dv-panel-border-width: var(--floatpanel-border-width);
+  --dv-panel-shadow: var(--floatpanel-shadow);
+  --dv-panel-gap: var(--floatpanel-gap);
 }
 /* Header readability floor: never below 85% even when the body is at the alpha
    floor, keeping the title + drag handle legible over bright imagery. */

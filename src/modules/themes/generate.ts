@@ -509,6 +509,14 @@ export function generateTheme(input: ThemeGenerationInput): ThemeGenerationResul
   tokens["--dockpanel-tab-font-weight"] = "var(--font-weight-medium)";
   tokens["--dockpanel-tab-active-indicator"] = "var(--color-interactive)";
 
+  // --- Float-window chrome (Track A — float/dock split). Same additive pattern;
+  // each defaults to its --dockpanel-* counterpart so floats inherit dock chrome
+  // until a theme customizes them. var() chains keep live recolor + byte-identity.
+  tokens["--floatpanel-radius"] = "var(--dockpanel-radius)";
+  tokens["--floatpanel-border-width"] = "var(--dockpanel-border-width)";
+  tokens["--floatpanel-shadow"] = "var(--dockpanel-shadow)";
+  tokens["--floatpanel-gap"] = "var(--dockpanel-gap)";
+
   // --- Font roles (C3) — body/sans only; heading is C2-owned. -----------------
   // Emitting nothing when neither fontSpec nor fontFamily is set keeps output
   // byte-identical to pre-C3 for fontless themes (§3c). Verbatim passthrough of a

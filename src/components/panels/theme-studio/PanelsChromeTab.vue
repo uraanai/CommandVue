@@ -49,9 +49,17 @@ const panelStateStore = usePanelStateStore();
 const session = useSessionStore();
 
 // --- Region (a): chrome token editors --------------------------------------
-// The "Dock panel" manifest section (the 5 legacy + 7 C4 chrome tokens). Static.
-// Resolved values come from the shared `resolved` prop (refreshed after the push).
-const CHROME_ENTRIES = TOKEN_MANIFEST_LIST.filter((e) => e.section === "component-dockpanel");
+// Two sub-groups so dock windows and float windows are themed separately:
+//  - "Dock windows" = the component-dockpanel section (5 legacy + 7 C4 tokens).
+//  - "Float windows" = the component-floatpanel geometry/depth tokens (each
+//    defaults to its --dockpanel-* counterpart, so floats match docked chrome
+//    until customized).
+// Static. Resolved values come from the shared `resolved` prop (refreshed after
+// the push), so a per-token reset reverts the control too.
+const CHROME_GROUPS = [
+  { label: "Dock windows", section: "component-dockpanel" },
+  { label: "Float windows", section: "component-floatpanel" },
+].map((g) => ({ ...g, entries: TOKEN_MANIFEST_LIST.filter((e) => e.section === g.section) }));
 
 // --- Region (b): per-panel appearance assignment ---------------------------
 const VARIANT_OPTIONS = PANEL_APPEARANCE_VARIANTS.map((v) => ({
@@ -212,28 +220,31 @@ async function onRemove(panelId: string, presetId: string): Promise<void> {
       </template>
     </section>
 
-    <!-- Region (a): chrome token editors -->
-    <section class="flex flex-col">
-      <h3 class="text-faint px-0 pt-1 pb-1 text-[10px] font-semibold tracking-wider uppercase">
-        Chrome tokens
-      </h3>
-      <p class="text-faint px-0 pb-1 text-[11px]">
-        Geometry, depth, and tab styling of every dock panel frame. These feed the four appearance
-        variants above.
+    <!-- Region (a): chrome token editors — dock windows vs float windows -->
+    <section class="flex flex-col gap-3">
+      <p class="text-faint text-[11px]">
+        Geometry, depth, and tab styling of the panel frame, feeding the four appearance variants
+        above. Float windows take their geometry + depth from a separate set (defaulting to the dock
+        values) so they can read differently while hovering over the map.
       </p>
-      <div class="border-border-subtle rounded-md border">
-        <TokenRow
-          v-for="entry in CHROME_ENTRIES"
-          :key="entry.name"
-          :entry="entry"
-          :resolved-value="resolved[entry.name] ?? ''"
-          :resolved-contrast-bg="
-            entry.contrastAgainst ? resolved[entry.contrastAgainst] : undefined
-          "
-          :edited="entry.name in a.overrides.value"
-          @set="(t: string, v: string) => a.setOverride(t, v)"
-          @reset="(t: string) => a.clearOverride(t)"
-        />
+      <div v-for="group in CHROME_GROUPS" :key="group.section" class="flex flex-col">
+        <h3 class="text-faint px-0 pt-1 pb-1 text-[10px] font-semibold tracking-wider uppercase">
+          {{ group.label }}
+        </h3>
+        <div class="border-border-subtle rounded-md border">
+          <TokenRow
+            v-for="entry in group.entries"
+            :key="entry.name"
+            :entry="entry"
+            :resolved-value="resolved[entry.name] ?? ''"
+            :resolved-contrast-bg="
+              entry.contrastAgainst ? resolved[entry.contrastAgainst] : undefined
+            "
+            :edited="entry.name in a.overrides.value"
+            @set="(t: string, v: string) => a.setOverride(t, v)"
+            @reset="(t: string) => a.clearOverride(t)"
+          />
+        </div>
       </div>
     </section>
   </div>

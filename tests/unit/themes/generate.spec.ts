@@ -33,14 +33,15 @@ function oklchValues(tokens: Record<string, string>): string[] {
 }
 
 describe("generateTheme", () => {
-  it("emits the full semantic + accent + p-surface + chrome token set (85 tokens)", () => {
+  it("emits the full semantic + accent + p-surface + chrome token set (89 tokens)", () => {
     const { tokens } = generateTheme(input());
     const count = Object.keys(tokens).length;
     // Exact baseline tripwire (not a wide band): minimal input emits a fixed
-    // set — 78 pre-C4 + 7 unconditional --dockpanel-* chrome keys (C4). A scale
-    // leak (a conditional family emitted unconditionally) trips this immediately.
-    // Bump deliberately, in the same PR, when a new unconditional token lands.
-    expect(count).toBe(85);
+    // set — 78 pre-C4 + 7 unconditional --dockpanel-* (C4) + 4 unconditional
+    // --floatpanel-* (float/dock split). A scale leak (a conditional family
+    // emitted unconditionally) trips this immediately. Bump deliberately, in the
+    // same PR, when a new unconditional token lands.
+    expect(count).toBe(89);
   });
 
   it("emits the dockview chrome tokens unconditionally as var() chains (C4)", () => {
@@ -53,6 +54,17 @@ describe("generateTheme", () => {
     expect(tokens["--dockpanel-tab-font-weight"]).toBe("var(--font-weight-medium)");
     expect(tokens["--dockpanel-tab-active-indicator"]).toBe("var(--color-interactive)");
     for (const k of Object.keys(tokens).filter((t) => t.startsWith("--dockpanel-"))) {
+      expect(KNOWN.has(k)).toBe(true);
+    }
+  });
+
+  it("emits the float-window chrome tokens, each defaulting to its --dockpanel-* counterpart", () => {
+    const { tokens } = generateTheme(input());
+    expect(tokens["--floatpanel-radius"]).toBe("var(--dockpanel-radius)");
+    expect(tokens["--floatpanel-border-width"]).toBe("var(--dockpanel-border-width)");
+    expect(tokens["--floatpanel-shadow"]).toBe("var(--dockpanel-shadow)");
+    expect(tokens["--floatpanel-gap"]).toBe("var(--dockpanel-gap)");
+    for (const k of Object.keys(tokens).filter((t) => t.startsWith("--floatpanel-"))) {
       expect(KNOWN.has(k)).toBe(true);
     }
   });

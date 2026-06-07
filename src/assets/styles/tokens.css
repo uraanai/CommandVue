@@ -574,6 +574,17 @@
   --dockpanel-tab-font-size: var(--density-font-size);
   --dockpanel-tab-font-weight: var(--font-weight-medium);
   --dockpanel-tab-active-indicator: var(--color-interactive);
+  /* Float-window chrome (Track A — float/dock split). A floating window's frame
+     geometry + depth, kept SEPARATE from the docked --dockpanel-* family so floats
+     (which hover over the map) can read differently — e.g. rounder + more lifted.
+     Each defaults to its --dockpanel-* counterpart, so floats inherit dock chrome
+     until customized (zero behavior change). The float CSS re-points the
+     --dv-panel-* wiring vars to these on .dv-groupview-floating. --floatpanel-gap
+     is reserved for parity (a standalone float has no inter-panel grid gap). */
+  --floatpanel-radius: var(--dockpanel-radius);
+  --floatpanel-border-width: var(--dockpanel-border-width);
+  --floatpanel-shadow: var(--dockpanel-shadow);
+  --floatpanel-gap: var(--dockpanel-gap);
 
   /* Floating window (Track B Phase 3) — the see-through "glass" tint of an
      in-window floating pane. THEME-FOLLOWING so the float matches the rest of the

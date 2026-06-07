@@ -143,6 +143,15 @@ export const COMPONENT_TOKEN_NAMES = [
   "--dockpanel-tab-font-size",
   "--dockpanel-tab-font-weight",
   "--dockpanel-tab-active-indicator",
+  // Float-window chrome (Track A — float/dock split) — mirrors the --dockpanel-*
+  // geometry/depth family for floating windows; each defaults to its --dockpanel-*
+  // counterpart in tokens.css. Consumed by .dv-groupview-floating re-pointing the
+  // internal --dv-panel-* wiring vars (which are NOT allowlisted). No --floatpanel-
+  // tab/blur tokens: tab styling + glass blur stay shared with the dock family.
+  "--floatpanel-radius",
+  "--floatpanel-border-width",
+  "--floatpanel-shadow",
+  "--floatpanel-gap",
   // MenuBar
   "--menubar-bg",
   "--menubar-fg",
