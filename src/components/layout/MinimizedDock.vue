@@ -30,9 +30,13 @@ const hideLabel = computed(() => `Hide ${entries.value.length} minimized window$
 </script>
 
 <template>
+  <!-- `items-start`, not `items-end`: when the bars overflow, the scroll row gets a
+       horizontal scrollbar BELOW the bars, which adds to its height. Bottom-aligning
+       would drop the handle to the scrollbar line (lower than the bars); top-aligning
+       keeps the handle level with the bar row, with the scrollbar sitting below both. -->
   <div
     v-if="entries.length > 0"
-    class="pointer-events-none absolute bottom-0 left-0 z-30 flex max-w-full items-end gap-1.5 py-2 pr-2"
+    class="pointer-events-none absolute bottom-0 left-0 z-30 flex max-w-full items-start gap-1.5 py-2 pr-2"
   >
     <!-- Handle: flush to the left edge (square left corner), always visible (solid
          `secondary` fill, not ghost), and the count is shown in BOTH states so the
@@ -59,10 +63,13 @@ const hideLabel = computed(() => `Hide ${entries.value.length} minimized window$
       leave-from-class="translate-x-0 opacity-100"
       leave-to-class="-translate-x-3 opacity-0"
     >
+      <!-- `tab-scroll-bar` (main.css) is the shared 2px themed scrollbar used by the
+           scrollable Tabs strip — reused here so the overflow scrollbar is a thin
+           1–2px bar instead of the chunky default. -->
       <div
         v-if="!collapsed"
         id="minimized-tray-row"
-        class="pointer-events-auto flex min-w-0 items-end gap-2 overflow-x-auto"
+        class="tab-scroll-bar pointer-events-auto flex min-w-0 items-start gap-2 overflow-x-auto"
       >
         <MinimizedBar
           v-for="entry in entries"
