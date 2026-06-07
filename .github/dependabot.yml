@@ -2,6 +2,12 @@ version: 2
 updates:
   - package-ecosystem: "npm"
     directory: "/"
+    # Dependency updates flow through `develop` like all other work, then ride the
+    # normal release branch into `main` (see CLAUDE.md → Branch and workflow). This
+    # keeps `main` from diverging on manifests, so release PRs don't conflict on
+    # package.json / pnpm-lock.yaml. NOTE: Dependabot reads THIS file only from the
+    # default branch (`main`), so this setting takes effect once it lands on `main`.
+    target-branch: "develop"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -61,6 +67,8 @@ updates:
 
   - package-ecosystem: "github-actions"
     directory: "/"
+    # Same rationale as the npm block above — target `develop`, not the default branch.
+    target-branch: "develop"
     schedule:
       interval: "weekly"
       day: "monday"
