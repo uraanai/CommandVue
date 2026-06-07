@@ -564,6 +564,16 @@
   /* Glass blur radius (Track A C5) — owned by C5; consumed by C4 glass panels
      via var(--dockpanel-glass-blur, 8px). Mode-independent. */
   --dockpanel-glass-blur: 8px;
+  /* Dockview chrome (Track A C4) — themeable panel frame + tab strip. Geometry
+     is fixed/derived; --dockpanel-shadow is a foreground-class shadow (A1c) so it
+     survives the float surface-zero. Defaults equal today's implicit chrome. */
+  --dockpanel-radius: var(--radius-md);
+  --dockpanel-border-width: 1px;
+  --dockpanel-shadow: var(--shadow-bevel-raised);
+  --dockpanel-gap: var(--space-1);
+  --dockpanel-tab-font-size: var(--density-font-size);
+  --dockpanel-tab-font-weight: var(--font-weight-medium);
+  --dockpanel-tab-active-indicator: var(--color-interactive);
 
   /* Floating window (Track B Phase 3) — the see-through "glass" tint of an
      in-window floating pane. THEME-FOLLOWING so the float matches the rest of the

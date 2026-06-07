@@ -33,11 +33,28 @@ function oklchValues(tokens: Record<string, string>): string[] {
 }
 
 describe("generateTheme", () => {
-  it("emits the full semantic + accent + p-surface token set (~73 tokens)", () => {
+  it("emits the full semantic + accent + p-surface + chrome token set (85 tokens)", () => {
     const { tokens } = generateTheme(input());
     const count = Object.keys(tokens).length;
-    expect(count).toBeGreaterThanOrEqual(70);
-    expect(count).toBeLessThanOrEqual(85);
+    // Exact baseline tripwire (not a wide band): minimal input emits a fixed
+    // set — 78 pre-C4 + 7 unconditional --dockpanel-* chrome keys (C4). A scale
+    // leak (a conditional family emitted unconditionally) trips this immediately.
+    // Bump deliberately, in the same PR, when a new unconditional token lands.
+    expect(count).toBe(85);
+  });
+
+  it("emits the dockview chrome tokens unconditionally as var() chains (C4)", () => {
+    const { tokens } = generateTheme(input());
+    expect(tokens["--dockpanel-radius"]).toBe("var(--radius-md)");
+    expect(tokens["--dockpanel-border-width"]).toBe("1px");
+    expect(tokens["--dockpanel-shadow"]).toBe("var(--shadow-bevel-raised)");
+    expect(tokens["--dockpanel-gap"]).toBe("var(--space-1)");
+    expect(tokens["--dockpanel-tab-font-size"]).toBe("var(--density-font-size)");
+    expect(tokens["--dockpanel-tab-font-weight"]).toBe("var(--font-weight-medium)");
+    expect(tokens["--dockpanel-tab-active-indicator"]).toBe("var(--color-interactive)");
+    for (const k of Object.keys(tokens).filter((t) => t.startsWith("--dockpanel-"))) {
+      expect(KNOWN.has(k)).toBe(true);
+    }
   });
 
   it("emits the type-scale ramp + line-height companions only when typeScale is set", () => {

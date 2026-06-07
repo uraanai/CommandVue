@@ -129,6 +129,13 @@ elevation scale `--shadow-1`, `--shadow-2`, `--shadow-3`, `--shadow-4`,
 glow / blur inputs on a generated theme; a static theme may override any of them
 directly.
 
+**Panel chrome (optional — the dockview frame + tab strip; default to today's
+implicit chrome, so most themes omit them):** frame geometry `--dockpanel-radius`,
+`--dockpanel-border-width`, `--dockpanel-gap`; the depth `--dockpanel-shadow`; the
+tab strip `--dockpanel-tab-font-size`, `--dockpanel-tab-font-weight`,
+`--dockpanel-tab-active-indicator`. The four panel appearance variants (flat /
+bordered / raised / glass) are applied per-panel via a preset, not theme tokens.
+
 **Typography (optional):** `--font-family-body`, `--font-family-sans`,
 `--font-family-mono`, `--font-family-heading`. Font sizes — the type scale —
 are `--text-xs`, `--text-sm`, `--text-base`, `--text-lg`, `--text-xl`,

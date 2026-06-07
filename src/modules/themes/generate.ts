@@ -497,6 +497,18 @@ export function generateTheme(input: ThemeGenerationInput): ThemeGenerationResul
     "--tooltip-text": css(surfaceBase),
   };
 
+  // --- Dockview chrome (Track A C4). Emitted unconditionally as var() chains
+  // equal to the tokens.css defaults — additive + byte-identical (no ENGINE_VERSION
+  // bump), so an exported theme is self-contained; the Panels & Chrome tab tweaks
+  // them via overrides. var() (not resolved literals) keeps live recolor working. -
+  tokens["--dockpanel-radius"] = "var(--radius-md)";
+  tokens["--dockpanel-border-width"] = "1px";
+  tokens["--dockpanel-shadow"] = "var(--shadow-bevel-raised)";
+  tokens["--dockpanel-gap"] = "var(--space-1)";
+  tokens["--dockpanel-tab-font-size"] = "var(--density-font-size)";
+  tokens["--dockpanel-tab-font-weight"] = "var(--font-weight-medium)";
+  tokens["--dockpanel-tab-active-indicator"] = "var(--color-interactive)";
+
   // --- Font roles (C3) — body/sans only; heading is C2-owned. -----------------
   // Emitting nothing when neither fontSpec nor fontFamily is set keeps output
   // byte-identical to pre-C3 for fontless themes (§3c). Verbatim passthrough of a

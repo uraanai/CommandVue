@@ -591,6 +591,49 @@ export const TOKEN_MANIFEST_LIST: readonly TokenManifestEntry[] = [
     label: "Dock panel · padding",
     kind: "length",
   },
+  // Dockview chrome (Track A C4) — frame geometry + tab strip.
+  {
+    name: "--dockpanel-radius",
+    section: "component-dockpanel",
+    label: "Dock panel · radius",
+    kind: "length",
+  },
+  {
+    name: "--dockpanel-border-width",
+    section: "component-dockpanel",
+    label: "Dock panel · border width",
+    kind: "length",
+  },
+  {
+    name: "--dockpanel-shadow",
+    section: "component-dockpanel",
+    label: "Dock panel · shadow",
+    kind: "shadow",
+  },
+  {
+    name: "--dockpanel-gap",
+    section: "component-dockpanel",
+    label: "Dock panel · gap",
+    kind: "length",
+  },
+  {
+    name: "--dockpanel-tab-font-size",
+    section: "component-dockpanel",
+    label: "Dock tab · font size",
+    kind: "length",
+  },
+  {
+    name: "--dockpanel-tab-font-weight",
+    section: "component-dockpanel",
+    label: "Dock tab · font weight",
+    kind: "number",
+  },
+  {
+    name: "--dockpanel-tab-active-indicator",
+    section: "component-dockpanel",
+    label: "Dock tab · active indicator",
+    kind: "color",
+  },
   // ── component-menubar ─────────────────────────────────────────────────────
   { name: "--menubar-bg", section: "component-menubar", label: "Menu bar · bg", kind: "color" },
   {

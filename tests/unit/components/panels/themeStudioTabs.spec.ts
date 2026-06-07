@@ -56,15 +56,14 @@ describe("ThemeStudioPanel — C6 IA", () => {
     expect(txt).toContain("Contrast");
   });
 
-  it("renders the matching placeholder for each not-yet-built tab", async () => {
+  it("renders the Panels & Chrome tab body (C4) — not a placeholder", async () => {
     const w = mountPanel();
-    for (const { label, title, phase } of [
-      { label: "Panels & Chrome", title: "Panels & Chrome", phase: "C4" },
-    ]) {
-      await clickTab(w, label);
-      expect(w.text()).toContain(title);
-      expect(w.text()).toContain(`Lands in ${phase}`);
-    }
+    await clickTab(w, "Panels & Chrome");
+    const txt = w.text();
+    expect(txt).toContain("Panel appearance"); // region (b) — assignment header
+    expect(txt).toContain("Chrome tokens"); // region (a) — token-editor header
+    expect(txt).toContain("Open a panel to assign an appearance"); // empty state (no dock in test)
+    expect(txt).not.toContain("Lands in C4"); // the placeholder is gone
   });
 
   it("renders the Tokens editor (C1) — not a placeholder — in the Tokens tab", async () => {

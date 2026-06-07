@@ -1,4 +1,5 @@
 import type { PanelDefinition } from "./types";
+import type { PanelType } from "@/types/workspace";
 
 import { panelRegistry } from "./registry";
 
@@ -100,6 +101,14 @@ export const BUILTIN_PANELS: readonly PanelDefinition[] = [
     component: () => import("@/components/panels/ThemeStudioPanel.vue"),
   },
 ] as const;
+
+/**
+ * Every built-in panel-type id. The single source for preset `applicableTo`
+ * contracts (e.g. the `panel-appearance` preset applies to all panel types),
+ * so they can't drift from the registered set — `registry.spec.ts` asserts the
+ * preset's `applicableTo` equals this list.
+ */
+export const ALL_BUILTIN_PANEL_TYPE_IDS: readonly PanelType[] = BUILTIN_PANELS.map((p) => p.id);
 
 let registered = false;
 
