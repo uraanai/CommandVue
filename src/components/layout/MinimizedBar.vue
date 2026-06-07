@@ -40,7 +40,7 @@ const closeLabel = computed(() => `Close ${props.entry.title}`);
     <Button
       variant="ghost"
       size="sm"
-      class="min-h-[var(--density-control-height)] rounded-none text-[length:var(--density-font-size)]"
+      class="h-[var(--density-control-height)] rounded-none text-[length:var(--density-font-size)]"
       :title="restoreLabel"
       :aria-label="restoreLabel"
       @click="emit('restore')"
@@ -51,10 +51,20 @@ const closeLabel = computed(() => `Close ${props.entry.title}`);
         >+{{ extraCount }}</span
       >
     </Button>
-    <IconButton :label="restoreLabel" size="sm" class="rounded-none" @click="emit('restore')">
+    <IconButton
+      :label="restoreLabel"
+      size="sm"
+      class="h-[var(--density-control-height)] rounded-none"
+      @click="emit('restore')"
+    >
       <Maximize2 />
     </IconButton>
-    <IconButton :label="closeLabel" size="sm" class="rounded-none" @click="emit('discard')">
+    <IconButton
+      :label="closeLabel"
+      size="sm"
+      class="h-[var(--density-control-height)] rounded-none"
+      @click="emit('discard')"
+    >
       <X />
     </IconButton>
   </div>

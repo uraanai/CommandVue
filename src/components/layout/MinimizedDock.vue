@@ -40,7 +40,7 @@ const hideLabel = computed(() => `Hide ${entries.value.length} minimized window$
     <Button
       variant="secondary"
       size="sm"
-      class="pointer-events-auto min-h-[var(--density-control-height)] shrink-0 rounded-l-none shadow-md"
+      class="pointer-events-auto h-[var(--density-control-height)] shrink-0 rounded-l-none shadow-md"
       :title="collapsed ? showLabel : hideLabel"
       :aria-label="collapsed ? showLabel : hideLabel"
       :aria-expanded="!collapsed"
