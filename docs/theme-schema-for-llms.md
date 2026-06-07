@@ -135,6 +135,10 @@ implicit chrome, so most themes omit them):** frame geometry `--dockpanel-radius
 tab strip `--dockpanel-tab-font-size`, `--dockpanel-tab-font-weight`,
 `--dockpanel-tab-active-indicator`. The four panel appearance variants (flat /
 bordered / raised / glass) are applied per-panel via a preset, not theme tokens.
+Floating windows take their geometry + depth from a parallel `--floatpanel-radius`,
+`--floatpanel-border-width`, `--floatpanel-shadow`, `--floatpanel-gap` family — each
+defaults to its `--dockpanel-*` counterpart, so set them only to make floats (which
+hover over the map) read differently from docked panels.
 
 **Typography (optional):** `--font-family-body`, `--font-family-sans`,
 `--font-family-mono`, `--font-family-heading`. Font sizes — the type scale —

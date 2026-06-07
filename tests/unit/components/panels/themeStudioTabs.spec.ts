@@ -61,7 +61,8 @@ describe("ThemeStudioPanel — C6 IA", () => {
     await clickTab(w, "Panels & Chrome");
     const txt = w.text();
     expect(txt).toContain("Panel appearance"); // region (b) — assignment header
-    expect(txt).toContain("Chrome tokens"); // region (a) — token-editor header
+    expect(txt).toContain("Dock windows"); // region (a) — dock chrome sub-group
+    expect(txt).toContain("Float windows"); // region (a) — float chrome sub-group (float/dock split)
     expect(txt).toContain("Open a panel to assign an appearance"); // empty state (no dock in test)
     expect(txt).not.toContain("Lands in C4"); // the placeholder is gone
   });

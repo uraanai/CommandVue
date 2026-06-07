@@ -5,6 +5,7 @@ titlebox
 commandvue
 CommandVue
 dockpanel
+floatpanel
 menubar
 statusbar
 uraanai

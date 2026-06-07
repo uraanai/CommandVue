@@ -42,6 +42,7 @@ export const TOKEN_SECTIONS = [
   "surface-scale",
   "component-datatable",
   "component-dockpanel",
+  "component-floatpanel",
   "component-menubar",
   "component-statusbar",
   "component-dialog",
@@ -67,6 +68,7 @@ export const TOKEN_SECTION_LABELS: Record<TokenSection, string> = {
   "surface-scale": "Surface scale",
   "component-datatable": "DataTable",
   "component-dockpanel": "Dock panel",
+  "component-floatpanel": "Float panel",
   "component-menubar": "Menu bar",
   "component-statusbar": "Status bar",
   "component-dialog": "Dialog",
@@ -633,6 +635,31 @@ export const TOKEN_MANIFEST_LIST: readonly TokenManifestEntry[] = [
     section: "component-dockpanel",
     label: "Dock tab · active indicator",
     kind: "color",
+  },
+  // ── component-floatpanel (Track A — float/dock split) ──────────────────────
+  {
+    name: "--floatpanel-radius",
+    section: "component-floatpanel",
+    label: "Float panel · radius",
+    kind: "length",
+  },
+  {
+    name: "--floatpanel-border-width",
+    section: "component-floatpanel",
+    label: "Float panel · border width",
+    kind: "length",
+  },
+  {
+    name: "--floatpanel-shadow",
+    section: "component-floatpanel",
+    label: "Float panel · shadow",
+    kind: "shadow",
+  },
+  {
+    name: "--floatpanel-gap",
+    section: "component-floatpanel",
+    label: "Float panel · gap",
+    kind: "length",
   },
   // ── component-menubar ─────────────────────────────────────────────────────
   { name: "--menubar-bg", section: "component-menubar", label: "Menu bar · bg", kind: "color" },
