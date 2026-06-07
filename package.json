@@ -142,7 +142,7 @@
     "@vitejs/plugin-vue": "^6.0.7",
     "@vue/eslint-config-prettier": "^10.2.0",
     "@vue/eslint-config-typescript": "^14.2.0",
-    "@vue/test-utils": "^2.4.6",
+    "@vue/test-utils": "^2.4.11",
     "@vue/tsconfig": "^0.9.1",
     "cloudflared": "^0.7.1",
     "cspell": "^10.0.1",
