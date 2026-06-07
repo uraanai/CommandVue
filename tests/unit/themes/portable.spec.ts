@@ -1,4 +1,4 @@
-import type { Theme } from "@/types/theme";
+import type { Theme, ThemeBase } from "@/types/theme";
 
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -6,11 +6,20 @@ import { themeRepo } from "@/modules/storage/themeRepo";
 import { buildExportFilename, downloadThemeFile, exportThemeToJson } from "@/modules/themes/export";
 import { importThemeFromJson } from "@/modules/themes/import";
 import { themeRegistry } from "@/modules/themes/registry";
+import { resolve } from "@/modules/themes/resolve";
 
 import { resetStorage } from "../storage/helpers";
 
 function makeTheme(over: Partial<Theme> = {}): Theme {
   const now = Date.now();
+  // For a static fixture, `tokens` (the cache) and `base.tokens` are the same
+  // bag, so a `tokens` override drives both — otherwise a re-import would resolve
+  // the static base and ignore the overridden cache. A `base` override wins.
+  const tokens = over.tokens ?? {
+    "--color-surface-base": "oklch(0.98 0.005 250)",
+    "--color-text-primary": "oklch(0.2 0.04 264)",
+  };
+  const base: ThemeBase = over.base ?? { kind: "static", tokens };
   return {
     id: "01ARZ3NDEKTSV4RRFFQ69G5FAV",
     name: "Sample",
@@ -19,21 +28,129 @@ function makeTheme(over: Partial<Theme> = {}): Theme {
     source: "user",
     mode: "light",
     density: "comfortable",
-    tokens: {
-      "--color-surface-base": "oklch(0.98 0.005 250)",
-      "--color-text-primary": "oklch(0.2 0.04 264)",
-    },
+    ...over,
+    base,
+    overrides: over.overrides ?? {},
+    tokens,
     createdAt: now,
     updatedAt: now,
-    ...over,
   };
 }
+
+describe("portable typeScale (C2)", () => {
+  beforeEach(async () => {
+    await resetStorage();
+    themeRegistry.__resetForTests();
+  });
+
+  const genInput = (ts: { baseSize: number; ratio: number }) =>
+    ({
+      schemaVersion: 2,
+      baseColor: "oklch(0.16 0.03 285)",
+      accentColor: "oklch(0.7 0.16 320)",
+      contrast: 62,
+      mode: "dark",
+      density: "compact",
+      typeScale: ts,
+    }) as const;
+
+  function seedWithTypeScale(ts: { baseSize: number; ratio: number }): Theme {
+    const input = genInput(ts);
+    return makeTheme({
+      source: "generated",
+      mode: "dark",
+      density: "compact",
+      base: { kind: "generated", input },
+      tokens: resolve({ base: { kind: "generated", input }, overrides: {}, name: "TS" }),
+    });
+  }
+
+  it("round-trips a generated theme's typeScale through export → import", async () => {
+    const ts = { baseSize: 18, ratio: 1.25 };
+    const result = await importThemeFromJson(exportThemeToJson(seedWithTypeScale(ts)));
+    expect(result.success).toBe(true);
+    const stored = result.theme!;
+    expect(stored.base.kind === "generated" && stored.base.input.typeScale).toEqual(ts);
+    expect(stored.tokens["--text-base"]).toBe("1.125rem");
+  });
+
+  it("rejects an out-of-range typeScale on import (rejected, never clamped)", async () => {
+    const json = JSON.parse(
+      exportThemeToJson(seedWithTypeScale({ baseSize: 18, ratio: 1.25 })),
+    ) as {
+      theme: { base: { input: { typeScale: { baseSize: number } } } };
+    };
+    json.theme.base.input.typeScale.baseSize = 30; // out of [10, 24]
+    const bad = await importThemeFromJson(JSON.stringify(json));
+    expect(bad.success).toBe(false);
+  });
+});
+
+describe("portable effects (C5)", () => {
+  beforeEach(async () => {
+    await resetStorage();
+    themeRegistry.__resetForTests();
+  });
+
+  function seedWithEffects(effects: {
+    depth?: number;
+    glowAlpha?: number;
+    blurRadius?: number;
+  }): Theme {
+    const input = {
+      schemaVersion: 2,
+      baseColor: "oklch(0.16 0.03 285)",
+      accentColor: "oklch(0.7 0.16 320)",
+      contrast: 62,
+      mode: "dark",
+      density: "compact",
+      effects,
+    } as const;
+    return makeTheme({
+      source: "generated",
+      mode: "dark",
+      density: "compact",
+      base: { kind: "generated", input },
+      tokens: resolve({ base: { kind: "generated", input }, overrides: {}, name: "FX" }),
+    });
+  }
+
+  it("round-trips a generated theme's effects through export → import", async () => {
+    const fx = { depth: 70, glowAlpha: 0.5, blurRadius: 10 };
+    const result = await importThemeFromJson(exportThemeToJson(seedWithEffects(fx)));
+    expect(result.success).toBe(true);
+    const stored = result.theme!;
+    expect(stored.base.kind === "generated" && stored.base.input.effects).toEqual(fx);
+    expect(stored.tokens["--dockpanel-glass-blur"]).toBe("10px");
+  });
+
+  it("strips an unknown effects sub-key on import (forward-compat)", async () => {
+    const json = JSON.parse(exportThemeToJson(seedWithEffects({ depth: 60 }))) as {
+      theme: { base: { input: { effects: Record<string, unknown> } } };
+    };
+    json.theme.base.input.effects.futureKnob = 5;
+    const result = await importThemeFromJson(JSON.stringify(json));
+    expect(result.success).toBe(true);
+    const stored = result.theme!;
+    const fx = stored.base.kind === "generated" ? stored.base.input.effects : undefined;
+    expect(fx).toEqual({ depth: 60 }); // unknown sub-key dropped
+  });
+
+  it("rejects an out-of-range effects value on import (rejected, never clamped)", async () => {
+    const json = JSON.parse(exportThemeToJson(seedWithEffects({ depth: 60 }))) as {
+      theme: { base: { input: { effects: { depth: number } } } };
+    };
+    json.theme.base.input.effects.depth = 999; // out of [0, 100]
+    const bad = await importThemeFromJson(JSON.stringify(json));
+    expect(bad.success).toBe(false);
+  });
+});
 
 describe("exportThemeToJson", () => {
   it("wraps a theme in the PortableTheme envelope", () => {
     const theme = makeTheme();
     const parsed = JSON.parse(exportThemeToJson(theme)) as Record<string, unknown>;
-    expect(parsed.schemaVersion).toBe(1);
+    expect(parsed.schemaVersion).toBe(2);
     expect(parsed.exportedBy).toBe("commandvue");
     expect(typeof parsed.exportedByVersion).toBe("string");
     expect(typeof parsed.exportedAt).toBe("number");
@@ -126,19 +243,56 @@ describe("importThemeFromJson", () => {
   it("forces source to 'imported' regardless of what the file claims", async () => {
     const seed = makeTheme({
       source: "generated",
-      generation: {
-        schemaVersion: 1,
-        baseColor: "oklch(0.98 0.005 250)",
-        accentColor: "oklch(0.55 0.18 250)",
-        contrast: 50,
+      base: {
+        kind: "generated",
+        input: {
+          schemaVersion: 2,
+          baseColor: "oklch(0.98 0.005 250)",
+          accentColor: "oklch(0.55 0.18 250)",
+          contrast: 50,
+          mode: "light",
+          density: "comfortable",
+        },
       },
     });
     const result = await importThemeFromJson(exportThemeToJson(seed));
     expect(result.success).toBe(true);
     expect(result.theme?.source).toBe("imported");
-    // generation block carries through so a re-imported generated theme can
-    // still be edited by the customizer (Phase E).
+    // The generated base survives (so the customizer can re-edit), and the
+    // derived `generation` compat block reflects its inputs.
+    expect(result.theme?.base.kind).toBe("generated");
     expect(result.theme?.generation?.contrast).toBe(50);
+  });
+
+  it("upcasts a version 1 export (incl. legacy --color-p-surface-* keys) to v2", async () => {
+    const v1File = JSON.stringify({
+      schemaVersion: 1,
+      exportedAt: Date.now(),
+      exportedBy: "commandvue",
+      exportedByVersion: "0.1.0",
+      theme: {
+        id: "01ARZ3NDEKTSV4RRFFQ69G5FAV",
+        name: "Legacy Import",
+        description: "a v1 file in the wild",
+        author: "old-app",
+        source: "imported",
+        mode: "light",
+        density: "comfortable",
+        tokens: {
+          "--color-surface-base": "oklch(0.98 0.005 250)",
+          "--color-text-primary": "oklch(0.2 0.04 264)",
+          "--color-p-surface-0": "#ffffff",
+        },
+        createdAt: 1,
+        updatedAt: 2,
+      },
+    });
+    const result = await importThemeFromJson(v1File);
+    expect(result.success).toBe(true);
+    expect(result.theme?.source).toBe("imported");
+    expect(result.theme?.base.kind).toBe("static");
+    expect(result.theme?.tokens["--color-p-surface-0"]).toBe("#ffffff"); // legacy key preserved
+    expect(result.warnings?.some((w) => /version 1/.test(w))).toBe(true);
   });
 
   describe("ID conflict resolution", () => {

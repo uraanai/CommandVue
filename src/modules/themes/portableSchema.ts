@@ -43,18 +43,124 @@ export const TokenNameSchema = z.string().refine((n) => isKnownToken(n), {
   error: (issue) => `Unknown token name: ${String(issue.input)}`,
 });
 
-/** Generation metadata captured when a theme is produced by the engine. */
+/** Per-family status override (Track A A1b). Tier 1 = `hue`; `color`/`subtle`
+ *  are reserved for Tier 2 (A2b) and carried so persisted themes round-trip. */
+const StatusFamilyOverrideSchema = z.object({
+  hue: z.number().min(0).max(360).optional(),
+  color: z.string().min(1).max(100).optional(),
+  subtle: z.string().min(1).max(100).optional(),
+});
+
+/** Per-family status overrides keyed by family. */
+const StatusOverridesSchema = z.object({
+  success: StatusFamilyOverrideSchema.optional(),
+  warning: StatusFamilyOverrideSchema.optional(),
+  danger: StatusFamilyOverrideSchema.optional(),
+  info: StatusFamilyOverrideSchema.optional(),
+});
+
+/** Per-family status hue pins (forward-compat; pinned on migration). */
+const StatusHuesSchema = z.object({
+  success: z.number().min(0).max(360).optional(),
+  warning: z.number().min(0).max(360).optional(),
+  danger: z.number().min(0).max(360).optional(),
+  info: z.number().min(0).max(360).optional(),
+});
+
+/**
+ * Legacy generation metadata (data-model v1). In v2 this is a **derived** compat
+ * block, re-derived from `base.input` on import; accepted here (optional, lenient)
+ * only so a round-tripped file validates. `base.input` is the source of truth.
+ */
 const GenerationMetaSchema = z.object({
   schemaVersion: z.literal(1),
   baseColor: z.string().min(1),
   accentColor: z.string().min(1),
   contrast: z.number().min(30).max(100),
   paired: z.string().optional(),
+  statusOverrides: StatusOverridesSchema.optional(),
 });
 
-/** Inner Theme object. `source` is validated here; the importer additionally
+// --- C3 font spec (security boundary at the Zod edge) -----------------------
+// The `fallback` regex deliberately excludes `<`, `(`, `)`, `:`, `;`, `/` — so a
+// composed `--font-family-*` value built only from a validated `family` +
+// `fallback` can never form a CSS-injection sequence (this is why the engine
+// does no re-validation of the composed string).
+const FontFamilyNameSchema = z
+  .string()
+  .min(1)
+  .max(64)
+  .regex(/^[A-Za-z0-9][A-Za-z0-9 \-]*$/, "Invalid font family name");
+const FontSourceSchema = z.enum(["google", "system", "stack"]);
+const FontWeightsSchema = z.array(z.number().int().min(1).max(1000)).max(18).optional();
+const FontFallbackSchema = z
+  .string()
+  .max(200)
+  .regex(/^[A-Za-z0-9 ,'_-]*$/, "Invalid font fallback stack")
+  .optional();
+
+/** C3 — structured font choice. Plain z.object (strip unknown keys), NOT
+ *  .strict(), for forward-compat with future additive sub-fields. */
+const FontSpecSchema = z.object({
+  family: FontFamilyNameSchema,
+  source: FontSourceSchema,
+  weights: FontWeightsSchema,
+  fallback: FontFallbackSchema,
+  heading: z
+    .object({
+      family: FontFamilyNameSchema,
+      source: FontSourceSchema,
+      weights: FontWeightsSchema,
+      fallback: FontFallbackSchema,
+    })
+    .optional(),
+});
+
+/** Effects / depth inputs (Track A C5). Plain z.object → unknown future sub-keys
+ *  are stripped (forward-compat), matching the GenerationInputV2Schema posture. */
+const EffectsSpecSchema = z.object({
+  depth: z.number().min(0).max(100).optional(),
+  glowAlpha: z.number().min(0).max(1).optional(),
+  blurRadius: z.number().min(0).max(24).optional(),
+});
+
+/** The v2 generation input persisted as a `generated` base. Lossless — carries
+ *  fontFamily + status inputs so the theme is fully re-derivable. */
+const GenerationInputV2Schema = z.object({
+  schemaVersion: z.literal(2),
+  baseColor: z.string().min(1),
+  accentColor: z.string().min(1),
+  contrast: z.number().min(30).max(100),
+  mode: z.enum(["light", "dark"]),
+  density: z.enum(["compact", "comfortable", "spacious"]),
+  fontFamily: z.string().min(1).max(200).optional(),
+  statusHues: StatusHuesSchema.optional(),
+  statusOverrides: StatusOverridesSchema.optional(),
+  // C2 — modular type-scale input. Bounds == TYPE_SCALE_BOUNDS (the deriver
+  // range); the Zod edge is the SINGLE enforcement point — out-of-range is
+  // REJECTED here (never clamped), so a persisted value always equals what the
+  // deriver renders. Plain z.object (strip unknowns) for forward-compat.
+  typeScale: z
+    .object({
+      baseSize: z.number().min(10).max(24),
+      ratio: z.number().min(1).max(1.333),
+    })
+    .optional(),
+  fontSpec: FontSpecSchema.optional(),
+  effects: EffectsSpecSchema.optional(),
+});
+
+/** Discriminated theme base (v2): re-derivable generated input, or frozen tokens. */
+const ThemeBaseSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("generated"), input: GenerationInputV2Schema }),
+  z.object({ kind: z.literal("static"), tokens: z.record(TokenNameSchema, TokenValueSchema) }),
+]);
+
+/** Inner Theme object (v2). `source` is validated here; the importer additionally
  *  *forces* it to `"imported"` after Zod passes, so even an exported `"user"`
- *  theme is re-stamped as imported on the way in. */
+ *  theme is re-stamped as imported on the way in. The `tokens` cache is embedded
+ *  (Open Decision 7) so a fork with a divergent engine can still render the
+ *  original; `generation` is accepted but re-derived from `base.input`. */
 export const ThemeSchema = z.object({
   id: z.string().min(1).max(100),
   name: z.string().min(1).max(100),
@@ -63,7 +169,10 @@ export const ThemeSchema = z.object({
   source: z.enum(["built-in", "user", "imported", "generated"]),
   mode: z.enum(["light", "dark"]),
   density: z.enum(["compact", "comfortable", "spacious"]),
+  base: ThemeBaseSchema,
+  overrides: z.record(TokenNameSchema, TokenValueSchema).optional().default({}),
   tokens: z.record(TokenNameSchema, TokenValueSchema),
+  paired: z.string().optional(),
   generation: GenerationMetaSchema.optional(),
   createdAt: z.number(),
   updatedAt: z.number(),

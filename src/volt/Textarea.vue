@@ -28,8 +28,8 @@ const theme = ref<TextareaPassThroughOptions>({
         enabled:focus:border-primary
         disabled:bg-surface-200 disabled:text-surface-500
         dark:disabled:bg-surface-700 dark:disabled:text-surface-400
-        p-invalid:border-red-400 dark:p-invalid:border-red-300
-        p-invalid:placeholder:text-red-600 dark:p-invalid:placeholder:text-red-400
+        p-invalid:border-[var(--color-status-danger)]
+        p-invalid:placeholder:text-[var(--color-status-danger)]
         px-[var(--density-cell-padding-x)] py-[var(--density-cell-padding-y)]
         text-[length:var(--density-font-size)]
         p-fluid:w-full

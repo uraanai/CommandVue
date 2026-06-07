@@ -165,6 +165,17 @@ docs/.vitepress/dist/
 # Scratch / temp dirs used during agent sessions
 temp/
 
+# Stray Playwright Stage-1 screenshots accidentally saved to the repo root.
+# They belong in .verification-screenshots/ (ignored above); ignore the names
+# used by verification runs so `git add -A` never sweeps them in.
+/slider-*.png
+/phase4*.png
+
+# Claude Code session-local runtime — the scheduled-task lock + local settings.
+# Project-scoped config like .claude/CLAUDE.md or .claude/rules/ stays trackable.
+.claude/scheduled_tasks.lock
+.claude/settings.local.json
+
 # Internal planning documents — tracked intentionally, not public
 # The ! rule below prevents accidental exclusion by future blanket dotfile rules
 !.internal/

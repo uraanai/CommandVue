@@ -168,9 +168,15 @@
   --color-accent-900: var(--color-blue-900);
 
   /* --------------------------------------------------------------------------
-   * PrimeVue surface palette — required by `tailwindcss-primeui`.
-   * Volt and PrimeVue's unstyled mode read `--color-p-surface-*` for
-   * `bg-surface-0` / `dark:bg-surface-900` etc. utilities.
+   * PrimeVue / Volt surface ramp — the AUTHORED source for every theme's surface
+   * neutrals. A fixed light→dark scale (0 = lightest … 950 = darkest); themes
+   * re-emit it via the generator. These are the DEFAULT (no-theme) values.
+   *
+   * The live lever Volt actually resolves is `--p-surface-N` (single `p`), which
+   * `main.css` bridges to this ramp (`--p-surface-N: var(--color-p-surface-N)`),
+   * so `bg-surface-0` / `dark:bg-surface-900` etc. follow the theme (Track A A1a).
+   * Do NOT confuse this with the app's 4-rung `--color-surface-{base,raised,…}`
+   * ladder, nor with the numeric `--color-surface-N` utility alias.
    * -------------------------------------------------------------------------- */
   --color-p-surface-0: #ffffff;
   --color-p-surface-50: var(--color-slate-50);
@@ -221,6 +227,9 @@
     "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-family-mono: ui-monospace, "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
   --font-family-display: var(--font-family-sans);
+  /* Heading role (Track A C2). Defaults to the display alias so existing
+   * built-ins render headings in the sans face until a theme sets it. */
+  --font-family-heading: var(--font-family-display);
 
   /* Legacy aliases — keep `font-sans` / `font-mono` Tailwind utilities. */
   --font-sans: var(--font-family-sans);
@@ -234,6 +243,17 @@
   --text-2xl: 1.5rem;
   --text-3xl: 1.875rem;
   --text-4xl: 2.25rem;
+  /* Type-scale line-height companions (Track A C2). Fixed fallbacks match the
+   * default Tailwind v4 per-step leading; the engine overrides these only when
+   * `typeScale` is set, keeping headings from clipping as sizes grow. */
+  --text-xs--line-height: 1.5;
+  --text-sm--line-height: 1.5;
+  --text-base--line-height: 1.5;
+  --text-lg--line-height: 1.5;
+  --text-xl--line-height: 1.375;
+  --text-2xl--line-height: 1.25;
+  --text-3xl--line-height: 1.2;
+  --text-4xl--line-height: 1.1;
 
   --font-weight-regular: 400;
   --font-weight-medium: 500;
@@ -348,9 +368,73 @@
   --color-status-info: var(--color-blue-600);
   --color-status-info-subtle: var(--color-blue-50);
 
-  /* Focus ring */
-  --color-focus-ring: var(--color-blue-500);
+  /* Status borders — the left-stripe / outline accent for tags + toasts.
+   * Default to the solid family hue; the generator re-emits these from the
+   * resolved status value when a status override is present (Track A A1b). */
+  --color-status-success-border: var(--color-status-success);
+  --color-status-warning-border: var(--color-status-warning);
+  --color-status-danger-border: var(--color-status-danger);
+  --color-status-info-border: var(--color-status-info);
+
+  /* Toast — neutral defaults + per-severity fills. `-bg` = the family's subtle
+   * fill, `-fg` = the family's solid color. These chain off the status +
+   * surface tokens, so they follow the active theme AND dark mode without a
+   * separate dark block: custom-property references resolve in the current
+   * cascade, picking up whatever `--color-status-*` / surface tokens are live.
+   * Built-ins inherit them for free; a generated theme with a status override
+   * re-emits them pinned to its resolved values (Track A A1b, §3c). */
+  --color-toast-bg: var(--color-surface-raised);
+  --color-toast-fg: var(--color-text-primary);
+  --color-toast-border: var(--color-border-default);
+  --color-toast-success-bg: var(--color-status-success-subtle);
+  --color-toast-success-fg: var(--color-status-success);
+  --color-toast-info-bg: var(--color-status-info-subtle);
+  --color-toast-info-fg: var(--color-status-info);
+  --color-toast-warning-bg: var(--color-status-warning-subtle);
+  --color-toast-warning-fg: var(--color-status-warning);
+  --color-toast-danger-bg: var(--color-status-danger-subtle);
+  --color-toast-danger-fg: var(--color-status-danger);
+
+  /* Focus ring — follows the interactive (accent) color by default so the focus
+   * outline never clashes with a recolored theme. It stays a distinct,
+   * overridable token: the theme generator sets it explicitly, and a downstream
+   * theme can point it at any color to give focus its own hue. */
+  --color-focus-ring: var(--color-interactive);
   --shadow-focus-ring: 0 0 0 2px var(--color-focus-ring);
+
+  /* Depth & accent (Track A A1c) — the "less-flat" palette. All foreground-class
+   * (border / shadow colors, never surface fills) so they survive the
+   * float-transparency override in `dockview.css`. The color defaults chain off
+   * surface / border / interactive, so they auto-adapt to dark mode AND to a
+   * recolored theme without a separate dark block — like the A1b toast/border
+   * chains. A generated theme emits precise per-mode color values; the composed
+   * shadows below are theme-independent and reference whichever colors are live. */
+  --color-surface-bevel-light: color-mix(in oklch, var(--color-surface-raised), white 9%);
+  --color-surface-bevel-dark: color-mix(in oklch, var(--color-surface-raised), black 9%);
+  --color-border-accent: color-mix(
+    in oklch,
+    var(--color-border-default),
+    var(--color-interactive) 35%
+  );
+  --color-interactive-glow: color-mix(in oklch, var(--color-interactive) 32%, transparent);
+  --color-interactive-dim: color-mix(in oklch, var(--color-interactive), black 14%);
+  --shadow-bevel-raised:
+    inset 0 1px 0 0 var(--color-surface-bevel-light),
+    inset 0 -1px 0 0 var(--color-surface-bevel-dark);
+  --shadow-bevel-sunken:
+    inset 0 1px 0 0 var(--color-surface-bevel-dark),
+    inset 0 -1px 0 0 var(--color-surface-bevel-light);
+  --shadow-accent-glow: 0 0 0 3px var(--color-interactive-glow);
+  /* Elevation scale (Track A C5) — a neutral, themeable depth ramp. Ink derives
+   * from --color-text-primary so a dark theme's elevation auto-inverts toward a
+   * subtle light glow (mode-adaptive — no dark block). The generator re-emits
+   * these from effects.depth; absent → these defaults apply (byte-identical).
+   * Foreground-class (box-shadow) → survive the float-transparency override. */
+  --shadow-1: 0 1px 2px 0 color-mix(in oklch, var(--color-text-primary) 8%, transparent);
+  --shadow-2: 0 2px 4px -1px color-mix(in oklch, var(--color-text-primary) 10%, transparent);
+  --shadow-3: 0 4px 8px -2px color-mix(in oklch, var(--color-text-primary) 12%, transparent);
+  --shadow-4: 0 8px 16px -4px color-mix(in oklch, var(--color-text-primary) 14%, transparent);
+  --shadow-5: 0 16px 32px -8px color-mix(in oklch, var(--color-text-primary) 18%, transparent);
 
   /* Semantic spacing — for layout-level usage (panels, forms, sections) */
   --space-panel-padding: var(--space-4);
@@ -400,6 +484,26 @@
 
   /* Legacy aliases — keep older `h-titlebar` / `h-statusbar` consumers
    * working as the density tokens drive the source of truth. */
+  --spacing-titlebar: var(--density-titlebar-height);
+  --spacing-statusbar: var(--density-statusbar-height);
+}
+
+/* Comfortable is the @theme/:root default; this explicit block lets a nested
+ * `[data-density="comfortable"]` wrapper (the Theme Studio editor chrome, C6)
+ * override an inherited `<html data-density="…">` for its subtree. Values are
+ * identical to the :root defaults above — this adds NO new token NAME, so it is
+ * not a doc-sync / knownTokens / engine change. Authored as a bare attribute
+ * selector (specificity 0-1-0) so the inner wrapper beats the html-level value. */
+[data-density="comfortable"] {
+  --density-row-height: 2.25rem;
+  --density-cell-padding-y: var(--space-2);
+  --density-cell-padding-x: var(--space-3);
+  --density-control-height: 2rem;
+  --density-icon-size: 1rem;
+  --density-font-size: var(--text-sm);
+  --density-titlebar-height: 2.5rem;
+  --density-statusbar-height: 1.75rem;
+  --density-panel-header-height: 2.25rem;
   --spacing-titlebar: var(--density-titlebar-height);
   --spacing-statusbar: var(--density-statusbar-height);
 }
@@ -457,6 +561,41 @@
   --dockpanel-tab-active-bg: var(--color-surface-base);
   --dockpanel-tab-border: var(--color-border-subtle);
   --dockpanel-padding: var(--space-panel-padding);
+  /* Glass blur radius (Track A C5) — owned by C5; consumed by C4 glass panels
+     via var(--dockpanel-glass-blur, 8px). Mode-independent. */
+  --dockpanel-glass-blur: 8px;
+  /* Dockview chrome (Track A C4) — themeable panel frame + tab strip. Geometry
+     is fixed/derived; --dockpanel-shadow is a foreground-class shadow (A1c) so it
+     survives the float surface-zero. Defaults equal today's implicit chrome. */
+  --dockpanel-radius: var(--radius-md);
+  --dockpanel-border-width: 1px;
+  --dockpanel-shadow: var(--shadow-bevel-raised);
+  --dockpanel-gap: var(--space-1);
+  --dockpanel-tab-font-size: var(--density-font-size);
+  --dockpanel-tab-font-weight: var(--font-weight-medium);
+  --dockpanel-tab-active-indicator: var(--color-interactive);
+  /* Float-window chrome (Track A — float/dock split). A floating window's frame
+     geometry + depth, kept SEPARATE from the docked --dockpanel-* family so floats
+     (which hover over the map) can read differently — e.g. rounder + more lifted.
+     Each defaults to its --dockpanel-* counterpart, so floats inherit dock chrome
+     until customized (zero behavior change). The float CSS re-points the
+     --dv-panel-* wiring vars to these on .dv-groupview-floating. --floatpanel-gap
+     is reserved for parity (a standalone float has no inter-panel grid gap). */
+  --floatpanel-radius: var(--dockpanel-radius);
+  --floatpanel-border-width: var(--dockpanel-border-width);
+  --floatpanel-shadow: var(--dockpanel-shadow);
+  --floatpanel-gap: var(--dockpanel-gap);
+
+  /* Floating window (Track B Phase 3) — the see-through "glass" tint of an
+     in-window floating pane. THEME-FOLLOWING so the float matches the rest of the
+     UI: a light tint in light mode (here), a dark tint in dark mode (overridden in
+     html[data-theme="dark"] below). Sourced from the `--color-p-surface-*` ramp
+     (Track A A1a) so it now follows the active THEME's neutrals rather than a
+     fixed slate primitive — and that ramp is NOT among the surface tokens zeroed
+     to transparent inside floats, so the tint stays opaque where it is actually
+     used. The per-window alpha is the runtime var `--cv-float-alpha` (0..1),
+     composed via color-mix in dockview.css. */
+  --cv-float-tint: var(--color-p-surface-100);
 
   /* MenuBar */
   --menubar-bg: var(--color-surface-base);
@@ -474,7 +613,7 @@
   /* Dialog */
   --dialog-bg: var(--color-surface-overlay);
   --dialog-backdrop: rgb(0 0 0 / 0.4);
-  --dialog-shadow: var(--shadow-xl);
+  --dialog-shadow: var(--shadow-4);
   --dialog-border: var(--color-border-default);
 
   /* Tooltip */
@@ -483,12 +622,26 @@
   --tooltip-radius: var(--radius-md);
   --tooltip-font-size: var(--text-xs);
 
-  /* Button */
+  /* Button — heights are DENSITY-AWARE, derived from --density-control-height with
+     fixed offsets that keep sm<md<lg distinct in every density (md tracks the control
+     height so buttons line up with inputs; sm one step down, lg one step up).
+
+     DEFAULT buttons gently FLOOR the compact density via max() so they don't get too
+     small (design call): comfortable + spacious track the control height, while
+     compact is nudged up (~29px md instead of 26px). The floors only bind in compact.
+
+     The DENSE variant (ui/Button `dense` prop) drops the floor for a fully
+     density-proportional, smaller compact button — for special dense surfaces only.
+     `--button-height-dense-*` are internal wiring (not themeable); a theme overrides
+     the default `--button-height-*`. */
   --button-radius: var(--radius-md);
   --button-font-weight: var(--font-weight-medium);
-  --button-height-sm: 1.5rem;
-  --button-height-md: 2rem;
-  --button-height-lg: 2.5rem;
+  --button-height-sm: max(calc(var(--density-control-height) - 0.375rem), 1.4375rem);
+  --button-height-md: max(var(--density-control-height), 1.8125rem);
+  --button-height-lg: max(calc(var(--density-control-height) + 0.5rem), 2.3125rem);
+  --button-height-dense-sm: calc(var(--density-control-height) - 0.375rem);
+  --button-height-dense-md: var(--density-control-height);
+  --button-height-dense-lg: calc(var(--density-control-height) + 0.5rem);
 }
 
 /* ==========================================================================
@@ -504,6 +657,10 @@ html[data-theme="dark"] {
   --color-surface-base: var(--color-slate-900);
   --color-surface-raised: var(--color-slate-800);
   --color-surface-overlay: var(--color-slate-800);
+
+  /* Floating-window glass tint — dark in dark mode (light default lives in :root).
+     Theme-following + float-immune via the `--color-p-surface-*` ramp (A1a). */
+  --cv-float-tint: var(--color-p-surface-800);
   --color-surface-sunken: var(--color-slate-950);
 
   /* Border */
@@ -534,8 +691,8 @@ html[data-theme="dark"] {
   --color-status-info: var(--color-blue-400);
   --color-status-info-subtle: var(--color-blue-950);
 
-  /* Focus */
-  --color-focus-ring: var(--color-blue-400);
+  /* Focus — follows the accent (see the light-mode note above). */
+  --color-focus-ring: var(--color-interactive);
 
   /* The backwards-compatibility aliases (--color-surface, --color-foreground,
    * --color-muted, --color-border, etc.) defined in the @theme block point at
@@ -550,4 +707,25 @@ html[data-theme="dark"] {
   --tooltip-bg: var(--color-slate-50);
   --tooltip-text: var(--color-slate-900);
   --dialog-backdrop: rgb(0 0 0 / 0.7);
+}
+
+/* ==========================================================================
+ * BASE-LAYER CONSUMERS
+ *
+ * Live element rules that read the tokens above. Tailwind v4 orders `base`
+ * before `utilities`, so a `font-sans` utility on a heading still overrides
+ * this default — exactly the override semantics we want.
+ * ========================================================================== */
+
+@layer base {
+  /* Heading role (Track A C2). Makes `--font-family-heading` live end-to-end so
+   * a theme's heading font reaches real <h1>..<h6>, not just the Studio preview. */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-family-heading);
+  }
 }

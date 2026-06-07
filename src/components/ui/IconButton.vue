@@ -51,7 +51,7 @@ const sizeClass: Record<Size, string> = {
 const rootClass = computed(() =>
   cn(
     "inline-flex items-center justify-center rounded-md transition-colors duration-150 ease-out",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-focus-ring)] focus-visible:ring-offset-2",
     "disabled:cursor-not-allowed disabled:opacity-50",
     variantClass[props.variant],
     sizeClass[props.size],

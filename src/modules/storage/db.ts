@@ -5,13 +5,22 @@ import type { AppMeta, Layout, PanelState, Workspace } from "@/types/workspace";
 
 import { type DBSchema, type IDBPDatabase, openDB } from "idb";
 
+import { migrateThemeV1ToV2 } from "@/modules/themes/migrate";
+
 const DB_NAME = "commandvue-workspaces";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 /**
- * IndexedDB schema (version 1).
+ * IndexedDB schema (current version 3).
  *
- * Six object stores, all keyed by entity id (ULID) except `app-meta` which
+ * Version history:
+ *   - v1: workspaces, layouts, panel-states, presets, chrome-profiles, app-meta.
+ *   - v2: custom-themes store (+ by-name / by-source indexes).
+ *   - v3: custom-themes records migrated to the theme data-model v2 shape
+ *         (`base` + `overrides` + resolved `tokens` cache) — see the `upgrade`
+ *         branch and `migrateThemeV1ToV2`. No store/index changes.
+ *
+ * Seven object stores, all keyed by entity id (ULID) except `app-meta` which
  * is keyed by a string `key`. Indexes mirror the access patterns the
  * repositories actually use.
  *
@@ -86,7 +95,7 @@ export function getDb(): Promise<IDBPDatabase<CommandVueDb>> {
 async function openDatabase(): Promise<IDBPDatabase<CommandVueDb>> {
   try {
     return await openDB<CommandVueDb>(DB_NAME, DB_VERSION, {
-      upgrade(db, oldVersion) {
+      async upgrade(db, oldVersion, _newVersion, transaction) {
         if (oldVersion < 1) {
           db.createObjectStore("workspaces", { keyPath: "id" });
 
@@ -110,6 +119,29 @@ async function openDatabase(): Promise<IDBPDatabase<CommandVueDb>> {
           const customThemes = db.createObjectStore("custom-themes", { keyPath: "id" });
           customThemes.createIndex("by-name", "name");
           customThemes.createIndex("by-source", "source");
+        }
+        if (oldVersion < 3) {
+          // Track A data-model v2 (A1a.5 keystone): rewrite every persisted custom
+          // theme from the v1 resolved-bag shape into base + sparse overrides +
+          // mandatory resolved cache. The transform is pixel-identical (the cache
+          // is set to the stored tokens verbatim — see `migrateThemeV1ToV2`).
+          //
+          // The migration runs ON the versionchange `transaction` (idb exposes it
+          // precisely for cross-store migrations). `migrateThemeV1ToV2` is fully
+          // synchronous (no foreign await between getAll/put would auto-commit the
+          // transaction). Each record is guarded so one unparseable theme can't
+          // abort the whole upgrade — it is skipped and logged, mirroring the
+          // VersionError tolerance below.
+          const store = transaction.objectStore("custom-themes");
+          const records = await store.getAll();
+          for (const record of records) {
+            try {
+              await store.put(migrateThemeV1ToV2(record));
+            } catch (err) {
+              const id = (record as { id?: string } | null)?.id ?? "<unknown>";
+              console.warn(`[db-migrate] custom-themes ${id}: skipped during v3 upgrade.`, err);
+            }
+          }
         }
       },
     });

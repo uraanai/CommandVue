@@ -99,24 +99,31 @@ CommandVue/
 
 ## Scripts
 
-| Command             | Action                                                        |
-| ------------------- | ------------------------------------------------------------- |
-| `pnpm dev`          | Start Vite dev server on http://localhost:5173                |
-| `pnpm build`        | Type-check + production build to `dist/`                      |
-| `pnpm preview`      | Serve the production build locally                            |
-| `pnpm lint`         | Run ESLint with `--fix` and cache                             |
-| `pnpm format`       | Prettier write across `src/`                                  |
-| `pnpm format:check` | Prettier check (CI-friendly)                                  |
-| `pnpm type-check`   | `vue-tsc --build` across all tsconfig projects                |
-| `pnpm test`         | Vitest one-shot                                               |
-| `pnpm test:watch`   | Vitest watch mode                                             |
-| `pnpm spell`        | CSpell across source + docs                                   |
-| `pnpm docs:dev`     | Run the VitePress docs site locally (auto-picks a free port)  |
-| `pnpm docs:build`   | Build the docs site to `docs/.vitepress/dist/`                |
-| `pnpm docs:preview` | Serve the built docs site                                     |
-| `pnpm docker:build` | Build the multi-stage Docker image (`commandvue:local`)       |
-| `pnpm docker:up`    | `docker compose up --build` (serves on http://localhost:8080) |
-| `pnpm docker:down`  | Stop the compose stack                                        |
+| Command             | Action                                                                       |
+| ------------------- | ---------------------------------------------------------------------------- |
+| `pnpm dev`          | Start Vite dev server on http://localhost:5173                               |
+| `pnpm dev:tunnel`   | Dev server + Cloudflare quick tunnel; prints a public URL for remote testing |
+| `pnpm build`        | Type-check + production build to `dist/`                                     |
+| `pnpm preview`      | Serve the production build locally                                           |
+| `pnpm lint`         | Run ESLint with `--fix` and cache                                            |
+| `pnpm format`       | Prettier write across `src/`                                                 |
+| `pnpm format:check` | Prettier check (CI-friendly)                                                 |
+| `pnpm type-check`   | `vue-tsc --build` across all tsconfig projects                               |
+| `pnpm test`         | Vitest one-shot                                                              |
+| `pnpm test:watch`   | Vitest watch mode                                                            |
+| `pnpm spell`        | CSpell across source + docs                                                  |
+| `pnpm docs:dev`     | Run the VitePress docs site locally (auto-picks a free port)                 |
+| `pnpm docs:build`   | Build the docs site to `docs/.vitepress/dist/`                               |
+| `pnpm docs:preview` | Serve the built docs site                                                    |
+| `pnpm docker:build` | Build the multi-stage Docker image (`commandvue:local`)                      |
+| `pnpm docker:up`    | `docker compose up --build` (serves on http://localhost:8080)                |
+| `pnpm docker:down`  | Stop the compose stack                                                       |
+
+### Remote testing (Cloudflare quick tunnel)
+
+`pnpm dev:tunnel` runs the dev server and opens a Cloudflare **quick tunnel**, printing a public `https://<random>.trycloudflare.com` URL you can open from any device. It uses the `cloudflared` dev-dependency, which downloads its own binary automatically on first run — no Cloudflare account or manual install required.
+
+The URL is **ephemeral** (it changes every run) and, while the command is running, your local dev server is **publicly reachable** by anyone who has the URL. Stop the command (Ctrl+C) when you're done.
 
 ---
 

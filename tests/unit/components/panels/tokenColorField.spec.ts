@@ -1,0 +1,99 @@
+import { enableAutoUnmount, mount } from "@vue/test-utils";
+import PrimeVue from "primevue/config";
+import { afterEach, describe, expect, it } from "vitest";
+import { nextTick } from "vue";
+
+// The popover teleports to <body>; auto-unmount keeps it from leaking between tests.
+enableAutoUnmount(afterEach);
+
+import TokenColorField from "@/components/panels/theme-studio/TokenColorField.vue";
+import Input from "@/components/ui/Input.vue";
+import InputNumber from "@/volt/InputNumber.vue";
+
+function mountField(resolvedValue = "oklch(0.55 0.18 250)") {
+  return mount(TokenColorField, {
+    props: { resolvedValue, edited: false, label: "Interactive" },
+    global: { plugins: [[PrimeVue, { unstyled: true }]] },
+  });
+}
+
+describe("TokenColorField (C1)", () => {
+  it("renders a swatch trigger tinted with the resolved value; popover is closed initially", () => {
+    const w = mountField();
+    const swatch = w.find("button");
+    expect(swatch.attributes("style")).toContain("background-color");
+    // The popover (and its controls, incl. the native picker) only render when opened.
+    expect(w.find('input[type="color"]').exists()).toBe(false);
+  });
+
+  it("the native color picker converts a chosen hex to an OKLCH change", async () => {
+    const w = mountField();
+    await w.find("button").trigger("click"); // open popover (teleported to body)
+    await nextTick();
+    const native = document.querySelector('input[type="color"]') as HTMLInputElement | null;
+    expect(native).toBeTruthy();
+    native!.value = "#ff0000";
+    native!.dispatchEvent(new Event("input"));
+    await nextTick();
+    const change = w.emitted("change");
+    expect(change).toBeTruthy();
+    expect(change!.at(-1)![0]).toMatch(/^oklch\(/);
+  });
+
+  it("editing an OKLCH channel emits a formatCss-normalized OKLCH string", async () => {
+    const w = mountField();
+    await w.find("button").trigger("click"); // open popover → seeds L/C/H + renders channels
+    await nextTick();
+    const channels = w.findAllComponents(InputNumber);
+    expect(channels).toHaveLength(3);
+    await channels[2]!.vm.$emit("update:model-value", 200); // H channel
+    const change = w.emitted("change");
+    expect(change).toBeTruthy();
+    expect(change!.at(-1)![0]).toMatch(/^oklch\(/);
+  });
+
+  it("Advanced field accepts a var() value verbatim but rejects an injection value", async () => {
+    const w = mountField();
+    await w.find("button").trigger("click");
+    await nextTick();
+    const advanced = w.findComponent(Input);
+
+    // Injection-shaped → rejected, no emit.
+    await advanced.vm.$emit("update:modelValue", "<script>alert(1)</script>");
+    await advanced.find("input").trigger("blur");
+    expect(w.emitted("change")).toBeFalsy();
+
+    // Valid var() → emitted verbatim.
+    await advanced.vm.$emit("update:modelValue", "var(--color-blue-500)");
+    await advanced.find("input").trigger("blur");
+    expect(w.emitted("change")?.at(-1)).toEqual(["var(--color-blue-500)"]);
+  });
+
+  // Pop-out close fix: the outside-click listener is bound (at open time) to the
+  // trigger's OWNING window — `ownerDocument.defaultView` — so a click inside a
+  // dockview pop-out window closes the popover instead of only the opener. jsdom
+  // is single-realm, so these prove the mechanism + docked behavior; the actual
+  // cross-window case is verified manually (Stage 2).
+  it("closes the popover when a pointerdown lands outside it", async () => {
+    const w = mountField();
+    await w.find("button").trigger("click"); // open (teleported to body)
+    await nextTick();
+    expect(document.querySelector('input[type="color"]')).toBeTruthy();
+
+    document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    await nextTick();
+    expect(document.querySelector('input[type="color"]')).toBeNull();
+  });
+
+  it("keeps the popover open when the pointerdown is inside it", async () => {
+    const w = mountField();
+    await w.find("button").trigger("click");
+    await nextTick();
+    const native = document.querySelector('input[type="color"]') as HTMLElement | null;
+    expect(native).toBeTruthy();
+
+    native!.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    await nextTick();
+    expect(document.querySelector('input[type="color"]')).toBeTruthy();
+  });
+});

@@ -105,8 +105,10 @@ describe("registerBuiltinPanels", () => {
       "entities",
       "maplibre",
       "markdown",
+      "showcase",
       "symbology",
       "telemetry",
+      "theme-studio",
     ]);
   });
 

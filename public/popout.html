@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CommandVue — Pop-out</title>
+    <!--
+      Minimal same-origin blank page for dockview's `addPopoutGroup` (Track B Phase 6a).
+      dockview REQUIRES a real URL (it rejects cross-origin / data: / blob:), relocates
+      the group's live DOM here via appendChild, and copies the opener's stylesheets in.
+      The opener's inline theme TOKENS (the `--*` custom properties + data-theme*/-density
+      on <html>) are NOT in those sheets, so `usePopoutThemeSync` mirrors them and keeps
+      them live. The inline script below seeds them from the opener BEFORE first paint to
+      avoid a default-theme flash; the composable then takes over.
+    -->
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+      }
+    </style>
+    <script>
+      // Seed theme attributes + inline token style from the opener pre-paint.
+      try {
+        var src = window.opener && window.opener.document.documentElement;
+        if (src) {
+          var dst = document.documentElement;
+          ["data-theme", "data-theme-id", "data-density"].forEach(function (a) {
+            var v = src.getAttribute(a);
+            if (v !== null) dst.setAttribute(a, v);
+          });
+          // Only the theme `--*` custom props, not other inline styles.
+          var tokens = "";
+          for (var i = 0; i < src.style.length; i++) {
+            var p = src.style.item(i);
+            if (p.indexOf("--") === 0) tokens += p + ":" + src.style.getPropertyValue(p) + ";";
+          }
+          if (tokens) dst.setAttribute("style", tokens);
+        }
+      } catch (e) {
+        /* cross-origin opener or detached — the composable re-syncs on open */
+      }
+    </script>
+  </head>
+  <body></body>
+</html>

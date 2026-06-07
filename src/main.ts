@@ -5,6 +5,8 @@ import "@/assets/styles/main.css";
 import { LUCIDE_CONTEXT } from "@lucide/vue";
 import { createPinia } from "pinia";
 import PrimeVue from "primevue/config";
+import ConfirmationService from "primevue/confirmationservice";
+import ToastService from "primevue/toastservice";
 import { createApp, defineAsyncComponent } from "vue";
 
 import { initializeTheme } from "@/composables/useTheme";
@@ -92,6 +94,14 @@ app.use(router);
 // passthrough (pt) API.
 app.use(PrimeVue, { unstyled: true });
 
+// Toast service — powers `useNotify()`; the outlets mount in AppShell via
+// `NotificationOutlets`. Must register before any component calls `useToast()`.
+app.use(ToastService);
+
+// Confirmation service — powers `useConfirm()` for ConfirmDialog / ConfirmPopup
+// (demoed in the Component Showcase). Must register before any consumer mounts.
+app.use(ConfirmationService);
+
 // Dockview-vue 6 looks up panel components by string name via Vue's local +
 // global registry (it walks the parent chain looking at `instance.components`
 // and falls back to `appContext.components`). We register each panel
@@ -136,12 +146,30 @@ app.component(
   defineAsyncComponent(() => import("@/components/panels/ComponentsPanel.vue")),
 );
 app.component(
+  "showcase",
+  defineAsyncComponent(() => import("@/components/panels/ShowcasePanel.vue")),
+);
+app.component(
+  "theme-studio",
+  defineAsyncComponent(() => import("@/components/panels/ThemeStudioPanel.vue")),
+);
+app.component(
   UNASSIGNED_PANEL_TYPE,
   defineAsyncComponent(() => import("@/components/panels/UnassignedPanel.vue")),
 );
 app.component(
   MISSING_PANEL_TYPE,
   defineAsyncComponent(() => import("@/components/panels/MissingPanelPlaceholder.vue")),
+);
+// Dockview per-group header-actions component — the floating-window opacity
+// eye/slider (Track B Phase 3b) AND the grid "Close All" button (Phase 4a),
+// branched by group location. Registered globally + referenced by STRING on
+// <DockviewVue> (dockview-vue's component-string resolution, same path as the
+// panels above); passing the component object directly trips its narrow
+// `VueComponent` prop type even though it renders fine.
+app.component(
+  "commandvue-header-actions",
+  defineAsyncComponent(() => import("@/components/layout/dock/CommandVueHeaderActions.vue")),
 );
 /* eslint-enable vue/component-definition-name-casing */
 

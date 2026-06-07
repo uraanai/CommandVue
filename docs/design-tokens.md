@@ -66,7 +66,13 @@ Six families: `blue`, `teal`, `green`, `amber`, `red`, `violet`. Each with 11 st
 
 ### Color — PrimeVue surface palette
 
-`--color-p-surface-0…950` is required by `tailwindcss-primeui` for Volt-vendored components. Mirrors `slate-*`. Volt files reference these via `bg-surface-0 dark:bg-surface-900`.
+`--color-p-surface-0…950` is the **authored** surface ramp for Volt-vendored components — a fixed light→dark scale (defaults to `slate-*`, re-emitted tinted by every generated theme). Volt files reference it via `bg-surface-0 dark:bg-surface-900` etc.
+
+Three traps to know (the reason custom themes used to leave modals grey — the "surface seam", fixed in Track A A1a):
+
+1. `tailwindcss-primeui` inlines `var(--p-surface-N)` (single `p`) at each Volt use site (`@theme inline`), so the **only** runtime lever on a Volt surface is `--p-surface-N`. `main.css` bridges it to the authored ramp: `--p-surface-N: var(--color-p-surface-N)`. Editing `--color-p-surface-N` (what the generator emits) recolors Volt; editing the app's `--color-surface-*` does not.
+2. There are **two** `--color-surface-*` families: the app's 4-rung semantic ladder (`base/raised/overlay/sunken`, inline-overridable) and PrimeUI's numeric `--color-surface-N` (a `@theme inline` alias of `--p-surface-N`, **not** inline-overridable — never put it in a theme manifest).
+3. Inside a floating panel, `dockview.css` zeroes the four app surface tokens to `transparent` (so the panel shows the glass). The `--p-surface-*` ramp is deliberately exempt, so Volt modals/menus opened from a float stay opaque.
 
 ### Spacing
 
@@ -100,16 +106,17 @@ Chrome heights: `--spacing-titlebar: 3rem`, `--spacing-statusbar: 1.75rem`. Surf
 ```
 --font-family-sans     Inter Variable + system fallbacks
 --font-family-mono     ui-monospace + JetBrains Mono / Cascadia Code
---font-family-display  alias of sans (themes can override)
+--font-family-display  alias of sans (internal alias; not themeable directly)
+--font-family-heading  alias of display (Track A C2; consumed by h1–h6, themeable)
 
---text-xs              0.75rem
---text-sm              0.875rem
---text-base            1rem
---text-lg              1.125rem
---text-xl              1.25rem
---text-2xl             1.5rem
---text-3xl             1.875rem
---text-4xl             2.25rem
+--text-xs              0.75rem   (+ --text-xs--line-height)
+--text-sm              0.875rem  (+ --text-sm--line-height)
+--text-base            1rem      (+ --text-base--line-height)
+--text-lg              1.125rem  (+ --text-lg--line-height)
+--text-xl              1.25rem   (+ --text-xl--line-height)
+--text-2xl             1.5rem    (+ --text-2xl--line-height)
+--text-3xl             1.875rem  (+ --text-3xl--line-height)
+--text-4xl             2.25rem   (+ --text-4xl--line-height)
 
 --font-weight-regular   400
 --font-weight-medium    500
@@ -120,6 +127,11 @@ Chrome heights: `--spacing-titlebar: 3rem`, `--spacing-statusbar: 1.75rem`. Surf
 --leading-normal   1.5
 --leading-relaxed  1.625
 ```
+
+The `--text-*` ramp and its `--text-*--line-height` companions are themeable: the
+Theme Studio's Typography tab generates the whole ramp from a base size + ratio
+(the `typeScale` input), or you can override individual steps. `--font-family-heading`
+is a first-class role consumed by `h1`–`h6`; it defaults to the display alias.
 
 ### Border radii
 
@@ -213,6 +225,21 @@ Names with meaning. Reference primitives only. Light defaults in `:root`; dark o
 ### Focus
 
 `--color-focus-ring` + `--shadow-focus-ring` (`0 0 0 2px var(--color-focus-ring)`).
+
+### Depth & accent (the "less-flat" palette — Track A A1c)
+
+Foreground-class colors (border/shadow only, never fills) so they survive the
+float-transparency override. Defaults chain off surface/border/interactive
+(auto-adapting to dark mode); a generated theme emits precise per-mode values.
+
+| Token                                                        | Purpose                                                                                                            |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `--color-surface-bevel-light` / `--color-surface-bevel-dark` | Top-highlight / bottom-line edge colors of the triple-layer bevel.                                                 |
+| `--color-border-accent`                                      | Default border nudged toward the accent hue — active/selected panels (wires `--dv-paneview-active-outline-color`). |
+| `--color-interactive-glow`                                   | Translucent accent for focus halos / hover rings / active-tab glow.                                                |
+| `--color-interactive-dim`                                    | Desaturated, darkened accent for secondary accent surfaces.                                                        |
+| `--shadow-bevel-raised` / `--shadow-bevel-sunken`            | Composed inset bevel box-shadows (reference the bevel colors).                                                     |
+| `--shadow-accent-glow`                                       | `0 0 0 3px var(--color-interactive-glow)` — focus/selection halo.                                                  |
 
 ### Semantic spacing
 

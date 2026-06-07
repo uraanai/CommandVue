@@ -23,6 +23,10 @@ import type { Theme } from "@/types/theme";
  */
 
 const APPLIED_KEYS_ATTR = "data-theme-applied";
+/** Separate bookkeeping for live PREVIEW overrides (Theme Studio, A2a). Kept
+ *  distinct from `data-theme-applied` so a committed theme apply and an ephemeral
+ *  preview never clobber each other's teardown set. Never persisted. */
+const PREVIEW_KEYS_ATTR = "data-theme-preview-applied";
 
 /** Ensure a token key is in `--name` form. Idempotent. */
 function cssVarName(key: string): string {
@@ -50,10 +54,81 @@ export function applyTheme(theme: Theme): void {
     keys.push(key);
   }
   root.setAttribute(APPLIED_KEYS_ATTR, JSON.stringify(keys));
+  // A real theme apply supersedes any live preview overlay: drop preview keys
+  // this committed set now owns, so a later `clearTokenOverrides` can't strip
+  // the committed value (Theme Studio commit ordering, §3e).
+  reconcilePreviewAfterCommit(root, new Set(keys));
 
   root.setAttribute("data-theme-id", theme.id);
   root.setAttribute("data-theme", theme.mode);
   root.setAttribute("data-density", theme.density);
+
+  // C3 — committed-theme font load. Single choke point for boot / setTheme /
+  // workspace bind / commit. Fire-and-forget: the --font-family-* token value is
+  // already applied above, so text paints in the fallback immediately and the
+  // webfont swaps in when ready (display: swap). The dynamic import keeps the
+  // loader out of apply.ts's static graph; the loader's offline check uses a
+  // hardcoded set, so the catalog JSON never enters the boot path.
+  if (theme.base.kind === "generated" && theme.base.input.fontSpec) {
+    const spec = theme.base.input.fontSpec;
+    void import("@/composables/useFontLoader").then((m) => m.ensureFontSpecLoaded(spec));
+  }
+}
+
+/**
+ * Live PREVIEW apply (Theme Studio, A2a). Writes a sparse map of token overrides
+ * onto an **explicit** root (never ambient `document` — see {@link APP_ROOT}),
+ * additively: previously-written preview keys are retained in the tracking set so
+ * a later {@link clearTokenOverrides} removes exactly the preview overlay without
+ * disturbing the committed theme underneath. Idempotent per key.
+ */
+export function applyTokenOverrides(overrides: Record<string, string>, root: HTMLElement): void {
+  const tracked = new Set(readKeyList(root, PREVIEW_KEYS_ATTR));
+  for (const [rawKey, value] of Object.entries(overrides)) {
+    const key = cssVarName(rawKey);
+    root.style.setProperty(key, value);
+    tracked.add(key);
+  }
+  root.setAttribute(PREVIEW_KEYS_ATTR, JSON.stringify([...tracked]));
+}
+
+/**
+ * Remove the live preview overlay from a root. `except` keeps a set of keys
+ * inline (the no-flash commit/cancel ordering re-asserts the committed theme
+ * first, then clears only the preview-only keys it does NOT own — §3e), so there
+ * is never a frame where the root has neither value.
+ */
+export function clearTokenOverrides(root: HTMLElement, except?: Set<string>): void {
+  const tracked = readKeyList(root, PREVIEW_KEYS_ATTR);
+  const kept: string[] = [];
+  for (const key of tracked) {
+    if (except?.has(key)) {
+      kept.push(key);
+      continue;
+    }
+    root.style.removeProperty(key);
+  }
+  if (kept.length > 0) root.setAttribute(PREVIEW_KEYS_ATTR, JSON.stringify(kept));
+  else root.removeAttribute(PREVIEW_KEYS_ATTR);
+}
+
+/**
+ * A committed theme apply SUPERSEDES any live preview overlay. Overlapping keys
+ * were just written above with the committed value, so we only stop TRACKING them
+ * (a later `clearTokenOverrides` must not strip the committed value). Any
+ * non-overlapping preview keys are now stale, so we REMOVE them — otherwise an
+ * EXTERNAL committed apply (`setTheme` / workspace bind) made while a Theme Studio
+ * preview is active leaves a stale overlay masking the new theme until "Live across
+ * app" is toggled (the toggle's `cancelPreview` is what used to clear them). The
+ * Studio re-pushes its overlay on its next edit if it's still live.
+ */
+function reconcilePreviewAfterCommit(root: HTMLElement, committed: Set<string>): void {
+  const tracked = readKeyList(root, PREVIEW_KEYS_ATTR);
+  if (tracked.length === 0) return;
+  for (const key of tracked) {
+    if (!committed.has(key)) root.style.removeProperty(key);
+  }
+  root.removeAttribute(PREVIEW_KEYS_ATTR);
 }
 
 /**
@@ -68,17 +143,23 @@ export function clearTheme(): void {
 }
 
 function clearPreviousKeys(root: HTMLElement): void {
-  const raw = root.getAttribute(APPLIED_KEYS_ATTR);
-  if (!raw) return;
-  try {
-    const prev = JSON.parse(raw) as unknown;
-    if (Array.isArray(prev)) {
-      for (const k of prev) {
-        if (typeof k === "string") root.style.removeProperty(cssVarName(k));
-      }
-    }
-  } catch {
-    // Corrupt attribute — nothing safe to clean. Drop it and move on.
+  for (const key of readKeyList(root, APPLIED_KEYS_ATTR)) {
+    root.style.removeProperty(key);
   }
   root.removeAttribute(APPLIED_KEYS_ATTR);
+}
+
+/** Parse a JSON string-array key-tracking attribute into normalized var names.
+ *  A corrupt attribute yields `[]` — nothing safe to clean. */
+function readKeyList(root: HTMLElement, attr: string): string[] {
+  const raw = root.getAttribute(attr);
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw) as unknown;
+    return Array.isArray(arr)
+      ? arr.filter((k): k is string => typeof k === "string").map(cssVarName)
+      : [];
+  } catch {
+    return [];
+  }
 }

@@ -5,6 +5,7 @@ titlebox
 commandvue
 CommandVue
 dockpanel
+floatpanel
 menubar
 statusbar
 uraanai
@@ -48,3 +49,12 @@ Volted
 Vuetify
 firstrule
 browsable
+headerless
+Headerless
+headered
+groupview
+popout
+lato
+merriweather
+menlo
+montserrat

@@ -3,6 +3,7 @@ import type { Map as MapLibreMap } from "maplibre-gl";
 
 import { getPanelInstance } from "@/modules/panels/instances";
 
+import { PANEL_APPEARANCE_PRESET } from "./panelAppearance";
 import { presetTypeRegistry } from "./registry";
 
 /**
@@ -115,6 +116,7 @@ export const BUILTIN_PRESET_TYPES = [
   MAP_STYLE_PRESET,
   MAP_OVERLAY_PRESET,
   CHART_THEME_PRESET,
+  PANEL_APPEARANCE_PRESET,
 ] as const;
 
 let registered = false;

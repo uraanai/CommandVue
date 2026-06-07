@@ -17,6 +17,7 @@ import { OPENFREEMAP_LIBERTY } from "@/modules/maplibre/styles";
  */
 export function useMapLibre() {
   const map = shallowRef<MapLibreMap | null>(null);
+  let resizeObserver: ResizeObserver | null = null;
 
   function mount(container: HTMLElement, options: Partial<MapOptions> = {}): MapLibreMap {
     if (map.value) {
@@ -31,10 +32,28 @@ export function useMapLibre() {
       ...options,
     });
     map.value = instance;
+
+    // MapLibre's built-in `trackResize` only listens for *window* resizes, not
+    // container resizes. Dock panes change size without a window resize — a new
+    // pane spawned by Split settles to its final size after the map is created,
+    // and splitter drags / maximize resize it later — so the map would otherwise
+    // keep its create-time dimensions and render small inside a full-size pane.
+    // Observe the container and resize the map to fit. Guard zero sizes so a
+    // hidden / inactive tab (which collapses to 0×0) doesn't resize to nothing.
+    resizeObserver = new ResizeObserver((entries) => {
+      const rect = entries[0]?.contentRect;
+      if (rect && rect.width > 0 && rect.height > 0) instance.resize();
+    });
+    resizeObserver.observe(container);
+
     return instance;
   }
 
   function destroy(): void {
+    if (resizeObserver) {
+      resizeObserver.disconnect();
+      resizeObserver = null;
+    }
     if (map.value) {
       map.value.remove();
     }

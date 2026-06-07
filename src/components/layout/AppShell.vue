@@ -4,13 +4,17 @@ import { RouterView } from "vue-router";
 
 import ChromeBar from "@/components/chrome/ChromeBar.vue";
 import EditModeOverlay from "@/components/chrome/EditModeOverlay.vue";
+import NotificationOutlets from "@/components/common/NotificationOutlets.vue";
 import ConfirmDialog from "@/components/dialogs/ConfirmDialog.vue";
 import SaveLayoutAsDialog from "@/components/dialogs/SaveLayoutAsDialog.vue";
+import MinimizedDock from "@/components/layout/MinimizedDock.vue";
 import { useKeyboardShortcuts } from "@/composables/useKeyboardShortcuts";
+import { initPopoutThemeSync } from "@/composables/usePopoutThemeSync";
 import { useTheme } from "@/composables/useTheme";
 import { newId } from "@/modules/storage/ids";
 import { useChromeStore } from "@/stores/chrome";
 import { useLayoutStore } from "@/stores/layout";
+import { useMinimizedStore } from "@/stores/minimized";
 import { usePanelStateStore } from "@/stores/panelState";
 import { useSessionStore } from "@/stores/session";
 import { useToolsStore } from "@/stores/tools";
@@ -20,6 +24,8 @@ import CommandPalette from "./CommandPalette.vue";
 
 // Bootstrap the theme composable so `data-theme` lands on <html> from first paint.
 useTheme();
+// Keep any pop-out windows' theme tokens mirrored to <html> (Track B Phase 6a).
+initPopoutThemeSync();
 
 const tools = useToolsStore();
 const ui = useUiStore();
@@ -27,6 +33,7 @@ const session = useSessionStore();
 const layoutStore = useLayoutStore();
 const panelStateStore = usePanelStateStore();
 const chrome = useChromeStore();
+const minimized = useMinimizedStore();
 
 const saveAsOpen = ref(false);
 
@@ -97,6 +104,10 @@ useKeyboardShortcuts({
       toggleComponentsPanel();
       return;
     }
+    if (action === "view.toggleMinimizedTray") {
+      minimized.toggleCollapsed();
+      return;
+    }
     if (action.startsWith("tool.")) {
       const toolId = action.slice("tool.".length);
       tools.toggle(toolId);
@@ -109,14 +120,18 @@ useKeyboardShortcuts({
   <div class="bg-surface text-foreground relative flex h-screen w-screen flex-col overflow-hidden">
     <EditModeOverlay />
     <ChromeBar position="top" />
-    <main class="min-h-0 flex-1">
+    <main class="relative min-h-0 flex-1">
       <RouterView />
+      <MinimizedDock />
     </main>
     <ChromeBar v-if="chrome.statusBarVisible" position="status" />
     <CommandPalette />
     <!-- App-wide confirmation host. Driven by useConfirm(); mounted once here
          so any component can `await useConfirm().confirm({ … })`. -->
     <ConfirmDialog />
+    <!-- App-wide toast outlets (7 positions). Driven by useNotify(); installs
+         the producer handle so any component/store can fire notifications. -->
+    <NotificationOutlets />
     <SaveLayoutAsDialog
       v-model:visible="saveAsOpen"
       :default-name="(layoutStore.currentLayout?.name ?? '') + ' (saved)'"

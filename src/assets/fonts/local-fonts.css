@@ -1,0 +1,53 @@
+/**
+ * Curated offline font faces (Track A C3).
+ *
+ * Self-hosted via @fontsource* packages — the maintainer-approved alternative to
+ * committing raw woff2 (SO-1). Each `latin-<weight>.css` declares `@font-face`
+ * (font-display: swap) for the latin subset only, keeping the bundle lean.
+ *
+ * @font-face is inert until a family is actually used, so this unconditional
+ * import downloads nothing eagerly. These families MUST set-equal
+ * CURATED_OFFLINE_FAMILIES (minus Inter) in `useFontLoader.ts`.
+ *
+ * Inter is intentionally OMITTED — it already ships via
+ * `@fontsource-variable/inter` (redeclaring it would double-download).
+ */
+
+/* Roboto */
+@import "@fontsource/roboto/latin-400.css";
+@import "@fontsource/roboto/latin-600.css";
+@import "@fontsource/roboto/latin-700.css";
+
+/* Open Sans */
+@import "@fontsource/open-sans/latin-400.css";
+@import "@fontsource/open-sans/latin-600.css";
+@import "@fontsource/open-sans/latin-700.css";
+
+/* Lato (no 600 face — uses 400/700) */
+@import "@fontsource/lato/latin-400.css";
+@import "@fontsource/lato/latin-700.css";
+
+/* Montserrat */
+@import "@fontsource/montserrat/latin-400.css";
+@import "@fontsource/montserrat/latin-600.css";
+@import "@fontsource/montserrat/latin-700.css";
+
+/* Source Sans 3 */
+@import "@fontsource/source-sans-3/latin-400.css";
+@import "@fontsource/source-sans-3/latin-600.css";
+@import "@fontsource/source-sans-3/latin-700.css";
+
+/* IBM Plex Sans */
+@import "@fontsource/ibm-plex-sans/latin-400.css";
+@import "@fontsource/ibm-plex-sans/latin-600.css";
+@import "@fontsource/ibm-plex-sans/latin-700.css";
+
+/* Merriweather */
+@import "@fontsource/merriweather/latin-400.css";
+@import "@fontsource/merriweather/latin-600.css";
+@import "@fontsource/merriweather/latin-700.css";
+
+/* Lora */
+@import "@fontsource/lora/latin-400.css";
+@import "@fontsource/lora/latin-600.css";
+@import "@fontsource/lora/latin-700.css";

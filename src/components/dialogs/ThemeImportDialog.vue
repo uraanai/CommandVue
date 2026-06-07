@@ -6,6 +6,7 @@ import { fileOpen } from "browser-fs-access";
 import { computed, ref, watch } from "vue";
 
 import Button from "@/components/ui/Button.vue";
+import { useNotify } from "@/composables/useNotify";
 import {
   importThemeFromJson,
   type ImportConflictPolicy,
@@ -47,6 +48,7 @@ const emit = defineEmits<{
 
 const themeStore = useThemeStore();
 const workspaceStore = useWorkspaceStore();
+const notify = useNotify();
 
 const jsonText = ref("");
 const fileName = ref<string | null>(null);
@@ -165,8 +167,11 @@ async function doImport(): Promise<void> {
       if (applyAfterImport.value) {
         await themeStore.setTheme(r.theme.id, workspaceStore.currentWorkspaceId);
       }
+      notify.success("Theme imported", { detail: `“${r.theme.name}” added.` });
       emit("imported", r.theme);
       close();
+    } else {
+      notify.danger("Import failed", { detail: r.errors?.[0] ?? "The theme file is invalid." });
     }
   } finally {
     importing.value = false;

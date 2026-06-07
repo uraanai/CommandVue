@@ -2,6 +2,7 @@
   <Menu
     ref="el"
     unstyled
+    :append-to="overlayTarget"
     :pt="theme"
     :pt-options="{
       mergeProps: ptViewMerge,
@@ -16,6 +17,8 @@
 <script setup lang="ts">
 import Menu, { type MenuPassThroughOptions, type MenuProps } from "primevue/menu";
 import { ref } from "vue";
+
+import { useOverlayTarget } from "@/composables/useOverlayTarget";
 
 import { ptViewMerge } from "./utils";
 
@@ -63,7 +66,30 @@ const theme = ref<MenuPassThroughOptions>({
 });
 
 const el = ref();
+
+// Pop-out support (Track B): teleport the popup into the panel's OWNING window
+// instead of the opener's `document.body`.
+//
+// Anchor + timing: PrimeVue Menu (popup mode) renders only a `<Portal>` while
+// closed and emits ONLY `show` / `hide` / `focus` / `blur` — there is no
+// `before-show`, and the instance has no stable in-window element to read
+// `ownerDocument` from. So we anchor `useOverlayTarget` to the TRIGGER element
+// (the opening event's `currentTarget`, the button the user clicked), which is
+// guaranteed to live in the correct window (incl. a dockview pop-out). We
+// resolve INSIDE the exposed `toggle`, which runs synchronously BEFORE the
+// Portal teleports (`show()` flips `overlayVisible` after our resolve), so
+// `appendTo` is correct on the very first open.
+const triggerEl = ref<HTMLElement | null>(null);
+const { target: overlayTarget, resolve: resolveOverlay } = useOverlayTarget(triggerEl);
+
 defineExpose({
-  toggle: (event: Event) => el.value.toggle(event),
+  toggle: (event: Event) => {
+    const node = (event.currentTarget ?? event.target) as unknown;
+    if (node instanceof HTMLElement) {
+      triggerEl.value = node;
+      resolveOverlay();
+    }
+    return el.value.toggle(event);
+  },
 });
 </script>

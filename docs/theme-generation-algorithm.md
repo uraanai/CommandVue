@@ -87,6 +87,27 @@ Fixed semantic hue families (OKLCH degrees): `success ≈ 145`, `warning ≈ 75`
 
 Derived from the semantic layer so the theme is self-contained and matches the built-ins' deliberate choices — e.g. `--datatable-header-bg = surface-raised`, `--menubar-item-hover-bg = interactive-subtle`, `--tooltip-bg = text-primary` (inverse surface), `--dialog-backdrop` = translucent dark.
 
+## Type scale (Track A C2)
+
+When a generated theme carries a `typeScale` input (`{ baseSize, ratio }`), the
+engine derives the whole `--text-*` ramp instead of relying on the fixed
+`tokens.css` defaults:
+
+```
+size(step)                 = baseSize × ratio^step    // step: xs=-2 … base=0 … 4xl=+5
+--text-<name>              = round(size(step) ÷ 16, 4) + "rem"
+--text-<name>--line-height = tightens as size grows (1.5 → 1.25 → 1.15)
+```
+
+`--text-base` is always `baseSize ÷ 16` rem (step 0, so it is ratio-independent).
+Every size emits a paired `--text-*--line-height` companion so headings don't
+clip as the ratio climbs. Defaults: `baseSize 16` / `ratio 1.2` (a minor third);
+the ratio is capped at `1.333` (perfect fourth) to keep derived leading legible.
+When `typeScale` is absent the engine emits no `--text-*` keys and the fixed
+`tokens.css` ramp is the cascade fallback — byte-identical to pre-C2 themes. The
+font-family roles (`--font-family-sans/-body` from the `fontFamily` input,
+`--font-family-heading` via overrides) are emitted independently of the scale.
+
 ## Contrast verification
 
 `wcagContrast` computes actual ratios for the critical pairs. The `contrastReport` surfaces three headline numbers (`textOnSurface`, `textOnRaised`, `onInteractive`) and a `failures[]` array for any pair below its required ratio:
@@ -138,7 +159,7 @@ Sometimes you want a named handle so a control can be tuned independently (`--ti
 
 2. **`src/modules/themes/knownTokens.ts`** — add the names to `COMPONENT_TOKEN_NAMES` so `themeRepo`'s invariants and the import validator accept them as legal overrides in custom-theme JSON.
 
-The new token reads its value from a semantic token the generator already controls; under any generated theme it inherits correctly. Custom themes that _want_ to deviate can override `--titlebox-header-bg` explicitly in their JSON, and the import path now accepts it. `THEME_SCHEMA_VERSION` stays at `1` — adding tokens is backward-compatible. Old themes that don't override the new token simply fall back to the cascade.
+The new token reads its value from a semantic token the generator already controls; under any generated theme it inherits correctly. Custom themes that _want_ to deviate can override `--titlebox-header-bg` explicitly in their JSON, and the import path now accepts it. Adding a token does **not** bump `THEME_SCHEMA_VERSION` (now `2`, after the data-model v2 migration) — a new key is backward-compatible. Old themes that don't override the new token simply fall back to the cascade. (Changing an _existing_ emitted token's derivation math is different — that bumps `ENGINE_VERSION`; see the §3i engine-stability contract.)
 
 ### 1% case — generator should compute a non-trivial derived value
 
@@ -162,7 +183,7 @@ If the gap is genuinely about _vocabulary_ — a meaning the existing semantic l
 - `knownTokens.ts` — `SEMANTIC_TOKEN_NAMES`.
 - `generate.ts` — emit a derived value via the surface / text / interactive / status scale it logically belongs to.
 - `docs/design-tokens.md` and `docs/theme-schema-for-llms.md` (Phase G) — so LLM-generated themes know about the new token.
-- `THEME_SCHEMA_VERSION` stays `1` (additive).
+- Adding the token does not bump `THEME_SCHEMA_VERSION` (now `2`) — a new key is additive.
 
 New semantic tokens are a governed surface — they belong on the cheat sheet in the theming agent skill and the LLM schema doc, so every consumer learns about them.
 

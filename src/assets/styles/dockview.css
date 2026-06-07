@@ -21,8 +21,35 @@
 .dockview-theme-commandvue {
   --dv-group-view-background-color: var(--color-surface);
   --dv-tabs-and-actions-container-background-color: var(--color-surface-raised);
-  --dv-tabs-and-actions-container-font-size: 0.8125rem;
+  /* Tab strip font-size is now density-aware via the C4 chrome token (was a
+     fixed 0.8125rem). Switching density (or a theme override of the token)
+     resizes the dock tab text. */
+  --dv-tabs-and-actions-container-font-size: var(--dockpanel-tab-font-size);
   --dv-tabs-container-scrollbar-color: var(--color-border);
+
+  /* Themeable panel-chrome geometry (Track A C4). These `--dv-panel-*` names are
+     the dockview-scoped WIRING vars consumed by the appearance-variant rule
+     blocks below; the THEMEABLE surface is the `--dockpanel-*` family (in
+     tokens.css + the allowlist). A theme recolors chrome by overriding
+     `--dockpanel-*`, never `--dv-panel-*` directly. */
+  --dv-panel-radius: var(--dockpanel-radius);
+  --dv-panel-border-width: var(--dockpanel-border-width);
+  --dv-panel-shadow: var(--dockpanel-shadow);
+  --dv-panel-gap: var(--dockpanel-gap);
+
+  /*
+   * Stacking context for dockview's transient overlays — the tab-overflow
+   * dropdown popover today; floating / pop-out group overlays in later Track B
+   * phases. Every BUILT-IN dockview theme class ships `--dv-overlay-z-index: 999`
+   * (see `dockview-core/dist/styles/dockview.css`); a hand-rolled theme class
+   * MUST define it too. Without it the overflow popover renders at `z-index:
+   * auto` and is painted *under* panel WebGL canvases (Cesium / MapLibre) —
+   * present in the DOM but unclickable, because the click lands on the canvas.
+   * The popover anchor is a sibling of the dock grid under `.dv-shell`, so 999
+   * lifts the whole popover above panel content. (Verified fix for the Phase 1
+   * review's "overflow dropdown not clickable" report.)
+   */
+  --dv-overlay-z-index: 999;
 
   --dv-activegroup-visiblepanel-tab-background-color: var(--color-surface);
   --dv-activegroup-hiddenpanel-tab-background-color: var(--color-surface-raised);
@@ -35,9 +62,178 @@
   --dv-inactivegroup-hiddenpanel-tab-color: var(--color-muted);
 
   --dv-separator-border: var(--color-border);
-  --dv-paneview-active-outline-color: var(--color-accent-500);
-  --dv-drag-over-background-color: color-mix(in srgb, var(--color-accent-500) 15%, transparent);
+  /* Active-panel outline + drag-over highlight follow the THEME's semantic
+     accent (rather than the raw `--color-accent-500` primitive) so a custom
+     theme recolors them with everything else. The active outline uses the A1c
+     tiered accent border (`--color-border-accent` — the default border nudged
+     toward the accent hue), a touch softer than the full interactive. */
+  --dv-paneview-active-outline-color: var(--color-border-accent);
+  --dv-drag-over-background-color: color-mix(in srgb, var(--color-interactive) 15%, transparent);
   --dv-drag-over-border-color: var(--color-accent-500);
 
   --dv-icon-hover-background-color: var(--color-surface-sunken);
+}
+
+/*
+ * Closed-hand (grabbing) cursor while dragging a group by its header. dockview
+ * sets `cursor: grab` on the draggable void area of a group header and adds
+ * `.dv-dragged` to that element for the duration of a drag (dnd/backend.js); we
+ * switch it to the `grabbing` closed-hand for that active state (plus `:active`
+ * for the initial press). Applies to docked AND in-window floating group
+ * headers alike — both drag by the same `.dv-void-container.dv-draggable`.
+ */
+.dockview-theme-commandvue .dv-void-container.dv-draggable:active,
+.dockview-theme-commandvue .dv-void-container.dv-draggable.dv-dragged {
+  cursor: grabbing;
+}
+
+/*
+ * Floating-window see-through opacity (Track B Phase 3b). `--cv-float-alpha`
+ * (0..1) is set per floating group at runtime; this turns it into a translucent
+ * BACKGROUND via color-mix toward transparent — never element `opacity`, so the
+ * pane's content (text, controls) stays fully opaque while the background fades
+ * and whatever is behind the float (e.g. the map) shows through. Scoped to
+ * dockview's location-driven `.dv-groupview-floating` class so grid-docked panes
+ * are never affected. Tint is the fixed-dark `--cv-float-tint` (both themes).
+ */
+.dockview-theme-commandvue .dv-groupview-floating {
+  background-color: color-mix(
+    in oklch,
+    var(--cv-float-tint) calc(var(--cv-float-alpha, 1) * 100%),
+    transparent
+  );
+  /* The translucent group background above is the float's single "glass" layer.
+     Re-point the panel-facing SURFACE tokens to transparent INSIDE the float so a
+     panel's own `bg-surface*` shows that glass (and whatever is behind the float)
+     instead of an opaque fill — without stacking a second tint layer. Foreground
+     tokens (text / icon / border colors) are untouched, so content stays fully
+     legible.
+     NOTE (Track A A1a): this block zeroes ONLY these four app surface tokens. Volt
+     surfaces (Dialog / Menu / inputs) paint via the separate `--p-surface-*` ramp,
+     which is intentionally NOT listed here — so a Volt modal/menu opened from
+     inside a floating panel keeps an opaque, theme-colored background. Do not add
+     `--p-surface-*` / `--color-p-surface-*` to this list. */
+  --color-surface: transparent;
+  --color-surface-base: transparent;
+  --color-surface-sunken: transparent;
+  --color-surface-overlay: transparent;
+  --color-surface-raised: transparent;
+
+  /* Float/dock chrome split (Track A): re-point the --dv-panel-* wiring vars to the
+     --floatpanel-* family on floating groups, so an appearance variant on a FLOAT
+     reads float chrome while the SAME variant on a docked group still reads
+     --dockpanel-*. The variant rule blocks below are UNCHANGED — they read
+     --dv-panel-*, which resolves to the float values on this element and to the dock
+     values on docked groups. --floatpanel-* default to --dockpanel-* so floats match
+     docked chrome until a theme customizes them. */
+  --dv-panel-radius: var(--floatpanel-radius);
+  --dv-panel-border-width: var(--floatpanel-border-width);
+  --dv-panel-shadow: var(--floatpanel-shadow);
+  --dv-panel-gap: var(--floatpanel-gap);
+}
+/* Header readability floor: never below 85% even when the body is at the alpha
+   floor, keeping the title + drag handle legible over bright imagery. */
+.dockview-theme-commandvue .dv-groupview-floating .dv-tabs-and-actions-container {
+  background-color: color-mix(
+    in oklch,
+    var(--cv-float-tint) calc(max(var(--cv-float-alpha, 1), 0.85) * 100%),
+    transparent
+  );
+}
+/* Windows high-contrast / forced-colors: never see-through. */
+@media (forced-colors: active) {
+  .dockview-theme-commandvue .dv-groupview-floating,
+  .dockview-theme-commandvue .dv-groupview-floating .dv-tabs-and-actions-container {
+    background-color: Canvas;
+  }
+}
+
+/* Elevation (Track A C5) — docked groups read the themeable depth ramp so the
+ * Effects depth knob is observable on real panels. Scoped to docked groups
+ * WITHOUT a C4 appearance variant: C4's per-variant box-shadow (raised / glass /
+ * flat) is more specific and takes over once assigned (Fix-E — avoids two
+ * stacked shadows). Floating panes keep their own glass treatment. */
+.dockview-theme-commandvue .dv-groupview:not(.dv-groupview-floating):not([data-cv-appearance]) {
+  box-shadow: var(--shadow-2);
+}
+
+/* ── Panel appearance variants (Track A C4) ──────────────────────────────────
+   A CLOSED set of four frame styles. The `data-cv-appearance` attribute lands
+   on the dock GROUP element via the `panel-appearance` preset (it mirrors the
+   proven session.ts setProperty pattern — an attribute, not an undocumented
+   class). Every value reads a `--dockpanel-*` theme token (via the `--dv-panel-*`
+   wiring vars above), so the THEME controls what each variant looks like and the
+   preset only picks which panel uses which. These `[data-cv-appearance]` rules
+   are MORE specific than the C5 docked-group shadow above (which excludes
+   `[data-cv-appearance]`), so an assigned variant owns its single box-shadow —
+   no two stacked shadows (Fix-E). */
+
+.dockview-theme-commandvue .dv-groupview[data-cv-appearance="flat"] {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.dockview-theme-commandvue .dv-groupview[data-cv-appearance="bordered"] {
+  border: var(--dv-panel-border-width) solid var(--color-border-default);
+  border-radius: var(--dv-panel-radius);
+  box-shadow: none;
+}
+
+.dockview-theme-commandvue .dv-groupview[data-cv-appearance="raised"] {
+  border: var(--dv-panel-border-width) solid var(--color-border-default);
+  border-radius: var(--dv-panel-radius);
+  box-shadow: var(--dv-panel-shadow);
+}
+
+/* Glass: FRAME-ONLY frost. It MUST NOT re-zero `--color-surface-*` on a grid
+   group — that collides with the float-transparency invariant and renders panel
+   content transparent over an opaque void. Gated behind @supports; the solid
+   fallback is the bordered look. The blur radius is owned by C5
+   (`--dockpanel-glass-blur`) and consumed here with an 8px fallback so this rule
+   is order-independent. `--cv-float-tint` is the existing fixed light/dark-aware
+   float tint that the floating-group block already uses. */
+.dockview-theme-commandvue .dv-groupview[data-cv-appearance="glass"] {
+  border: var(--dv-panel-border-width) solid var(--color-border-default);
+  border-radius: var(--dv-panel-radius);
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .dockview-theme-commandvue .dv-groupview[data-cv-appearance="glass"] {
+    background-color: color-mix(in oklch, var(--cv-float-tint) 70%, transparent);
+    -webkit-backdrop-filter: blur(var(--dockpanel-glass-blur, 8px));
+    backdrop-filter: blur(var(--dockpanel-glass-blur, 8px));
+  }
+}
+
+/* Glass on a FLOATING group: the float block already produces the translucent
+   surface; keep the header opaque so the float's 85% readability floor isn't
+   undermined by a second stacked blur. */
+.dockview-theme-commandvue
+  .dv-groupview-floating[data-cv-appearance="glass"]
+  .dv-tabs-and-actions-container {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Active-tab indicator (Track A C4). dockview-core 6.6 applies `.dv-active-tab`
+   to the active `.dv-tab` (confirmed against the installed package). The inset
+   underline reads the themeable indicator color; the active tab also takes the
+   themeable tab font-weight. */
+.dockview-theme-commandvue .dv-tab.dv-active-tab {
+  box-shadow: inset 0 -2px 0 0 var(--dockpanel-tab-active-indicator);
+  font-weight: var(--dockpanel-tab-font-weight);
+}
+
+/* Forced-colors / high-contrast: raised + glass must never be transparent or
+   lose their frame. Mirrors the existing floating-group forced-colors block. */
+@media (forced-colors: active) {
+  .dockview-theme-commandvue .dv-groupview[data-cv-appearance="glass"] {
+    background-color: Canvas;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .dockview-theme-commandvue .dv-groupview[data-cv-appearance="raised"],
+  .dockview-theme-commandvue .dv-groupview[data-cv-appearance="glass"] {
+    border: 1px solid CanvasText;
+  }
 }

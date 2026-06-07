@@ -60,14 +60,71 @@ When you add `WeatherRadarPanel.vue`:
 
 Pick the closest match; don't invent new ones without updating the type union in `src/modules/panels/types.ts`.
 
-| Category     | Examples                             |
-| ------------ | ------------------------------------ |
-| `maps`       | Cesium, MapLibre                     |
-| `data`       | EntityList, table views              |
-| `charts`     | ECharts panels                       |
-| `docs`       | Markdown briefing, ComponentsBrowser |
-| `monitoring` | Live telemetry, log tails            |
-| `tools`      | Symbology reference, calculators     |
+| Category     | Examples                                                 |
+| ------------ | -------------------------------------------------------- |
+| `maps`       | Cesium, MapLibre                                         |
+| `data`       | EntityList, table views                                  |
+| `charts`     | ECharts panels                                           |
+| `docs`       | Markdown briefing, ComponentsBrowser, Component Showcase |
+| `monitoring` | Live telemetry, log tails                                |
+| `tools`      | Symbology reference, Theme Studio, calculators           |
+
+## Component Showcase
+
+`Component Showcase` (id `showcase`, category `docs`, singleton) is a built-in
+panel that renders a live, admin-grade gallery of every `ui/*` and `volt/*`
+primitive. It doubles as living documentation and a **theming smoke test**:
+because it uses the real wrappers, a token change (Track A) recolors the whole
+panel in one scroll. Open it from **View → Add Component → Docs → Component
+Showcase**.
+
+Sections are grouped into ten tabs (`SHOWCASE_TABS`):
+
+- **Form Inputs** — text / number / mask / OTP / password, `DatePicker` (date,
+  range, time), `Slider`, `Knob`, float / in-field labels, icon fields, input
+  groups, color & file pickers.
+- **Selection** — select, multiselect, autocomplete, checkbox, radio, segmented
+  button, toggle button/switch, listbox, rating.
+- **Forms** — composed surfaces: a labelled form with validation roll-up and a
+  linear multi-step `Stepper` wizard.
+- **Buttons** — variants, sizes, icon buttons, split button, menu button.
+- **Data Display** — the TanStack `DataTable`, `DataView` grid, tags, chips,
+  avatars, badges, timeline, tree, meter group, click-to-edit `Inplace`.
+- **Feedback & Status** — messages, progress bar/spinner, skeletons, `BlockUI`,
+  empty state.
+- **Overlays** — dialog, confirm dialog/popup, drawer, popover, tooltip, context
+  menu, popup menu.
+- **Panels & Layout** — fieldset, panel, card, divider, accordion, toolbar.
+- **Navigation** — tabs, menubar, breadcrumb, paginator, stepper.
+- **Notifications** — the toast trigger matrix (severities, positions, sticky,
+  coalescing).
+
+Coverage is enforced. `src/components/showcase/registry.ts` lists every
+showcased primitive (`SHOWCASE_PRIMITIVES`) and every deliberate exclusion
+(`SHOWCASE_EXCLUDE`, e.g. multi-part sub-components demoed via their parent); the
+drift test `tests/unit/components/showcase/registry.spec.ts` fails CI if a
+`ui/`/`volt/` primitive is added without an entry, or if a stale entry outlives
+its file. Add a new primitive → add a registry entry **and** a demo section in
+the matching `src/components/showcase/tabs/*Tab.vue` file.
+
+## Theme Studio
+
+`Theme Studio` (id `theme-studio`, category `tools`, singleton) is the built-in
+authoring surface for themes (Track A A2a). Unlike a modal, it is a dockview
+panel — float it, dock it, or pop it out to a second monitor — and it previews
+**live across every window**: each edit writes the freshly-generated tokens to
+the top window's root via `themeStore.previewThemeTokens`, and the pop-out
+mirror fans the change out to every floating panel and pop-out at once
+(including a popped-out Studio, which targets the captured `APP_ROOT` rather than
+its own child-window `document`). Open it from **View → Theme Studio…**, or
+**View → Edit current theme…** to seed it from the active generated theme.
+
+The panel stays idle until you interact (a restored blank Studio does not recolor
+the app on load); **Save** persists the theme and applies it, **Discard** reverts
+the live preview, and closing the panel discards any uncommitted preview. The
+authoring logic (inputs, generation, save/update) lives in the shared
+`useThemeAuthoring()` composable so the panel and the transitional
+`ThemeCustomizerDialog` don't fork it.
 
 ## Lifecycle
 

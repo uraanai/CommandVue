@@ -28,7 +28,11 @@ interface Props extends /* @vue-ignore */ FieldsetProps {}
 defineProps<Props>();
 
 const theme = ref<FieldsetPassThroughOptions>({
-  root: `border border-surface-200 dark:border-surface-700 rounded-md
+  // `min-w-0` overrides the browser-default `min-width: min-content` on the
+  // <fieldset> element — without it, wide content (e.g. a `scrollable` Tabs
+  // strip) forces the fieldset past its parent's width instead of letting the
+  // content scroll inside. Standard fieldset-in-flexbox reset.
+  root: `min-w-0 border border-surface-200 dark:border-surface-700 rounded-md
         bg-surface-0 dark:bg-surface-900 text-surface-700 dark:text-surface-0
         px-[1.125rem] pt-0 pb-[1.125rem]`,
   legend: `border border-transparent rounded-md px-3 py-2 p-toggleable:p-0
@@ -41,11 +45,11 @@ const theme = ref<FieldsetPassThroughOptions>({
         hover:bg-surface-100 dark:hover:bg-surface-800
         text-surface-700 dark:text-surface-0
         hover:text-surface-800 dark:hover:text-surface-0
-        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-primary
+        focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]
         transition-colors duration-200`,
   toggleIcon: `text-surface-500 dark:text-surface-400 transition-colors duration-200
         group-hover:text-surface-600 dark:group-hover:text-surface-300`,
-  legendLabel: `font-semibold`,
+  legendLabel: `font-semibold text-[length:var(--density-font-size)]`,
   contentContainer: ``,
   content: `p-0`,
   transition: {

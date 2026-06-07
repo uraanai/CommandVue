@@ -8,6 +8,7 @@ import ThemeCustomizerDialog from "@/components/dialogs/ThemeCustomizerDialog.vu
 import ThemeImportDialog from "@/components/dialogs/ThemeImportDialog.vue";
 import Button from "@/components/ui/Button.vue";
 import { useConfirm } from "@/composables/useConfirm";
+import { useNotify } from "@/composables/useNotify";
 import { themeRepo } from "@/modules/storage/themeRepo";
 import { downloadThemeFile } from "@/modules/themes/export";
 import { themeRegistry } from "@/modules/themes/registry";
@@ -45,6 +46,7 @@ const emit = defineEmits<{ "update:visible": [value: boolean] }>();
 
 const themes = shallowRef<readonly Theme[]>([]);
 const themeStore = useThemeStore();
+const notify = useNotify();
 const workspaceStore = useWorkspaceStore();
 const { confirmIf } = useConfirm();
 
@@ -186,12 +188,19 @@ async function requestDelete(theme: Theme): Promise<void> {
     danger: true,
   });
   if (!ok) return;
-  // If the theme is currently applied, fall back to the global default first
-  // so we never sit on a deleted id.
-  if (themeStore.currentThemeId === theme.id) {
-    await themeStore.setTheme("compact-light", workspaceStore.currentWorkspaceId);
+  try {
+    // If the theme is currently applied, fall back to the global default first
+    // so we never sit on a deleted id.
+    if (themeStore.currentThemeId === theme.id) {
+      await themeStore.setTheme("compact-light", workspaceStore.currentWorkspaceId);
+    }
+    await themeRepo.delete(theme.id);
+    notify.success("Theme deleted", { detail: `“${theme.name}” removed.` });
+  } catch (e) {
+    notify.danger("Couldn’t delete theme", {
+      detail: e instanceof Error ? e.message : String(e),
+    });
   }
-  await themeRepo.delete(theme.id);
 }
 
 // --- Export / Edit / Import (Prompt 4 Phase G) ----------------------------

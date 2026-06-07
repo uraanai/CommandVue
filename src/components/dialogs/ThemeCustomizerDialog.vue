@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import type { Theme, ThemeDensity, ThemeId, ThemeMode } from "@/types/theme";
+import type {
+  GenerationInputV2,
+  StatusFamily,
+  StatusOverrides,
+  Theme,
+  ThemeDensity,
+  ThemeId,
+  ThemeMode,
+} from "@/types/theme";
 
 import { computed, ref, watch } from "vue";
 
@@ -7,12 +15,14 @@ import Button from "@/components/ui/Button.vue";
 import ColorSwatchPicker from "@/components/ui/ColorSwatchPicker.vue";
 import Input from "@/components/ui/Input.vue";
 import Select from "@/components/ui/Select.vue";
+import Slider from "@/components/ui/Slider.vue";
 import { themeRepo } from "@/modules/storage/themeRepo";
 import {
   ACCENT_COLOR_SWATCHES,
   BASE_COLOR_SWATCHES,
   BLANK_DEFAULTS,
   CURATED_FONTS,
+  STATUS_HUE_SWATCHES,
 } from "@/modules/themes/curated-swatches";
 import { generateTheme } from "@/modules/themes/generate";
 import { themeRegistry } from "@/modules/themes/registry";
@@ -20,7 +30,6 @@ import { useThemeStore } from "@/stores/theme";
 import { useWorkspaceStore } from "@/stores/workspace";
 import Checkbox from "@/volt/Checkbox.vue";
 import Dialog from "@/volt/Dialog.vue";
-import Slider from "@/volt/Slider.vue";
 
 /**
  * Theme customizer dialog — the Linear-style authoring surface.
@@ -65,6 +74,45 @@ const fontFamily = ref<string>(BLANK_DEFAULTS.fontFamily);
 const generatePaired = ref(true);
 const applyAfterSave = ref(true);
 
+// --- Status hues (Track A A1b) -------------------------------------------
+// One representative swatch per family; index 0 of each preset list is the
+// default. The `statusOverrides` computed turns any non-default selection into
+// a `{ hue }` override the generator consumes; an all-default selection yields
+// `undefined` (byte-identical output).
+const STATUS_FAMILIES: readonly StatusFamily[] = ["success", "warning", "danger", "info"];
+const statusSwatch = ref<Record<StatusFamily, string>>({
+  success: STATUS_HUE_SWATCHES.success[0]!.value,
+  warning: STATUS_HUE_SWATCHES.warning[0]!.value,
+  danger: STATUS_HUE_SWATCHES.danger[0]!.value,
+  info: STATUS_HUE_SWATCHES.info[0]!.value,
+});
+const statusOptions = computed<Record<StatusFamily, { label: string; value: string }[]>>(() => ({
+  success: STATUS_HUE_SWATCHES.success.map((s) => ({ label: s.label, value: s.value })),
+  warning: STATUS_HUE_SWATCHES.warning.map((s) => ({ label: s.label, value: s.value })),
+  danger: STATUS_HUE_SWATCHES.danger.map((s) => ({ label: s.label, value: s.value })),
+  info: STATUS_HUE_SWATCHES.info.map((s) => ({ label: s.label, value: s.value })),
+}));
+const statusOverrides = computed<StatusOverrides | undefined>(() => {
+  const out: StatusOverrides = {};
+  for (const fam of STATUS_FAMILIES) {
+    const presets = STATUS_HUE_SWATCHES[fam];
+    const selected = statusSwatch.value[fam];
+    if (selected === presets[0]!.value) continue; // default → no override
+    const match = presets.find((s) => s.value === selected);
+    if (match) out[fam] = { hue: match.hue };
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+});
+/** Drive the swatch refs from a persisted override set (edit / start-from). */
+function applyStatusOverridesToSwatches(over?: StatusOverrides): void {
+  for (const fam of STATUS_FAMILIES) {
+    const presets = STATUS_HUE_SWATCHES[fam];
+    const hue = over?.[fam]?.hue;
+    const match = hue != null ? presets.find((s) => s.hue === hue) : undefined;
+    statusSwatch.value[fam] = (match ?? presets[0]!).value;
+  }
+}
+
 const saveError = ref<string | null>(null);
 const saving = ref(false);
 
@@ -87,6 +135,7 @@ function applyDefaults(): void {
   accentColor.value = BLANK_DEFAULTS.accentColor;
   contrast.value = BLANK_DEFAULTS.contrast;
   fontFamily.value = BLANK_DEFAULTS.fontFamily;
+  applyStatusOverridesToSwatches(undefined); // reset all families to default hue
 }
 
 function loadFromBuiltIn(id: ThemeId): void {
@@ -108,6 +157,7 @@ function loadFromGenerated(id: ThemeId): void {
   contrast.value = t.generation.contrast;
   mode.value = t.mode;
   density.value = t.density;
+  applyStatusOverridesToSwatches(t.generation.statusOverrides);
   // fontFamily isn't persisted in the generation block today — leave at current.
 }
 
@@ -140,6 +190,7 @@ watch(
       contrast.value = t.generation.contrast;
       mode.value = t.mode;
       density.value = t.density;
+      applyStatusOverridesToSwatches(t.generation.statusOverrides);
       generatePaired.value = !!t.generation.paired;
       startFromMode.value = "custom";
       startFromCustomId.value = t.id;
@@ -165,6 +216,7 @@ const generationResult = computed(() => {
       mode: mode.value,
       density: density.value,
       fontFamily: fontFamily.value || undefined,
+      statusOverrides: statusOverrides.value,
     });
   } catch {
     // Bad input shouldn't crash the dialog — show nothing in the preview.
@@ -189,6 +241,27 @@ const dialogHeader = computed(() =>
 
 const canSave = computed(() => !saving.value && name.value.trim().length > 0);
 
+/**
+ * Assemble the v2 {@link GenerationInputV2} from the current form state for the
+ * given mode. `statusHues` is intentionally omitted for freshly-authored themes
+ * (the engine does not consume it; the v1→v2 migration pins it only to keep
+ * legacy themes self-describing). `fontFamily` / `statusOverrides` are included
+ * only when set, so the persisted input stays honest (§3i).
+ */
+function buildGenerationInput(forMode: ThemeMode): GenerationInputV2 {
+  const input: GenerationInputV2 = {
+    schemaVersion: 2,
+    baseColor: baseColor.value,
+    accentColor: accentColor.value,
+    contrast: contrast.value,
+    mode: forMode,
+    density: density.value,
+  };
+  if (fontFamily.value) input.fontFamily = fontFamily.value;
+  if (statusOverrides.value) input.statusOverrides = statusOverrides.value;
+  return input;
+}
+
 // --- Save ----------------------------------------------------------------
 async function save(): Promise<void> {
   saveError.value = null;
@@ -204,12 +277,9 @@ async function save(): Promise<void> {
   }
   saving.value = true;
   try {
-    const generationMeta = {
-      schemaVersion: 1 as const,
-      baseColor: baseColor.value,
-      accentColor: accentColor.value,
-      contrast: contrast.value,
-    };
+    // v2: persist the generation inputs as a `generated` base; the repo derives
+    // the resolved `tokens` cache (== `result.tokens`, same inputs) and the
+    // deprecated `generation` compat block.
     const created = await themeRepo.create({
       name: cleanName,
       description: description.value,
@@ -217,23 +287,14 @@ async function save(): Promise<void> {
       source: "generated",
       mode: mode.value,
       density: density.value,
-      tokens: result.tokens,
-      generation: generationMeta,
+      base: { kind: "generated", input: buildGenerationInput(mode.value) },
+      overrides: {},
     });
 
     if (generatePaired.value) {
       const flippedMode: ThemeMode = mode.value === "light" ? "dark" : "light";
       const pairedSuffix = flippedMode === "dark" ? "Dark" : "Light";
       const pairedName = `${cleanName} (${pairedSuffix})`;
-      const pairedResult = generateTheme({
-        name: pairedName,
-        baseColor: baseColor.value,
-        accentColor: accentColor.value,
-        contrast: contrast.value,
-        mode: flippedMode,
-        density: density.value,
-        fontFamily: fontFamily.value || undefined,
-      });
       const paired = await themeRepo.create({
         name: pairedName,
         description: description.value,
@@ -241,14 +302,13 @@ async function save(): Promise<void> {
         source: "generated",
         mode: flippedMode,
         density: density.value,
-        tokens: pairedResult.tokens,
-        generation: { ...generationMeta, paired: created.id },
+        base: { kind: "generated", input: buildGenerationInput(flippedMode) },
+        overrides: {},
+        paired: created.id,
       });
       // Backfill the primary so the Light/Dark toggle can bridge in both
       // directions. update() also re-syncs `themeRegistry`.
-      await themeRepo.update(created.id, {
-        generation: { ...generationMeta, paired: paired.id },
-      });
+      await themeRepo.update(created.id, { paired: paired.id });
     }
 
     if (applyAfterSave.value) {
@@ -285,21 +345,16 @@ async function updateExisting(): Promise<void> {
   }
   saving.value = true;
   try {
-    const generationMeta = {
-      schemaVersion: 1 as const,
-      baseColor: baseColor.value,
-      accentColor: accentColor.value,
-      contrast: contrast.value,
-      // Preserve the original paired ref if there was one.
-      paired: props.themeToEdit.generation?.paired,
-    };
+    // Preserve the original paired ref if there was one (v2 top-level `paired`,
+    // falling back to the derived compat mirror during the transition).
+    const existingPaired = props.themeToEdit.paired ?? props.themeToEdit.generation?.paired;
     const updated = await themeRepo.update(props.themeToEdit.id, {
       name: cleanName,
       description: description.value,
       mode: mode.value,
       density: density.value,
-      tokens: result.tokens,
-      generation: generationMeta,
+      base: { kind: "generated", input: buildGenerationInput(mode.value) },
+      ...(existingPaired !== undefined ? { paired: existingPaired } : {}),
     });
     if (applyAfterSave.value) {
       await themeStore.setTheme(updated.id, workspaceStore.currentWorkspaceId);
@@ -427,6 +482,25 @@ const FONT_OPTIONS = CURATED_FONTS.map((f) => ({ label: f.label, value: f.value 
               aria-label="Accent color"
             />
             <span class="text-faint font-mono text-[10px]">{{ accentColor }}</span>
+          </div>
+
+          <!-- Status hues (Track A A1b) — Tier 1, hue-only. Each family keeps
+               its semantic meaning; the picker offers a few hues within it. -->
+          <div class="flex flex-col gap-1.5">
+            <span class="text-foreground font-medium">Status hues</span>
+            <div v-for="fam in STATUS_FAMILIES" :key="fam" class="flex items-center gap-2">
+              <span class="text-muted w-16 shrink-0 text-xs capitalize">{{ fam }}</span>
+              <ColorSwatchPicker
+                v-model="statusSwatch[fam]"
+                :options="statusOptions[fam]"
+                :allow-custom="false"
+                :aria-label="`${fam} hue`"
+              />
+            </div>
+            <span class="text-faint text-[10px]">
+              Each family stays in its semantic lane (independent of the accent); defaults match the
+              built-in palette.
+            </span>
           </div>
 
           <!-- Contrast slider -->
@@ -589,10 +663,12 @@ const FONT_OPTIONS = CURATED_FONTS.map((f) => ({ label: f.label, value: f.value 
                 </div>
               </div>
 
-              <!-- Status badges. Status colors use fixed semantic hue
-                   families (success ≈ 145°, warning ≈ 75°, danger ≈ 27°,
+              <!-- Status badges. Status colors live in semantic hue families
+                   (defaults: success ≈ 145°, warning ≈ 75°, danger ≈ 27°,
                    info ≈ 250°) so meaning is preserved regardless of the
-                   accent — by design. They do shift L/C with Mode. -->
+                   accent. The "Status hues" control re-points a family's hue
+                   within its lane; L/C still shift with Mode. These badges read
+                   `--color-status-*`, so they recolor live as you tune. -->
               <div class="flex flex-col gap-1">
                 <div class="flex flex-wrap items-center gap-2">
                   <span
@@ -626,8 +702,8 @@ const FONT_OPTIONS = CURATED_FONTS.map((f) => ({ label: f.label, value: f.value 
                   </span>
                 </div>
                 <span class="text-[10px] italic" :style="{ color: 'var(--color-text-tertiary)' }">
-                  Status hues are fixed semantic families — independent of the accent so meaning is
-                  preserved.
+                  Status hues stay in their semantic families — independent of the accent so meaning
+                  is preserved. Tune each family's hue on the left.
                 </span>
               </div>
 

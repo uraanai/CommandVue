@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./tokens.css";
+@import "../fonts/local-fonts.css";
 @import "tw-animate-css";
 
 @plugin "@tailwindcss/forms";
@@ -51,29 +52,96 @@
   }
 }
 
-/* PrimeVue runtime palette — read by PrimeVue's unstyled-mode theme system
- * at JS runtime (separate from the Tailwind `@theme` block above). Mirrors
- * the slate scale from `tokens.css`. */
+/*
+ * Volt / PrimeVue surface ramp — the SINGLE live lever behind every
+ * `bg-surface-N` / `text-surface-N` / `border-surface-N` utility in `src/volt/*`
+ * (Track A A1a — the surface-seam fix).
+ *
+ * `tailwindcss-primeui` exposes the surface palette through `@theme inline`, so
+ * `var(--p-surface-N)` is INLINED at each Volt use site — meaning `--p-surface-N`
+ * (single `p`) is the ONLY runtime hook on a Volt surface. (Editing the app's
+ * `--color-surface-*` ladder or the numeric `--color-surface-N` alias does NOT
+ * reach Volt — see the trap notes in tokens.css.)
+ *
+ * Previously these were hardcoded slate literals, so modals / menus / inputs
+ * stayed grey no matter the theme — the "modals look like a different app" seam.
+ * They were ALSO disconnected from `--color-p-surface-*`, which the generator and
+ * every built-in theme already author but which nothing read (the dead-namespace
+ * bug). We now BRIDGE the lever to that authored ramp, so all Volt surfaces follow
+ * the active theme in both modes, with zero Volt edits and zero theme-data change.
+ *
+ * `--color-p-surface-*` is a FIXED light→dark ramp (0 = lightest … 950 = darkest),
+ * defaulted to slate in tokens.css and re-emitted by every theme; Volt picks the
+ * rung per mode (light bg = `-0`, dark bg = `-900`, etc.), so the ramp must NOT
+ * flip with `data-theme`. It is deliberately NOT among the tokens zeroed by the
+ * `.dv-groupview-floating` transparency block (dockview.css), so Volt surfaces
+ * stay opaque inside floating panels.
+ */
 :root {
-  --p-surface-0: #ffffff;
-  --p-surface-50: oklch(98.4% 0.003 247.858);
-  --p-surface-100: oklch(96.8% 0.007 247.896);
-  --p-surface-200: oklch(92.9% 0.013 255.508);
-  --p-surface-300: oklch(86.9% 0.022 252.894);
-  --p-surface-400: oklch(70.4% 0.04 256.788);
-  --p-surface-500: oklch(55.4% 0.046 257.417);
-  --p-surface-600: oklch(44.6% 0.043 257.281);
-  --p-surface-700: oklch(37.2% 0.044 257.287);
-  --p-surface-800: oklch(27.9% 0.041 260.031);
-  --p-surface-900: oklch(20.8% 0.042 265.755);
-  --p-surface-950: oklch(12.9% 0.042 264.695);
+  --p-surface-0: var(--color-p-surface-0);
+  --p-surface-50: var(--color-p-surface-50);
+  --p-surface-100: var(--color-p-surface-100);
+  --p-surface-200: var(--color-p-surface-200);
+  --p-surface-300: var(--color-p-surface-300);
+  --p-surface-400: var(--color-p-surface-400);
+  --p-surface-500: var(--color-p-surface-500);
+  --p-surface-600: var(--color-p-surface-600);
+  --p-surface-700: var(--color-p-surface-700);
+  --p-surface-800: var(--color-p-surface-800);
+  --p-surface-900: var(--color-p-surface-900);
+  --p-surface-950: var(--color-p-surface-950);
 
   /* Primary palette — Volt's Button etc. use `bg-primary` for the active
-   * fill. Align with CommandVue's accent (blue) scale. */
+   * fill. Already bridged to CommandVue's semantic interactive (accent) tokens
+   * — the surface half above now matches this pattern. */
   --p-primary-color: var(--color-interactive);
   --p-primary-hover-color: var(--color-interactive-hover);
   --p-primary-active-color: var(--color-interactive-active);
   --p-primary-contrast-color: var(--color-on-interactive);
+
+  /* Highlight — the "selected option" row in Listbox / AutoComplete panel /
+   * Tree / DataView / Paginator. tailwindcss-primeui's `bg-highlight` /
+   * `text-highlight` utilities read these vars, but PrimeVue leaves them
+   * undefined in unstyled mode, so a selected row rendered with no visible
+   * background. Define them as a translucent primary tint that reads on any
+   * surface in both light and dark, following the active accent token. */
+  --p-highlight-background: color-mix(in oklch, var(--p-primary-color) 12%, transparent);
+  --p-highlight-color: var(--p-primary-color);
+  --p-highlight-focus-background: color-mix(in oklch, var(--p-primary-color) 22%, transparent);
+  --p-highlight-focus-color: var(--p-primary-color);
+}
+
+/*
+ * Theme-aware text selection. The browser/OS default selection highlight is a
+ * fixed blue that clashes with a recolored theme, so tint it with the
+ * interactive (accent) color — selecting text now matches the active theme.
+ */
+::selection {
+  background-color: color-mix(in oklch, var(--color-interactive) 28%, transparent);
+}
+
+/*
+ * Theme the form-control focus ring.
+ *
+ * `@tailwindcss/forms` adds a focus ring to inputs/textarea/select via a
+ * box-shadow whose colour is a HARD-CODED `--tw-ring-color: <blue-500>`. That
+ * blue ring sat on top of the wrapper's themed accent border regardless of the
+ * active theme. These rules are unlayered, so they beat the plugin's
+ * `@layer base` declaration: re-point `--tw-ring-color` at the themed focus
+ * token so the ring follows the accent, and clear the browser's own outline so
+ * the accent ring + border are the only focus indicators.
+ *
+ * Controls that use an accent OUTLINE for focus (the Knob's SVG, etc.) are not
+ * `input`/`textarea`/`select`, so they are unaffected.
+ */
+input:focus,
+input:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+select:focus,
+select:focus-visible {
+  outline: none;
+  --tw-ring-color: var(--color-focus-ring);
 }
 
 /*
@@ -121,6 +189,115 @@
 
 *::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+/*
+ * One-line scroller base for the `scrollable` Tabs strip (ui/Tabs.vue).
+ *
+ * `.tab-scroll-thin` carries ONLY the chevron edge-fade mask (always on). The
+ * scrollbar itself is layered on by a modifier so it can be shown/hidden and
+ * recolored per the `scrollbar` / `scrollbarColor` props:
+ *   - `.tab-scroll-nobar` — DEFAULT: no visible bar (scroll via chevrons/wheel/drag).
+ *   - `.tab-scroll-bar`   — a 2px themed bar, thumb color from `--tab-scrollbar-color`.
+ */
+.tab-scroll-thin {
+  /*
+   * Fade the tabs out under the chevron nav buttons. The buttons sit absolutely
+   * over each edge (ui/Tabs.vue), so without this a tab label would show through
+   * behind a chevron. A mask is background-independent (mask = transparency, not
+   * a colored cover), so it works on any surface. The fade is 1.75rem (= the w-7
+   * button) and is toggled per edge by the `:has()` rules below, so an edge only
+   * fades when its chevron is actually present (i.e. you can scroll that way).
+   */
+  --tab-fade-l: black;
+  --tab-fade-r: black;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    var(--tab-fade-l),
+    black 1.75rem,
+    black calc(100% - 1.75rem),
+    var(--tab-fade-r)
+  );
+  mask-image: linear-gradient(
+    to right,
+    var(--tab-fade-l),
+    black 1.75rem,
+    black calc(100% - 1.75rem),
+    var(--tab-fade-r)
+  );
+}
+
+/* Fade the left edge only while the prev chevron is mounted (scrolled away from
+ * the start), and the right edge only while the next chevron is mounted. */
+[data-pc-name="tablist"]:has([data-pc-section="prevbutton"]) .tab-scroll-thin {
+  --tab-fade-l: transparent;
+}
+
+[data-pc-name="tablist"]:has([data-pc-section="nextbutton"]) .tab-scroll-thin {
+  --tab-fade-r: transparent;
+}
+
+/* Hidden scrollbar — the DEFAULT for the scrollable Tabs strip. `scrollbar-width:
+ * none` hides Chromium's standard bar; the pseudo-element rule covers older
+ * engines. Scrolling still works (chevrons / wheel / drag). */
+.tab-scroll-nobar {
+  scrollbar-width: none;
+}
+
+@supports selector(::-webkit-scrollbar) {
+  .tab-scroll-nobar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/*
+ * Visible 2px themed scrollbar (opt-in via the `scrollbar` prop).
+ *
+ * The global `* { scrollbar-width: thin; scrollbar-color: … }` above opts every
+ * element into Chromium's STANDARD scrollbar, which disables `::-webkit-scrollbar`
+ * (its only sizes are auto/thin/none — no 2px). So under `@supports` we reset BOTH
+ * standard props to `auto` to hand the element back to the legacy engine, then
+ * size it to 2px and drop the native arrow buttons. Firefox skips that block and
+ * keeps the `thin` bar declared here (it can't render 2px exactly). The thumb
+ * color follows `--tab-scrollbar-color` (the `scrollbarColor` prop), falling back
+ * to the theme border so it stays theme-aware by default.
+ */
+.tab-scroll-bar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--tab-scrollbar-color, var(--color-border-strong)) transparent;
+}
+
+@supports selector(::-webkit-scrollbar) {
+  .tab-scroll-bar {
+    scrollbar-width: auto;
+    scrollbar-color: auto;
+  }
+
+  .tab-scroll-bar::-webkit-scrollbar {
+    height: 2px;
+    width: 2px;
+  }
+
+  .tab-scroll-bar::-webkit-scrollbar-button {
+    display: none; /* drop the native left/right arrow buttons */
+    width: 0;
+    height: 0;
+  }
+
+  .tab-scroll-bar::-webkit-scrollbar-thumb {
+    background-color: var(--tab-scrollbar-color, var(--color-border-strong));
+    border: 0; /* no floating border — the bar is only 2px */
+    border-radius: 9999px;
+    background-clip: border-box;
+  }
+
+  .tab-scroll-bar::-webkit-scrollbar-thumb:hover {
+    background-color: var(--tab-scrollbar-color, var(--color-text-tertiary));
+  }
+
+  .tab-scroll-bar::-webkit-scrollbar-track {
+    background: transparent;
+  }
 }
 
 @layer base {
@@ -215,3 +392,26 @@ button:not(:disabled),
 [data-pc-name="contextmenu"] [data-pc-section="item"] {
   position: relative;
 }
+
+/*
+ * Toast stacking gap. PrimeVue renders the messages inside an inner
+ * `<TransitionGroup tag="div">` — the toast outlet root's ONLY child — so the
+ * vertical gap between toasts stacked at the same position must live on that
+ * wrapper, not the root (a gap on the root has only one child to space). The
+ * `class` passthrough can't reach it (PrimeVue types the transition pt as
+ * `TransitionProps`, which omits `class`), so it's set here. 0.625rem == the
+ * design's `gap-2.5` (10px).
+ */
+[data-pc-name="toast"] > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+/*
+ * Toast enter/leave animations live in Toast.vue (`animateEnter`/`animateLeave`,
+ * Web Animations API) — `css:false` disables Vue's transition classes, which
+ * don't advance inside PrimeVue's Portal. The hooks animate the card's height
+ * alongside the slide/fade so the surrounding stack reflows smoothly; they also
+ * honor reduced-motion. Nothing CSS-side is needed beyond the gap above.
+ */

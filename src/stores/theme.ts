@@ -1,11 +1,13 @@
-import type { Theme, ThemeId } from "@/types/theme";
+import type { Theme, ThemeDensity, ThemeId, ThemeMode } from "@/types/theme";
 import type { Ulid } from "@/types/workspace";
 
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 
 import { appMetaRepo } from "@/modules/storage/appMetaRepo";
-import { applyTheme } from "@/modules/themes/apply";
+import { themeRepo } from "@/modules/storage/themeRepo";
+import { applyTheme, applyTokenOverrides, clearTokenOverrides } from "@/modules/themes/apply";
+import { APP_ROOT } from "@/modules/themes/appRoot";
 import { themeRegistry } from "@/modules/themes/registry";
 
 /**
@@ -149,6 +151,125 @@ export const useThemeStore = defineStore("theme", () => {
     return workspaceBindings.value[workspaceId];
   }
 
+  // --- Live preview draft session (Theme Studio — Track A A2a) --------------
+  // A draft is a sparse map of token → value written onto the TOP-realm root
+  // (`APP_ROOT`, never ambient `document` — so a popped-out Studio still recolors
+  // the main window). `usePopoutThemeSync` mirrors the root's inline-style changes
+  // to every pop-out, so a single `setPreviewToken` fans out everywhere for free.
+  // The draft survives panel unmount / pop-out because it lives here, not in
+  // component-local refs. Persistence (save / save-as-new) is the authoring
+  // composable's concern (A2a-2); this store owns only the apply/commit/cancel
+  // mechanics. `setPreviewToken` applies synchronously — the calling UI debounces.
+  const previewDraft = ref<Record<string, string>>({});
+  const isPreviewing = ref(false);
+
+  /** Start a draft session (empties the draft). */
+  function beginPreview(): void {
+    previewDraft.value = {};
+    isPreviewing.value = true;
+  }
+
+  /** Set one draft token and live-apply it to the top root (mirrors to pop-outs). */
+  function setPreviewToken(token: string, value: string): void {
+    previewDraft.value = { ...previewDraft.value, [token]: value };
+    applyTokenOverrides({ [token]: value }, APP_ROOT);
+  }
+
+  /** Drop one draft token; re-derive the overlay so the committed value shows. */
+  function resetPreviewToken(token: string): void {
+    if (!(token in previewDraft.value)) return;
+    const next = { ...previewDraft.value };
+    delete next[token];
+    previewDraft.value = next;
+    clearTokenOverrides(APP_ROOT);
+    applyTokenOverrides(next, APP_ROOT);
+  }
+
+  /**
+   * Discard the draft: re-assert the committed theme FIRST (additive, in-place),
+   * then strip the preview-only keys — never a frame with neither value (§3e).
+   */
+  function cancelPreview(): void {
+    const committed = currentTheme.value;
+    if (committed) applyTheme(committed);
+    clearTokenOverrides(APP_ROOT);
+    previewDraft.value = {};
+    isPreviewing.value = false;
+  }
+
+  /**
+   * Commit the draft as the active theme's sparse `overrides` (merged over any
+   * existing), persist, and re-apply the resolved theme — then clear the now-
+   * redundant preview overlay (no-flash). Throws on a built-in active theme
+   * (overrides can't be persisted onto a registered built-in — the caller should
+   * route to "save as new theme" instead).
+   */
+  async function commitPreview(): Promise<Theme | null> {
+    const committed = currentTheme.value;
+    if (!committed) {
+      previewDraft.value = {};
+      isPreviewing.value = false;
+      return null;
+    }
+    if (committed.source === "built-in") {
+      throw new Error(
+        "Cannot commit overrides onto a built-in theme — save it as a new theme instead.",
+      );
+    }
+    const mergedOverrides = { ...committed.overrides, ...previewDraft.value };
+    const saved = await themeRepo.update(committed.id, { overrides: mergedOverrides });
+    applyTheme(saved);
+    clearTokenOverrides(APP_ROOT);
+    previewDraft.value = {};
+    isPreviewing.value = false;
+    return saved;
+  }
+
+  /**
+   * Generative preview (Theme Studio panel): live-apply a WHOLE freshly-generated
+   * token set to the top root. Additive over the prior preview — the generator
+   * emits a stable key set each pass, so values overwrite in place (no clear-gap
+   * flash) and the change fans out to every pop-out via the mirror observer.
+   */
+  function previewThemeTokens(
+    tokens: Record<string, string>,
+    density?: ThemeDensity,
+    mode?: ThemeMode,
+  ): void {
+    isPreviewing.value = true;
+    previewDraft.value = { ...tokens };
+    // Clear any previously-pushed preview key NOT in the new set, then apply.
+    // This drops a removed per-token override from the root instead of stranding
+    // it (the C6 `overrides` seam can shrink the set). Keys IN the new set are
+    // preserved across the clear → no flash for the stable generator key set.
+    clearTokenOverrides(APP_ROOT, new Set(Object.keys(tokens)));
+    applyTokenOverrides(tokens, APP_ROOT);
+    // Density isn't a token — it cascades from the `data-density` attribute. Mirror
+    // it onto the root during preview so spacing changes live too. Restored on
+    // cancel/commit via `applyTheme`, which re-sets the committed theme's density.
+    if (density) APP_ROOT.setAttribute("data-density", density);
+    // Mirror the previewed MODE onto `data-theme` too. Token VALUES alone flip the
+    // semantic surfaces, but the `dark:` variant — and the Volt surface-rung
+    // selection behind every Select / InputNumber / Checkbox — keys off
+    // `data-theme`. Without this, the Studio panel's own chrome stays in the
+    // committed mode while the rest of the app follows the preview. Restored on
+    // commit/cancel by `applyTheme`, which re-sets the committed theme's data-theme.
+    if (mode) APP_ROOT.setAttribute("data-theme", mode);
+  }
+
+  /**
+   * Tear down the generative preview overlay AFTER the committed theme has been
+   * applied (e.g. post-save). Strips only the leftover preview-only keys —
+   * `applyTheme` already reconciled the committed keys out of the preview set, so
+   * this never removes a committed value (no flash). Use {@link cancelPreview} to
+   * discard without a fresh commit.
+   */
+  function endPreview(): void {
+    clearTokenOverrides(APP_ROOT);
+    previewDraft.value = {};
+    isPreviewing.value = false;
+  }
+
   // --- Registry subscription for cache invalidation (Prompt 4 Phase F) -----
   // `themeRepo.delete` clears IDB bindings pointing at the deleted theme
   // (Phase A invariant) and unregisters from `themeRegistry` (Phase C sync).
@@ -186,5 +307,15 @@ export const useThemeStore = defineStore("theme", () => {
     setWorkspaceTheme,
     clearWorkspaceTheme,
     getWorkspaceBinding,
+    // Live preview draft session (A2a)
+    previewDraft,
+    isPreviewing,
+    beginPreview,
+    setPreviewToken,
+    resetPreviewToken,
+    cancelPreview,
+    commitPreview,
+    previewThemeTokens,
+    endPreview,
   };
 });

@@ -27,10 +27,22 @@
  * the Linear blog post that inspired the approach.
  */
 
-import type { Theme, ThemeDensity, ThemeMode } from "@/types/theme";
+import type {
+  EffectsSpec,
+  FontSpec,
+  StatusFamily,
+  StatusOverrides,
+  Theme,
+  ThemeDensity,
+  ThemeMode,
+  TypeScaleInput,
+} from "@/types/theme";
 import type { Oklch } from "culori";
 
 import { clampChroma, converter, inGamut, wcagContrast } from "culori";
+
+import { deriveBlur, deriveElevationRamp, deriveGlow } from "./effects";
+import { deriveTypeScale } from "./typeScale";
 
 const toOklch = converter("oklch");
 const isInSrgb = inGamut("rgb");
@@ -48,8 +60,35 @@ export interface ThemeGenerationInput {
   density: ThemeDensity;
   /** Optional font stack; when present, overrides `--font-family-sans/-body`. */
   fontFamily?: string;
+  /** Structured font choice (C3, google-only). When present it derives the
+   *  `--font-family-*` value; else the legacy `fontFamily` string is used. */
+  fontSpec?: FontSpec;
+  /** Modular type-scale input (Track A C2). Emits the ramp + line-heights only when set. */
+  typeScale?: TypeScaleInput;
+  /** Depth / glow / blur effects (Track A C5). Emits the shadow ramp / glow / blur only when set. */
+  effects?: EffectsSpec;
+  /**
+   * Per-family status overrides (Track A A1b). Absent → today's fixed hue
+   * families (byte-identical output). A present override re-points the hue and
+   * triggers emission of the additive status-border + toast keys.
+   */
+  statusOverrides?: StatusOverrides;
   name: string;
   description?: string;
+}
+
+/** "'Family Name', <fallback>" — quotes multi-word families, appends fallback.
+ *  Inputs are already Zod-/allowlist-validated (no injection possible). */
+function composeStack(family: string, fallback?: string): string {
+  const quoted = /\s/.test(family) ? `'${family}'` : family;
+  const fb = (fallback ?? "system-ui, sans-serif").trim();
+  return fb ? `${quoted}, ${fb}` : quoted;
+}
+/** Body/sans CSS value: fontSpec (google-only in C3) wins; else the legacy
+ *  fontFamily string VERBATIM (byte-identity for pre-C3 themes). */
+function fontFamilyValue(input: ThemeGenerationInput): string | undefined {
+  if (input.fontSpec) return composeStack(input.fontSpec.family, input.fontSpec.fallback);
+  return input.fontFamily || undefined;
 }
 
 /** One checked color pair and whether it cleared its required ratio. */
@@ -163,7 +202,9 @@ function solveDarkText(interactive: Oklch, hue: number): Oklch {
 }
 
 // Fixed semantic hue families for status colors (OKLCH degrees).
-const STATUS_HUES = { success: 145, warning: 75, danger: 27, info: 250 } as const;
+// Exported so the v1→v2 migration can pin a generated theme's `base.input.statusHues`
+// to these defaults (self-describing input + §3i engine-stability).
+export const STATUS_HUES = { success: 145, warning: 75, danger: 27, info: 250 } as const;
 
 /**
  * Generate a complete theme from high-level inputs.
@@ -250,6 +291,25 @@ export function generateTheme(input: ThemeGenerationInput): ThemeGenerationResul
     wcagContrast(whiteText, interactive) >= 4.5 ? whiteText : solveDarkText(interactive, accentHue);
   const focusRing = interactive;
 
+  // --- A1c richer palette: bevel highlights, accent border, accent triad. ----
+  // All foreground-class (border/shadow colors, never surface fills) so they
+  // survive the float-transparency override at `dockview.css` (§3d). The shadow
+  // *compositions* that use these live in `tokens.css` (theme-independent var()
+  // chains); the engine emits only the theme-dependent color values.
+  const bevelDelta = dark ? 0.05 : 0.04;
+  const bevelChroma = Math.min(surfChroma, 0.01);
+  const raisedL = surfaceRaised.l ?? baseL;
+  // Two edge colors derived from surface-raised: a lighter top highlight and a
+  // darker bottom line, carrying a whisper of the base hue.
+  const surfaceBevelLight = oklch(raisedL + bevelDelta, bevelChroma, baseHue);
+  const surfaceBevelDark = oklch(raisedL - bevelDelta, bevelChroma, baseHue);
+  // The default border, nudged to the accent hue — for active/selected panels.
+  const borderAccent = oklch(borderDefault.l ?? (dark ? 0.32 : 0.82), 0.04, accentHue);
+  // Translucent accent for focus halos / hover rings / active-tab glow.
+  const interactiveGlow = oklch(interL, interChroma, accentHue, dark ? 0.4 : 0.32);
+  // Desaturated + darkened accent for secondary accent surfaces.
+  const interactiveDim = oklch(dark ? interL - 0.1 : interL - 0.08, interChroma * 0.6, accentHue);
+
   // --- Status: fixed hue families, mode-tuned L/C, each with a subtle. ------
   const statusL = dark ? 0.68 : 0.55;
   const statusC = dark ? 0.15 : 0.16;
@@ -257,6 +317,26 @@ export function generateTheme(input: ThemeGenerationInput): ThemeGenerationResul
   const subtleC = dark ? 0.055 : 0.045;
   const status = (hue: number) => oklch(statusL, statusC, hue);
   const statusSubtle = (hue: number) => oklch(subtleL, subtleC, hue);
+
+  // Status overrides (Track A A1b). Tier 1 = hue-only: re-point the family hue
+  // and keep the mode-tuned L/C, so the result stays in-gamut + mode-adaptive
+  // (Tier-2 explicit color/subtle defer to A2b). With NO override a family
+  // resolves to EXACTLY today's value — `css(status(STATUS_HUES.x))` — so the
+  // status tokens stay byte-identical (§3c). `hasStatusOverride` gates the
+  // additive border/toast keys below.
+  const overrides = input.statusOverrides;
+  const hueFor = (name: StatusFamily): number => overrides?.[name]?.hue ?? STATUS_HUES[name];
+  const resolveStatusFamily = (name: StatusFamily) => ({
+    solid: css(status(hueFor(name))),
+    subtle: css(statusSubtle(hueFor(name))),
+  });
+  const statusFamilies: Record<StatusFamily, { solid: string; subtle: string }> = {
+    success: resolveStatusFamily("success"),
+    warning: resolveStatusFamily("warning"),
+    danger: resolveStatusFamily("danger"),
+    info: resolveStatusFamily("info"),
+  };
+  const hasStatusOverride = !!overrides && Object.keys(overrides).length > 0;
 
   // --- Accent scale (50–900) ------------------------------------------------
   // The existing UI primitives (Button, IconButton, Input, Select, Tabs,
@@ -294,8 +374,10 @@ export function generateTheme(input: ThemeGenerationInput): ThemeGenerationResul
   // Volt components (Dialog, Menu, Checkbox, InputText, Slider, DataView,
   // Fieldset, SecondaryButton) consume Tailwind utilities like
   // `bg-surface-0 dark:bg-surface-900`, `border-surface-200`,
-  // `text-surface-700` etc., which resolve to `--color-p-surface-*`.
-  // `tokens.css` aliases that scale to `--color-slate-*` by default — so
+  // `text-surface-700` etc. Those inline `var(--p-surface-N)` at the use site;
+  // `main.css` bridges `--p-surface-N: var(--color-p-surface-N)` (Track A A1a),
+  // so emitting this ramp recolors every Volt surface with the theme.
+  // `tokens.css` aliases the scale to `--color-slate-*` by default — so
   // without this override every Volt-rendered surface (dialog backgrounds,
   // the workspace-switcher menu, the customizer's own dialog chrome) stays
   // slate regardless of the generated theme.
@@ -332,10 +414,16 @@ export function generateTheme(input: ThemeGenerationInput): ThemeGenerationResul
     "--color-surface-raised": css(surfaceRaised),
     "--color-surface-overlay": css(surfaceOverlay),
     "--color-surface-sunken": css(surfaceSunken),
+    // Surface bevel (A1c) — top highlight + bottom line for the triple-layer
+    // bevel shadow composed in tokens.css.
+    "--color-surface-bevel-light": css(surfaceBevelLight),
+    "--color-surface-bevel-dark": css(surfaceBevelDark),
     // Borders
     "--color-border-subtle": css(borderSubtle),
     "--color-border-default": css(borderDefault),
     "--color-border-strong": css(borderStrong),
+    // Accent border (A1c) — active/selected panel outline.
+    "--color-border-accent": css(borderAccent),
     // Text
     "--color-text-primary": css(textPrimary),
     "--color-text-secondary": css(textSecondary),
@@ -348,17 +436,24 @@ export function generateTheme(input: ThemeGenerationInput): ThemeGenerationResul
     "--color-interactive-active": css(interactiveActive),
     "--color-interactive-subtle": css(interactiveSubtle),
     "--color-on-interactive": css(onInteractive),
-    // Status
-    "--color-status-success": css(status(STATUS_HUES.success)),
-    "--color-status-success-subtle": css(statusSubtle(STATUS_HUES.success)),
-    "--color-status-warning": css(status(STATUS_HUES.warning)),
-    "--color-status-warning-subtle": css(statusSubtle(STATUS_HUES.warning)),
-    "--color-status-danger": css(status(STATUS_HUES.danger)),
-    "--color-status-danger-subtle": css(statusSubtle(STATUS_HUES.danger)),
-    "--color-status-info": css(status(STATUS_HUES.info)),
-    "--color-status-info-subtle": css(statusSubtle(STATUS_HUES.info)),
-    // Focus
-    "--color-focus-ring": css(focusRing),
+    // Accent triad (A1c) — translucent glow (focus halos / hover rings) + a
+    // desaturated dim. `interactiveGlow` carries an alpha → `oklch(L C H / a)`.
+    "--color-interactive-glow": css(interactiveGlow),
+    "--color-interactive-dim": css(interactiveDim),
+    // Status — resolved per family (byte-identical when no override; §3c).
+    "--color-status-success": statusFamilies.success.solid,
+    "--color-status-success-subtle": statusFamilies.success.subtle,
+    "--color-status-warning": statusFamilies.warning.solid,
+    "--color-status-warning-subtle": statusFamilies.warning.subtle,
+    "--color-status-danger": statusFamilies.danger.solid,
+    "--color-status-danger-subtle": statusFamilies.danger.subtle,
+    "--color-status-info": statusFamilies.info.solid,
+    "--color-status-info-subtle": statusFamilies.info.subtle,
+    // Focus — emitted as a live reference to the interactive token (not a baked
+    // literal) so the focus outline always tracks the accent. `focusRing` (=
+    // interactive) is still used for the WCAG contrast check below; only the
+    // emitted value is a reference so recoloring the accent recolors focus too.
+    "--color-focus-ring": "var(--color-interactive)",
     // Accent scale 50–900 — overrides the `tokens.css` blue aliases so every
     // UI primitive that reads `bg-accent-500` / `var(--color-accent-*)` (Button,
     // Input, Select, Tabs, Menubar, DataTable, dockview, …) follows the user's
@@ -377,10 +472,12 @@ export function generateTheme(input: ThemeGenerationInput): ThemeGenerationResul
     "--color-muted": css(textSecondary),
     "--color-faint": css(textTertiary),
     "--color-border": css(borderDefault),
-    "--color-success": css(status(STATUS_HUES.success)),
-    "--color-warning": css(status(STATUS_HUES.warning)),
-    "--color-danger": css(status(STATUS_HUES.danger)),
-    "--color-info": css(status(STATUS_HUES.info)),
+    // Regenerated from the SAME resolved value as the status tokens so a
+    // re-pointed hue can't desync the compat aliases (byte-identical when unset).
+    "--color-success": statusFamilies.success.solid,
+    "--color-warning": statusFamilies.warning.solid,
+    "--color-danger": statusFamilies.danger.solid,
+    "--color-info": statusFamilies.info.solid,
     // Component color overrides (sizes/radii cascade from density/primitives).
     "--datatable-header-bg": css(surfaceRaised),
     "--datatable-header-fg": css(textSecondary),
@@ -400,9 +497,90 @@ export function generateTheme(input: ThemeGenerationInput): ThemeGenerationResul
     "--tooltip-text": css(surfaceBase),
   };
 
-  if (input.fontFamily) {
-    tokens["--font-family-sans"] = input.fontFamily;
-    tokens["--font-family-body"] = input.fontFamily;
+  // --- Dockview chrome (Track A C4). Emitted unconditionally as var() chains
+  // equal to the tokens.css defaults — additive + byte-identical (no ENGINE_VERSION
+  // bump), so an exported theme is self-contained; the Panels & Chrome tab tweaks
+  // them via overrides. var() (not resolved literals) keeps live recolor working. -
+  tokens["--dockpanel-radius"] = "var(--radius-md)";
+  tokens["--dockpanel-border-width"] = "1px";
+  tokens["--dockpanel-shadow"] = "var(--shadow-bevel-raised)";
+  tokens["--dockpanel-gap"] = "var(--space-1)";
+  tokens["--dockpanel-tab-font-size"] = "var(--density-font-size)";
+  tokens["--dockpanel-tab-font-weight"] = "var(--font-weight-medium)";
+  tokens["--dockpanel-tab-active-indicator"] = "var(--color-interactive)";
+
+  // --- Float-window chrome (Track A — float/dock split). Same additive pattern;
+  // each defaults to its --dockpanel-* counterpart so floats inherit dock chrome
+  // until a theme customizes them. var() chains keep live recolor + byte-identity.
+  tokens["--floatpanel-radius"] = "var(--dockpanel-radius)";
+  tokens["--floatpanel-border-width"] = "var(--dockpanel-border-width)";
+  tokens["--floatpanel-shadow"] = "var(--dockpanel-shadow)";
+  tokens["--floatpanel-gap"] = "var(--dockpanel-gap)";
+
+  // --- Font roles (C3) — body/sans only; heading is C2-owned. -----------------
+  // Emitting nothing when neither fontSpec nor fontFamily is set keeps output
+  // byte-identical to pre-C3 for fontless themes (§3c). Verbatim passthrough of a
+  // legacy fontFamily string preserves byte-identity for pre-C3 themes (§3i).
+  const bodyStack = fontFamilyValue(input);
+  if (bodyStack) {
+    tokens["--font-family-sans"] = bodyStack;
+    tokens["--font-family-body"] = bodyStack;
+  }
+
+  // --- Type scale (Track A C2). When `typeScale` is set, derive the 8-step
+  // `--text-*` ramp + their `--text-*--line-height` companions (deriver lives in
+  // typeScale.ts, unit-tested in isolation). Emitted ONLY when present — absent →
+  // the fixed tokens.css ramp/leading is the cascade fallback and output is
+  // byte-identical to pre-C2 (§3i additive contract). No ENGINE_VERSION bump. -----
+  if (input.typeScale) {
+    Object.assign(tokens, deriveTypeScale(input.typeScale));
+  }
+
+  // --- Additive status-border + toast keys (only when a status override is
+  // present). Pinned to the resolved status values so a re-pointed hue carries
+  // its border/toast through and the exported theme is self-contained. Without
+  // an override these are OMITTED — `tokens.css` provides them as `var()` chains
+  // off the byte-identical status tokens, so a default generated theme stays
+  // byte-identical and emits no new keys (§3c). -------------------------------
+  if (hasStatusOverride) {
+    const sf = statusFamilies;
+    Object.assign(tokens, {
+      "--color-status-success-border": sf.success.solid,
+      "--color-status-warning-border": sf.warning.solid,
+      "--color-status-danger-border": sf.danger.solid,
+      "--color-status-info-border": sf.info.solid,
+      "--color-toast-bg": tokens["--color-surface-raised"],
+      "--color-toast-fg": tokens["--color-text-primary"],
+      "--color-toast-border": tokens["--color-border-default"],
+      "--color-toast-success-bg": sf.success.subtle,
+      "--color-toast-success-fg": sf.success.solid,
+      "--color-toast-info-bg": sf.info.subtle,
+      "--color-toast-info-fg": sf.info.solid,
+      "--color-toast-warning-bg": sf.warning.subtle,
+      "--color-toast-warning-fg": sf.warning.solid,
+      "--color-toast-danger-bg": sf.danger.subtle,
+      "--color-toast-danger-fg": sf.danger.solid,
+    });
+  }
+
+  // --- Effects / depth ramp (C5). Emitted ONLY when input.effects is present —
+  // additive keys, no ENGINE_VERSION bump (§3i). Absent → the tokens.css static
+  // defaults apply and output stays byte-identical for every existing theme. Each
+  // sub-key is independently guarded (honest input — one knob ≠ all three). ------
+  const fx = input.effects;
+  if (fx) {
+    if (fx.depth !== undefined) {
+      Object.assign(tokens, deriveElevationRamp(fx.depth));
+    }
+    if (fx.glowAlpha !== undefined) {
+      // Re-point the glow COLOR only, as a live color-mix against the accent (no
+      // baked literal). The --shadow-accent-glow SPREAD (3px, tokens.css) is NOT
+      // touched → no existing-key math change → ENGINE_VERSION stays 1.
+      tokens["--color-interactive-glow"] = deriveGlow(fx.glowAlpha);
+    }
+    if (fx.blurRadius !== undefined) {
+      tokens["--dockpanel-glass-blur"] = deriveBlur(fx.blurRadius);
+    }
   }
 
   // --- Contrast report. ------------------------------------------------------
@@ -442,16 +620,22 @@ export function generateTheme(input: ThemeGenerationInput): ThemeGenerationResul
  * @throws if `theme` is not a generated theme (no `generation` block to read).
  */
 export function generatePairedVariant(theme: Theme): ThemeGenerationResult {
-  if (theme.source !== "generated" || !theme.generation) {
-    throw new Error("Can only pair a generated theme (missing generation block).");
+  if (theme.base.kind !== "generated") {
+    throw new Error("Can only pair a generated theme (base.kind must be 'generated').");
   }
+  const input = theme.base.input;
   const flipped: ThemeMode = theme.mode === "light" ? "dark" : "light";
   return generateTheme({
-    baseColor: theme.generation.baseColor,
-    accentColor: theme.generation.accentColor,
-    contrast: theme.generation.contrast,
+    baseColor: input.baseColor,
+    accentColor: input.accentColor,
+    contrast: input.contrast,
     mode: flipped,
     density: theme.density,
+    // Carry status overrides so the paired variant re-points the same hues and
+    // emits the same border/toast key set (keeping token coverage symmetric).
+    statusOverrides: input.statusOverrides,
+    // Carry the type scale so both variants emit the same `--text-*` key set.
+    ...(input.typeScale !== undefined ? { typeScale: input.typeScale } : {}),
     name: `${theme.name} (${flipped === "dark" ? "Dark" : "Light"})`,
   });
 }

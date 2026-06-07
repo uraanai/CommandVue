@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { Tooltip as VTooltip } from "floating-vue";
 import "floating-vue/dist/style.css";
+import { ref, type Ref } from "vue";
+
+import { type ElementLike, useOverlayTarget } from "@/composables/useOverlayTarget";
 
 /**
  * Tooltip — thin wrapper over `floating-vue`'s `Tooltip` component.
@@ -49,15 +52,29 @@ withDefaults(defineProps<Props>(), {
   delay: 200,
   disabled: false,
 });
+
+// Pop-out: floating-vue teleports the popper to its `container` (default
+// `"body"` → the OPENER document). The `<VTooltip>` root (`.v-popper` div) moves
+// with the panel into its own window, so bind `:container` to that element's
+// owning-window body and re-resolve on show. floating-vue's `container` watcher
+// re-teleports the live popper when the bound element changes, so resolving at
+// show time relocates the bubble into the correct window.
+const tooltipRef = ref<{ $el?: unknown } | null>(null);
+const { target: overlayContainer, resolve: resolveContainer } = useOverlayTarget(
+  tooltipRef as Ref<ElementLike>,
+);
 </script>
 
 <template>
   <VTooltip
+    ref="tooltipRef"
     :triggers="['hover', 'focus']"
     :placement="placement"
     :delay="delay"
     :disabled="disabled"
     :distance="6"
+    :container="overlayContainer"
+    @apply-show="resolveContainer"
   >
     <slot />
     <template #popper>

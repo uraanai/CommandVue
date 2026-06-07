@@ -41,6 +41,18 @@ class PanelRegistry {
     return Array.from(this.definitions.values());
   }
 
+  /**
+   * Returns the id of the first panel type flagged `mainPane: true`, or
+   * `undefined` if none is. Used by the clean-panes model to decide which
+   * type seeds as a clean (header-less) pane.
+   */
+  mainPanelType(): PanelType | undefined {
+    for (const def of this.definitions.values()) {
+      if (def.mainPane) return def.id;
+    }
+    return undefined;
+  }
+
   listByCategory(): Record<PanelCategory, PanelDefinition[]> {
     const grouped: Partial<Record<PanelCategory, PanelDefinition[]>> = {};
     for (const def of this.definitions.values()) {

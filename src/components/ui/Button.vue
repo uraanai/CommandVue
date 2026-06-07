@@ -21,6 +21,13 @@ type Size = "sm" | "md" | "lg";
 interface Props {
   variant?: Variant;
   size?: Size;
+  /**
+   * Opt into the DENSE height scale: a fully density-proportional button that
+   * gets genuinely small in compact density (vs the default, which floors the
+   * compact size so everyday buttons don't look cramped). For special dense
+   * surfaces only — most buttons should stay default.
+   */
+  dense?: boolean;
   disabled?: boolean;
   type?: "button" | "submit" | "reset";
 }
@@ -28,35 +35,48 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   variant: "primary",
   size: "md",
+  dense: false,
   disabled: false,
   type: "button",
 });
 
 const variantClass: Record<Variant, string> = {
   primary: "bg-accent-600 text-white hover:bg-accent-500 active:bg-accent-700",
-  secondary: "bg-surface-raised text-foreground border border-border hover:bg-surface-sunken",
+  secondary: "bg-surface-raised text-foreground border-border hover:bg-surface-sunken",
   ghost: "bg-transparent text-foreground hover:bg-surface-raised",
   danger: "bg-danger text-white hover:opacity-90 active:opacity-80",
 };
 
-// `sm` is the density-driven default — its padding, font-size, and min-height
-// all pull from the `--density-*` CSS variables so the entire app rescales
-// with the `data-density` attribute on `<html>`. `md` and `lg` are explicit
-// larger presets for callouts where a fixed size is intentional.
+// Density-aware heights via the per-size `--button-height-*` tokens (tokens.css),
+// which derive from `--density-control-height`, so a spacious app gets taller buttons
+// while `sm < md < lg` stays distinct in every density. The DEFAULT scale floors the
+// compact size so everyday buttons don't look cramped; the DENSE scale
+// (`--button-height-dense-*`, via the `dense` prop) drops that floor for genuinely
+// small compact buttons. Height is the `min-h` floor; horizontal padding + font stay
+// per-size for the size character. (Both maps are static strings so Tailwind's JIT
+// detects the arbitrary `min-h-[var(--…)]` utilities — do not build them dynamically.)
 const sizeClass: Record<Size, string> = {
-  sm: "px-[var(--density-cell-padding-x)] py-[var(--density-cell-padding-y)] text-[length:var(--density-font-size)] min-h-[var(--density-control-height)]",
-  md: "px-3.5 py-1.5 text-sm",
-  lg: "px-5 py-2.5 text-base",
+  sm: "min-h-[var(--button-height-sm)] px-2.5 text-xs",
+  md: "min-h-[var(--button-height-md)] px-3.5 text-sm",
+  lg: "min-h-[var(--button-height-lg)] px-5 text-base",
+};
+const denseSizeClass: Record<Size, string> = {
+  sm: "min-h-[var(--button-height-dense-sm)] px-2.5 text-xs",
+  md: "min-h-[var(--button-height-dense-md)] px-3.5 text-sm",
+  lg: "min-h-[var(--button-height-dense-lg)] px-5 text-base",
 };
 
 const rootClass = computed(() =>
   cn(
-    "inline-flex items-center justify-center gap-1.5 rounded-md font-medium",
+    // A 1px transparent border on every variant so the bordered `secondary`
+    // isn't 2px taller than the others (auto-height + border-box adds a real
+    // border's height; the transparent border equalizes it).
+    "inline-flex items-center justify-center gap-1.5 rounded-md border border-transparent font-medium",
     "transition-colors duration-150 ease-out",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-focus-ring)] focus-visible:ring-offset-2",
     "disabled:cursor-not-allowed disabled:opacity-50",
     variantClass[props.variant],
-    sizeClass[props.size],
+    (props.dense ? denseSizeClass : sizeClass)[props.size],
   ),
 );
 </script>

@@ -69,6 +69,15 @@ export interface PanelDefinition extends PanelLifecycle {
    * "Add" affordance.
    */
   singleton?: boolean;
+
+  /**
+   * Marks this panel type as the default "clean" (header-less) pane for the
+   * clean-panes model (Track B). When seeding or rebuilding a layout, the
+   * first `mainPane` type is added as its own clean group (no tab strip) and
+   * the idempotent legacy backfill promotes it to clean if nothing else is.
+   * Additive and orthogonal to `singleton`.
+   */
+  mainPane?: boolean;
 }
 
 /** Subscription callback for `panelRegistry.subscribe`. */

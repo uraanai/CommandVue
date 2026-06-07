@@ -1,0 +1,127 @@
+import { mount, type VueWrapper } from "@vue/test-utils";
+import PrimeVue from "primevue/config";
+import Ripple from "primevue/ripple"; // eslint-disable-line @typescript-eslint/no-restricted-imports -- test must register PrimeVue's Ripple directive to mount the panel
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { nextTick } from "vue";
+
+import { STUDIO_L1_TABS } from "@/components/panels/theme-studio/studioTabs";
+import ThemeStudioPanel from "@/components/panels/ThemeStudioPanel.vue";
+import { __unregisterBuiltinThemesForTests, registerBuiltinThemes } from "@/modules/themes/builtin";
+import { useThemeStore } from "@/stores/theme";
+
+import { resetForStoreTest } from "../../stores/helpers";
+
+function mountPanel(): VueWrapper {
+  return mount(ThemeStudioPanel, {
+    // Minimal usePanelApi bag — the Studio reads only `params.params`.
+    props: { params: { params: {} } } as never,
+    global: {
+      plugins: [[PrimeVue, { unstyled: true }]],
+      directives: { ripple: Ripple },
+    },
+    attachTo: document.body,
+  });
+}
+
+/** The 5 tab header buttons (PrimeVue tags them `data-pc-name="tab"`). */
+function tabs(w: VueWrapper) {
+  return w.findAll('[data-pc-name="tab"]');
+}
+function clickTab(w: VueWrapper, label: string): Promise<void> {
+  const tab = tabs(w).find((t) => t.text() === label);
+  if (!tab) throw new Error(`tab "${label}" not found`);
+  return tab.trigger("click").then(() => nextTick());
+}
+
+beforeEach(async () => {
+  await resetForStoreTest();
+  registerBuiltinThemes();
+});
+
+afterEach(() => {
+  __unregisterBuiltinThemesForTests();
+});
+
+describe("ThemeStudioPanel — C6 IA", () => {
+  it("renders the 5 locked L1 tabs in order", () => {
+    const w = mountPanel();
+    expect(tabs(w).map((t) => t.text())).toEqual(STUDIO_L1_TABS.map((t) => t.label));
+  });
+
+  it("defaults to the Generate tab showing the generation controls", () => {
+    const w = mountPanel();
+    const txt = w.text();
+    expect(txt).toContain("Mode");
+    expect(txt).toContain("Base color");
+    expect(txt).toContain("Contrast");
+  });
+
+  it("renders the Panels & Chrome tab body (C4) — not a placeholder", async () => {
+    const w = mountPanel();
+    await clickTab(w, "Panels & Chrome");
+    const txt = w.text();
+    expect(txt).toContain("Panel appearance"); // region (b) — assignment header
+    expect(txt).toContain("Dock windows"); // region (a) — dock chrome sub-group
+    expect(txt).toContain("Float windows"); // region (a) — float chrome sub-group (float/dock split)
+    expect(txt).toContain("Open a panel to assign an appearance"); // empty state (no dock in test)
+    expect(txt).not.toContain("Lands in C4"); // the placeholder is gone
+  });
+
+  it("renders the Tokens editor (C1) — not a placeholder — in the Tokens tab", async () => {
+    const w = mountPanel();
+    await clickTab(w, "Tokens");
+    const txt = w.text();
+    expect(txt).toContain("Reset all"); // the editor toolbar
+    expect(txt).toContain("Surface"); // first section header
+    expect(txt).toContain("--color-interactive"); // a known token row subtitle
+    expect(txt).not.toContain("Lands in C1"); // the old placeholder is gone
+  });
+
+  it("renders the Typography tab body (C2) — not a placeholder", async () => {
+    const w = mountPanel();
+    await clickTab(w, "Typography");
+    const txt = w.text();
+    expect(txt).toContain("Font roles"); // section A header
+    expect(txt).toContain("Type scale"); // section B header
+    expect(txt).not.toContain("Lands in C2"); // the placeholder is gone
+  });
+
+  it("renders the Effects tab body (C5) — not a placeholder", async () => {
+    const w = mountPanel();
+    await clickTab(w, "Effects");
+    const txt = w.text();
+    expect(txt).toContain("Elevation depth"); // depth section
+    expect(txt).toContain("Accent glow"); // glow section
+    expect(txt).not.toContain("Lands in C5"); // the placeholder is gone
+  });
+
+  it("keeps exactly one preview marker on every tab (preview lives outside Tabs)", async () => {
+    const w = mountPanel();
+    expect(w.findAll('[data-testid="studio-preview"]')).toHaveLength(1);
+    for (const label of ["Tokens", "Effects", "Generate"]) {
+      await clickTab(w, label);
+      expect(w.findAll('[data-testid="studio-preview"]')).toHaveLength(1);
+    }
+  });
+
+  it("does not pin the editor chrome density (inherits ambient); preview reflects authored density", () => {
+    const w = mountPanel();
+    // The editor controls no longer pin a fixed `comfortable` density — they inherit
+    // the app's ambient density (so a compact app shows compact Studio controls).
+    // The ONLY comfortable-density host is now the preview pane, which binds the
+    // AUTHORED density (default comfortable). Before the fix there were two such
+    // hosts (the controls wrapper + the preview); now there is exactly one.
+    expect(w.findAll('[data-density="comfortable"]')).toHaveLength(1);
+    expect(w.find('[data-testid="studio-preview"]').attributes("data-density")).toBe("comfortable");
+  });
+
+  it("does not push a live preview on a cold blank mount", async () => {
+    const store = useThemeStore();
+    const spy = vi.spyOn(store, "previewThemeTokens");
+    mountPanel();
+    await nextTick();
+    // Let any (debounced, 120ms) push fire — there must be none on a blank mount.
+    await new Promise((r) => setTimeout(r, 200));
+    expect(spy).not.toHaveBeenCalled();
+  });
+});

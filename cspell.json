@@ -44,7 +44,8 @@
     "*.svg",
     "LICENSE",
     "CHANGELOG.md",
-    ".internal/**"
+    ".internal/**",
+    "src/assets/fonts/google-catalog.json"
   ],
   "ignoreRegExpList": ["/[A-Za-z0-9+/=]{40,}/", "/0x[0-9a-fA-F]+/", "/[A-Z][A-Z0-9*-]{5,}/"],
   "words": []

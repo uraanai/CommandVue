@@ -16,6 +16,7 @@ export type ShortcutAction =
   | "palette.open"
   | "tool.deactivate"
   | "view.toggleComponents"
+  | "view.toggleMinimizedTray"
   | `tool.${string}`;
 
 export interface ShortcutDef {
@@ -53,6 +54,14 @@ export const SHORTCUTS: readonly ShortcutDef[] = [
     scope: "global",
     label: "Toggle Components panel",
     action: "view.toggleComponents",
+  },
+  {
+    // `mod+/` is unclaimed by every browser/OS (unlike mod+j = Downloads in
+    // Firefox), so it never collides — the handle click is the primary control.
+    keys: ["mod+/"],
+    scope: "global",
+    label: "Toggle minimized tray",
+    action: "view.toggleMinimizedTray",
   },
   {
     keys: ["escape"],

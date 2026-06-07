@@ -1,4 +1,5 @@
 import type { PanelDefinition } from "./types";
+import type { PanelType } from "@/types/workspace";
 
 import { panelRegistry } from "./registry";
 
@@ -21,6 +22,7 @@ export const BUILTIN_PANELS: readonly PanelDefinition[] = [
     description: "Cesium-powered 3D globe with terrain and imagery layers.",
     icon: "globe",
     category: "maps",
+    mainPane: true,
     component: () => import("@/components/panels/CesiumPanel.vue"),
   },
   {
@@ -80,7 +82,33 @@ export const BUILTIN_PANELS: readonly PanelDefinition[] = [
     singleton: true,
     component: () => import("@/components/panels/ComponentsPanel.vue"),
   },
+  {
+    id: "showcase",
+    title: "Component Showcase",
+    description: "Live gallery of every UI primitive — theming + behavior smoke test.",
+    icon: "palette",
+    category: "docs",
+    singleton: true,
+    component: () => import("@/components/panels/ShowcasePanel.vue"),
+  },
+  {
+    id: "theme-studio",
+    title: "Theme Studio",
+    description: "Author themes with a live preview that recolors every window at once.",
+    icon: "paintbrush",
+    category: "tools",
+    singleton: true,
+    component: () => import("@/components/panels/ThemeStudioPanel.vue"),
+  },
 ] as const;
+
+/**
+ * Every built-in panel-type id. The single source for preset `applicableTo`
+ * contracts (e.g. the `panel-appearance` preset applies to all panel types),
+ * so they can't drift from the registered set — `registry.spec.ts` asserts the
+ * preset's `applicableTo` equals this list.
+ */
+export const ALL_BUILTIN_PANEL_TYPE_IDS: readonly PanelType[] = BUILTIN_PANELS.map((p) => p.id);
 
 let registered = false;
 

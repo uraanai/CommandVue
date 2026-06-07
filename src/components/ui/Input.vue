@@ -40,7 +40,7 @@ const rootClass = computed(() =>
     "px-[var(--density-cell-padding-x)] py-[var(--density-cell-padding-y)]",
     "text-[length:var(--density-font-size)] min-h-[var(--density-control-height)]",
     "placeholder:text-faint",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-0",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-focus-ring)] focus-visible:ring-offset-0",
     "disabled:cursor-not-allowed disabled:opacity-50",
     props.invalid ? "border-danger" : "border-border",
   ),

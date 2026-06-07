@@ -1,0 +1,164 @@
+import { describe, expect, it } from "vitest";
+
+import { generateTheme } from "@/modules/themes/generate";
+import { migrateThemeV1ToV2, type ThemeV1Record } from "@/modules/themes/migrate";
+import { __clearResolveCacheForTests, resolve } from "@/modules/themes/resolve";
+import { ENGINE_VERSION, type GenerationInputV2, THEME_SCHEMA_VERSION } from "@/types/theme";
+
+/**
+ * §3i engine-stability contract. The diff-into-overrides migration promises that
+ * a generated theme renders identically post-upgrade and only changes when the
+ * user re-edits — provided no existing emitted token's derivation math changes
+ * under a fixed `ENGINE_VERSION`, and additive richness flows in as NEW keys.
+ */
+
+const BASE = "oklch(0.16 0.04 264)";
+const ACCENT = "oklch(0.6 0.18 250)";
+
+function generatedV1(tokens: Record<string, string>): ThemeV1Record {
+  return {
+    id: "01HZZZZZZZZZZZZZZZZZZZZZZZ9",
+    name: "Stable",
+    description: "",
+    author: "",
+    source: "generated",
+    mode: "dark",
+    density: "comfortable",
+    tokens,
+    generation: { schemaVersion: 1, baseColor: BASE, accentColor: ACCENT, contrast: 60 },
+    createdAt: 1,
+    updatedAt: 2,
+  };
+}
+
+describe("engine-stability (§3i)", () => {
+  it("exposes a numeric ENGINE_VERSION the resolve memo is keyed on", () => {
+    expect(typeof ENGINE_VERSION).toBe("number");
+  });
+
+  it("re-resolves a typeScale theme byte-identically (additive keys stable, no math bump)", () => {
+    __clearResolveCacheForTests();
+    const input: GenerationInputV2 = {
+      schemaVersion: 2,
+      baseColor: BASE,
+      accentColor: ACCENT,
+      contrast: 60,
+      mode: "dark",
+      density: "comfortable",
+      typeScale: { baseSize: 18, ratio: 1.25 },
+    };
+    const first = resolve({ base: { kind: "generated", input }, overrides: {}, name: "T" });
+    __clearResolveCacheForTests();
+    const second = resolve({
+      base: { kind: "generated", input: { ...input, typeScale: { baseSize: 18, ratio: 1.25 } } },
+      overrides: {},
+      name: "T",
+    });
+    expect(second).toEqual(first);
+    expect(first["--text-base"]).toBe("1.125rem");
+  });
+
+  it("re-resolves an effects theme byte-identically (additive keys stable, no math bump)", () => {
+    __clearResolveCacheForTests();
+    const input: GenerationInputV2 = {
+      schemaVersion: 2,
+      baseColor: BASE,
+      accentColor: ACCENT,
+      contrast: 60,
+      mode: "dark",
+      density: "comfortable",
+      effects: { depth: 70, glowAlpha: 0.5, blurRadius: 10 },
+    };
+    const first = resolve({ base: { kind: "generated", input }, overrides: {}, name: "T" });
+    __clearResolveCacheForTests();
+    const second = resolve({
+      base: {
+        kind: "generated",
+        input: { ...input, effects: { depth: 70, glowAlpha: 0.5, blurRadius: 10 } },
+      },
+      overrides: {},
+      name: "T",
+    });
+    expect(second).toEqual(first);
+    expect(first["--shadow-1"]).toBeDefined();
+    expect(first["--dockpanel-glass-blur"]).toBe("10px");
+  });
+
+  it("an effects-less theme emits no --shadow-1..5 (the if-guard prevents leakage)", () => {
+    __clearResolveCacheForTests();
+    const input: GenerationInputV2 = {
+      schemaVersion: 2,
+      baseColor: BASE,
+      accentColor: ACCENT,
+      contrast: 60,
+      mode: "dark",
+      density: "comfortable",
+    };
+    const tokens = resolve({ base: { kind: "generated", input }, overrides: {}, name: "T" });
+    expect(tokens["--shadow-1"]).toBeUndefined();
+    expect(tokens["--shadow-5"]).toBeUndefined();
+  });
+
+  it("keeps ENGINE_VERSION + THEME_SCHEMA_VERSION pinned (C2 is additive)", () => {
+    expect(ENGINE_VERSION).toBe(1);
+    expect(THEME_SCHEMA_VERSION).toBe(2);
+  });
+
+  it("re-resolves a freshly-generated migrated theme to byte-identical tokens (no drift)", () => {
+    __clearResolveCacheForTests();
+    const tokens = generateTheme({
+      name: "Stable",
+      baseColor: BASE,
+      accentColor: ACCENT,
+      contrast: 60,
+      mode: "dark",
+      density: "comfortable",
+    }).tokens;
+    const v2 = migrateThemeV1ToV2(generatedV1(tokens));
+    // Same engine, same input → empty overrides and an identical re-resolve.
+    expect(v2.overrides).toEqual({});
+    expect(resolve(v2)).toEqual(tokens);
+  });
+
+  it("pins an existing key against an engine value change via overrides", () => {
+    __clearResolveCacheForTests();
+    const tokens = generateTheme({
+      name: "Stable",
+      baseColor: BASE,
+      accentColor: ACCENT,
+      contrast: 60,
+      mode: "dark",
+      density: "comfortable",
+    }).tokens;
+    // Simulate a stored theme whose surface-base was authored to a value the
+    // current engine would NOT produce (a future math change, or a hand tweak).
+    const stored = { ...tokens, "--color-surface-base": "oklch(0.3 0.02 264)" };
+    const v2 = migrateThemeV1ToV2(generatedV1(stored));
+    expect(v2.overrides["--color-surface-base"]).toBe("oklch(0.3 0.02 264)");
+    // The pinned value wins on re-resolve — the engine cannot silently recolor it.
+    expect(resolve(v2)["--color-surface-base"]).toBe("oklch(0.3 0.02 264)");
+  });
+
+  it("adopts an additive engine key on re-resolve while the upgrade stays pixel-identical", () => {
+    __clearResolveCacheForTests();
+    const full = generateTheme({
+      name: "Stable",
+      baseColor: BASE,
+      accentColor: ACCENT,
+      contrast: 60,
+      mode: "dark",
+      density: "comfortable",
+    }).tokens;
+    // Simulate a theme generated by an OLDER engine that didn't emit this key.
+    const additiveKey = "--color-text-primary";
+    const stored = { ...full };
+    delete stored[additiveKey];
+
+    const v2 = migrateThemeV1ToV2(generatedV1(stored));
+    // Upgrade is pixel-identical: the cache matches what was stored (key absent).
+    expect(additiveKey in v2.tokens).toBe(false);
+    expect(v2.overrides[additiveKey]).toBeUndefined();
+    // …but a re-resolve adopts the additive key from the current engine base.
+    expect(resolve(v2)[additiveKey]).toBe(full[additiveKey]);
+  });
+});
