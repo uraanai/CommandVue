@@ -1,17 +1,18 @@
 <script setup lang="ts">
 import type { Preset } from "@/types/preset";
 
-import { ChevronRight, Copy, Globe, Layers, Pencil, Plus, Trash2 } from "@lucide/vue";
-import Column from "primevue/column";
-import DataTable from "primevue/datatable";
-import { ref, watch } from "vue";
+import { Copy, FolderInput, Globe, Layers, Pencil, Plus, Trash2 } from "@lucide/vue";
+import { computed, ref, watch } from "vue";
 
 import Button from "@/components/ui/Button.vue";
+import DataTable from "@/components/ui/DataTable.vue";
+import { createColumnHelper } from "@/components/ui/datatable/columnHelpers";
+import IconButton from "@/components/ui/IconButton.vue";
 import Tabs from "@/components/ui/Tabs.vue";
 import { presetTypeRegistry } from "@/modules/presets/registry";
 import { usePresetStore } from "@/stores/preset";
+import { useThemeStore } from "@/stores/theme";
 import { useWorkspaceStore } from "@/stores/workspace";
-import { cn } from "@/utils/cn";
 import Dialog from "@/volt/Dialog.vue";
 
 import EditPresetDialog from "./EditPresetDialog.vue";
@@ -35,11 +36,33 @@ const emit = defineEmits<{ "update:visible": [value: boolean] }>();
 
 const presetStore = usePresetStore();
 const workspace = useWorkspaceStore();
+const themeStore = useThemeStore();
+
+// Table density follows the active theme — the same single source of truth the
+// EntityList panel uses (themeStore.currentTheme.density, mirrored to
+// data-density on <html>). Cell padding then resolves from the --density-*
+// tokens inside the <DataTable> wrapper, so the rows track the global density.
+const density = computed(() => themeStore.currentTheme?.density ?? "comfortable");
 
 const editTarget = ref<null | Preset>(null);
 const editOpen = ref(false);
 const error = ref<null | string>(null);
 const activeTab = ref<"global" | "workspace">("global");
+
+// Two columns: a flexible Name (sized to fill the 480px dialog at comfortable
+// density) and a fixed Actions column. Sorting/resize/visibility are disabled —
+// these are short management lists, not data grids.
+const helper = createColumnHelper<Preset>();
+const presetColumns = [
+  helper.accessor("name", {
+    id: "name",
+    header: "Name",
+    size: 200,
+    enableSorting: false,
+    meta: { grow: true },
+  }),
+  helper.display({ id: "actions", header: "Actions", size: 208, enableSorting: false }),
+];
 
 watch(
   () => props.visible,
@@ -95,18 +118,9 @@ async function removePreset(preset: Preset): Promise<void> {
   }
 }
 
-const dataTablePT = {
-  root: { class: cn("border border-border rounded-md overflow-hidden") },
-  table: { class: "w-full text-sm" },
-  thead: { class: "bg-surface-sunken" },
-  headerRow: { class: "border-b border-border" },
-  headerCell: {
-    class: "text-faint px-3 py-2 text-[10px] tracking-[0.18em] uppercase text-left",
-  },
-  bodyRow: { class: "border-b border-border last:border-b-0" },
-  bodyCell: { class: "px-3 py-2 text-foreground" },
-  emptyMessage: { class: "px-3 py-6 text-center text-sm text-muted" },
-};
+function typeLabel(preset: Preset): string {
+  return presetTypeRegistry.get(preset.presetTypeId)?.title ?? preset.presetTypeId;
+}
 </script>
 
 <template>
@@ -116,6 +130,12 @@ const dataTablePT = {
     @update:visible="(v: boolean) => emit('update:visible', v)"
   >
     <div class="flex flex-col gap-3">
+      <p class="text-muted text-xs">
+        A preset is a reusable bundle of visual settings you apply to a panel (map style, overlay,
+        chart theme, panel appearance). Global presets are available in every workspace; Workspace
+        presets are scoped to the current one. Create, edit, duplicate, move between scopes, or
+        delete them.
+      </p>
       <Tabs v-model="activeTab" :tabs="tabs">
         <template #tab-global>
           <Globe class="size-3" />
@@ -145,47 +165,65 @@ const dataTablePT = {
               </div>
             </div>
             <DataTable
-              :value="presetStore.globalPresets"
-              data-key="id"
-              size="small"
-              :pt="dataTablePT"
+              :data="presetStore.globalPresets"
+              :columns="presetColumns"
+              row-key="id"
+              :density="density"
+              fluid
+              :enable-sorting="false"
+              :enable-column-resize="false"
+              :enable-column-visibility="false"
+              :enable-filtering="false"
+              container-height="auto"
+              empty-message="No global presets yet."
+              class="border-border overflow-hidden rounded-md border"
             >
-              <template #empty>No global presets yet.</template>
-              <Column field="name" header="Name" style="min-width: 12rem">
-                <template #body="{ data }">
-                  <div>
-                    <div class="text-foreground font-medium">{{ data.name }}</div>
-                    <div class="text-faint text-xs">
-                      {{ presetTypeRegistry.get(data.presetTypeId)?.title ?? data.presetTypeId }}
-                      <template v-if="data.description"> · {{ data.description }}</template>
-                    </div>
-                  </div>
-                </template>
-              </Column>
-              <Column header="Actions" header-style="width: 14rem">
-                <template #body="{ data }">
-                  <div class="flex items-center justify-end gap-1">
-                    <Button size="sm" variant="ghost" @click="startEdit(data)">
-                      <Pencil class="size-3.5" />
-                    </Button>
-                    <Button size="sm" variant="ghost" @click="duplicatePreset(data)">
-                      <Copy class="size-3.5" />
-                    </Button>
-                    <Button
-                      v-if="workspace.currentWorkspaceId"
-                      size="sm"
-                      variant="ghost"
-                      title="Copy to current workspace"
-                      @click="scope(data)"
+              <template #header-actions>
+                <div class="w-full pr-1 text-right">Actions</div>
+              </template>
+              <template #cell-name="{ row }">
+                <div class="min-w-0">
+                  <div class="text-foreground truncate font-medium">{{ (row as Preset).name }}</div>
+                  <div class="text-faint truncate text-xs">
+                    {{ typeLabel(row as Preset) }}
+                    <template v-if="(row as Preset).description">
+                      · {{ (row as Preset).description }}</template
                     >
-                      <ChevronRight class="size-3.5" />
-                    </Button>
-                    <Button size="sm" variant="ghost" @click="removePreset(data)">
-                      <Trash2 class="size-3.5" />
-                    </Button>
                   </div>
-                </template>
-              </Column>
+                </div>
+              </template>
+              <template #cell-actions="{ row }">
+                <div class="flex w-full items-center justify-end gap-1">
+                  <IconButton label="Edit" size="sm" title="Edit" @click="startEdit(row as Preset)">
+                    <Pencil />
+                  </IconButton>
+                  <IconButton
+                    label="Duplicate"
+                    size="sm"
+                    title="Duplicate"
+                    @click="duplicatePreset(row as Preset)"
+                  >
+                    <Copy />
+                  </IconButton>
+                  <IconButton
+                    v-if="workspace.currentWorkspaceId"
+                    label="Copy to current workspace"
+                    size="sm"
+                    title="Copy to current workspace"
+                    @click="scope(row as Preset)"
+                  >
+                    <FolderInput />
+                  </IconButton>
+                  <IconButton
+                    label="Delete"
+                    size="sm"
+                    title="Delete"
+                    @click="removePreset(row as Preset)"
+                  >
+                    <Trash2 />
+                  </IconButton>
+                </div>
+              </template>
             </DataTable>
           </div>
           <div v-else-if="active === 'workspace'">
@@ -208,46 +246,64 @@ const dataTablePT = {
               </div>
             </div>
             <DataTable
-              :value="presetStore.workspacePresets"
-              data-key="id"
-              size="small"
-              :pt="dataTablePT"
+              :data="presetStore.workspacePresets"
+              :columns="presetColumns"
+              row-key="id"
+              :density="density"
+              fluid
+              :enable-sorting="false"
+              :enable-column-resize="false"
+              :enable-column-visibility="false"
+              :enable-filtering="false"
+              container-height="auto"
+              empty-message="No workspace-scoped presets yet."
+              class="border-border overflow-hidden rounded-md border"
             >
-              <template #empty>No workspace-scoped presets yet.</template>
-              <Column field="name" header="Name" style="min-width: 12rem">
-                <template #body="{ data }">
-                  <div>
-                    <div class="text-foreground font-medium">{{ data.name }}</div>
-                    <div class="text-faint text-xs">
-                      {{ presetTypeRegistry.get(data.presetTypeId)?.title ?? data.presetTypeId }}
-                      <template v-if="data.description"> · {{ data.description }}</template>
-                    </div>
-                  </div>
-                </template>
-              </Column>
-              <Column header="Actions" header-style="width: 14rem">
-                <template #body="{ data }">
-                  <div class="flex items-center justify-end gap-1">
-                    <Button size="sm" variant="ghost" @click="startEdit(data)">
-                      <Pencil class="size-3.5" />
-                    </Button>
-                    <Button size="sm" variant="ghost" @click="duplicatePreset(data)">
-                      <Copy class="size-3.5" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      title="Promote to global"
-                      @click="promote(data)"
+              <template #header-actions>
+                <div class="w-full pr-1 text-right">Actions</div>
+              </template>
+              <template #cell-name="{ row }">
+                <div class="min-w-0">
+                  <div class="text-foreground truncate font-medium">{{ (row as Preset).name }}</div>
+                  <div class="text-faint truncate text-xs">
+                    {{ typeLabel(row as Preset) }}
+                    <template v-if="(row as Preset).description">
+                      · {{ (row as Preset).description }}</template
                     >
-                      <Globe class="size-3.5" />
-                    </Button>
-                    <Button size="sm" variant="ghost" @click="removePreset(data)">
-                      <Trash2 class="size-3.5" />
-                    </Button>
                   </div>
-                </template>
-              </Column>
+                </div>
+              </template>
+              <template #cell-actions="{ row }">
+                <div class="flex w-full items-center justify-end gap-1">
+                  <IconButton label="Edit" size="sm" title="Edit" @click="startEdit(row as Preset)">
+                    <Pencil />
+                  </IconButton>
+                  <IconButton
+                    label="Duplicate"
+                    size="sm"
+                    title="Duplicate"
+                    @click="duplicatePreset(row as Preset)"
+                  >
+                    <Copy />
+                  </IconButton>
+                  <IconButton
+                    label="Promote to global"
+                    size="sm"
+                    title="Promote to global"
+                    @click="promote(row as Preset)"
+                  >
+                    <Globe />
+                  </IconButton>
+                  <IconButton
+                    label="Delete"
+                    size="sm"
+                    title="Delete"
+                    @click="removePreset(row as Preset)"
+                  >
+                    <Trash2 />
+                  </IconButton>
+                </div>
+              </template>
             </DataTable>
           </div>
         </template>

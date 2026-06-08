@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import { Check, Copy, Star, Trash2 } from "@lucide/vue";
-import Column from "primevue/column";
-import DataTable, { type DataTableRowEditSaveEvent } from "primevue/datatable";
-import { ref, watch } from "vue";
+import type { Layout } from "@/types/workspace";
+
+import { Check, Copy, Pencil, Star, Trash2 } from "@lucide/vue";
+import { computed, ref, watch } from "vue";
 
 import Button from "@/components/ui/Button.vue";
+import DataTable from "@/components/ui/DataTable.vue";
+import { createColumnHelper } from "@/components/ui/datatable/columnHelpers";
+import IconButton from "@/components/ui/IconButton.vue";
 import Input from "@/components/ui/Input.vue";
 import { useNotify } from "@/composables/useNotify";
 import { useLayoutStore } from "@/stores/layout";
+import { useThemeStore } from "@/stores/theme";
 import { useWorkspaceStore } from "@/stores/workspace";
-import { cn } from "@/utils/cn";
 import Dialog from "@/volt/Dialog.vue";
 
 interface Props {
@@ -21,32 +24,80 @@ const emit = defineEmits<{ "update:visible": [value: boolean] }>();
 
 const workspace = useWorkspaceStore();
 const layoutStore = useLayoutStore();
+const themeStore = useThemeStore();
 const notify = useNotify();
-const editingRows = ref<{ id: string }[]>([]);
 const error = ref<string | null>(null);
+
+// Inline rename state. The default <DataTable> wrapper (TanStack, ADR 0001) has
+// no built-in row editing, so we drive it ourselves: the row whose id matches
+// editingId swaps its Name cell to an <Input> and its actions to Save / Cancel.
+const editingId = ref<null | string>(null);
+const draftName = ref("");
+
+// Focus + select the rename input the moment it mounts (the static `autofocus`
+// attribute only fires on initial page load, not on a v-if toggle).
+const vFocus = {
+  mounted: (el: HTMLElement): void => {
+    const input = el instanceof HTMLInputElement ? el : el.querySelector("input");
+    input?.focus();
+    input?.select();
+  },
+};
+
+// Density follows the active theme — see EntityListPanel for the rationale.
+const density = computed(() => themeStore.currentTheme?.density ?? "comfortable");
+
+// Flexible Name column + fixed Actions column, sized to fill the 480px dialog at
+// comfortable density. Sorting/resize/visibility are off — short management list.
+const helper = createColumnHelper<Layout>();
+const layoutColumns = [
+  helper.accessor("name", {
+    id: "name",
+    header: "Name",
+    size: 200,
+    enableSorting: false,
+    meta: { grow: true },
+  }),
+  helper.display({ id: "actions", header: "Actions", size: 208, enableSorting: false }),
+];
+
+function isDefault(layout: Layout): boolean {
+  return workspace.currentWorkspace?.defaultLayoutId === layout.id;
+}
 
 watch(
   () => props.visible,
   (open) => {
     if (open) {
-      editingRows.value = [];
+      editingId.value = null;
       error.value = null;
     }
   },
 );
 
-async function onRowEditSave(event: DataTableRowEditSaveEvent): Promise<void> {
-  const { newData } = event;
-  const next = newData as { id: string; name: string };
-  if (!next.name?.trim()) return;
+function startRename(layout: Layout): void {
+  editingId.value = layout.id;
+  draftName.value = layout.name;
+}
+
+function cancelRename(): void {
+  editingId.value = null;
+}
+
+async function saveRename(): Promise<void> {
+  const id = editingId.value;
+  if (!id) return;
+  const name = draftName.value.trim();
+  if (!name) return;
   try {
-    const layout = await layoutStore.renameLayout(next.id, { name: next.name.trim() });
+    const layout = await layoutStore.renameLayout(id, { name });
     notify.success("Layout renamed", { detail: `Now “${layout.name}”.` });
   } catch (e) {
     notify.danger("Couldn’t rename layout", {
       detail: e instanceof Error ? e.message : String(e),
     });
   }
+  editingId.value = null;
 }
 
 async function makeDefault(id: string): Promise<void> {
@@ -91,85 +142,97 @@ async function remove(id: string): Promise<void> {
   >
     <div class="flex flex-col gap-3">
       <p class="text-muted text-xs">
-        Layouts in
+        A layout is a saved arrangement of panels in
         <span class="text-foreground font-medium">{{
           workspace.currentWorkspace?.name ?? "—"
-        }}</span>
+        }}</span
+        >. Rename a layout, set the one this workspace opens with (the default), duplicate it as a
+        starting point, or delete it.
       </p>
       <p v-if="error" class="text-danger text-xs">{{ error }}</p>
 
       <DataTable
-        v-model:editing-rows="editingRows"
-        :value="layoutStore.layouts"
-        data-key="id"
-        edit-mode="row"
-        size="small"
-        :pt="{
-          root: { class: cn('border border-border rounded-md overflow-hidden') },
-          table: { class: 'w-full text-sm' },
-          thead: { class: 'bg-surface-sunken' },
-          headerRow: { class: 'border-b border-border' },
-          headerCell: {
-            class: 'text-faint px-3 py-2 text-[10px] tracking-[0.18em] uppercase text-left',
-          },
-          bodyRow: { class: 'border-b border-border last:border-b-0' },
-          bodyCell: { class: 'px-3 py-2 text-foreground' },
-        }"
-        @row-edit-save="onRowEditSave"
+        :data="layoutStore.layouts"
+        :columns="layoutColumns"
+        row-key="id"
+        :density="density"
+        fluid
+        :enable-sorting="false"
+        :enable-column-resize="false"
+        :enable-column-visibility="false"
+        :enable-filtering="false"
+        container-height="auto"
+        empty-message="No layouts yet."
+        class="border-border overflow-hidden rounded-md border"
       >
-        <Column field="name" header="Name" style="min-width: 12rem">
-          <template #body="{ data }">
-            <div class="flex items-center gap-2">
-              <span>{{ data.name }}</span>
-              <Star
-                v-if="workspace.currentWorkspace?.defaultLayoutId === data.id"
-                class="text-accent-500 size-3.5"
-                aria-label="Workspace default"
-              />
-            </div>
-          </template>
-          <template #editor="{ data, field }">
-            <Input v-model="data[field]" />
-          </template>
-        </Column>
-        <Column header="Actions" header-style="width: 22rem">
-          <template #body="{ data, editorInitCallback }">
-            <div class="flex items-center justify-end gap-1">
-              <Button size="sm" variant="ghost" @click="editorInitCallback">
-                <Check class="size-3.5" />
-                Rename
-              </Button>
-              <Button
-                v-if="workspace.currentWorkspace?.defaultLayoutId !== data.id"
-                size="sm"
-                variant="ghost"
-                @click="makeDefault(data.id)"
-              >
-                Make default
-              </Button>
-              <Button size="sm" variant="ghost" @click="duplicate(data.id)">
-                <Copy class="size-3.5" />
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                :disabled="layoutStore.layouts.length <= 1"
-                @click="remove(data.id)"
-              >
-                <Trash2 class="size-3.5" />
-              </Button>
-            </div>
-          </template>
-          <template #editor="{ editorSaveCallback, editorCancelCallback }">
-            <div class="flex items-center justify-end gap-1">
-              <Button size="sm" variant="primary" @click="editorSaveCallback">
+        <template #header-actions>
+          <div class="w-full pr-1 text-right">Actions</div>
+        </template>
+        <template #cell-name="{ row }">
+          <Input
+            v-if="editingId === (row as Layout).id"
+            v-model="draftName"
+            v-focus
+            class="w-full"
+            @keydown.enter="saveRename"
+            @keyup.esc="cancelRename"
+          />
+          <div v-else class="flex min-w-0 items-center gap-2">
+            <span class="truncate">{{ (row as Layout).name }}</span>
+            <Star
+              v-if="isDefault(row as Layout)"
+              class="text-accent-500 size-3.5 shrink-0 fill-current"
+              aria-label="Workspace default"
+            />
+          </div>
+        </template>
+        <template #cell-actions="{ row }">
+          <div class="flex w-full items-center justify-end gap-1">
+            <template v-if="editingId === (row as Layout).id">
+              <Button size="sm" variant="primary" @click="saveRename">
                 <Check class="size-3.5" />
                 Save
               </Button>
-              <Button size="sm" variant="secondary" @click="editorCancelCallback">Cancel</Button>
-            </div>
-          </template>
-        </Column>
+              <Button size="sm" variant="secondary" @click="cancelRename">Cancel</Button>
+            </template>
+            <template v-else>
+              <IconButton
+                v-if="!isDefault(row as Layout)"
+                label="Make default"
+                size="sm"
+                title="Make default"
+                @click="makeDefault((row as Layout).id)"
+              >
+                <Star />
+              </IconButton>
+              <IconButton
+                label="Rename"
+                size="sm"
+                title="Rename"
+                @click="startRename(row as Layout)"
+              >
+                <Pencil />
+              </IconButton>
+              <IconButton
+                label="Duplicate"
+                size="sm"
+                title="Duplicate"
+                @click="duplicate((row as Layout).id)"
+              >
+                <Copy />
+              </IconButton>
+              <IconButton
+                label="Delete"
+                size="sm"
+                title="Delete"
+                :disabled="layoutStore.layouts.length <= 1"
+                @click="remove((row as Layout).id)"
+              >
+                <Trash2 />
+              </IconButton>
+            </template>
+          </div>
+        </template>
       </DataTable>
     </div>
     <template #footer>

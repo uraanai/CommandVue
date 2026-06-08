@@ -5,7 +5,21 @@
  * sites can do `import type { ColumnDef } from "@/components/ui/datatable/types"`
  * without having to know which package the underlying library lives in.
  */
-import type { ColumnDef } from "@tanstack/vue-table";
+import type { ColumnDef, RowData } from "@tanstack/vue-table";
+
+declare module "@tanstack/vue-table" {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- augmentation must mirror the upstream generic signature
+  interface ColumnMeta<TData extends RowData, TValue> {
+    /**
+     * When the table is in `fluid` mode (the `fluid` prop), columns flagged
+     * `grow` expand to absorb the remaining width so the table fills its
+     * container edge-to-edge with no trailing gap. Unflagged columns keep their
+     * `size` as a fixed width — typically a right-hand actions column that
+     * should sit flush against the container's right edge.
+     */
+    grow?: boolean;
+  }
+}
 
 export type {
   CellContext,
@@ -40,6 +54,14 @@ export interface DataTableProps<TData> {
   columns: DataTableColumn<TData>[];
   rowKey?: keyof TData | ((row: TData) => string);
   density?: DataTableDensity;
+  /**
+   * Make columns fill the container width instead of summing to a fixed pixel
+   * total. Columns whose `meta.grow` is true expand to absorb slack; the rest
+   * keep their `size` as a fixed width. Off by default (fixed-width layout with
+   * horizontal scroll) — opt in for narrow surfaces like dialogs where a
+   * trailing gap looks wrong. See `meta.grow` on ColumnMeta.
+   */
+  fluid?: boolean;
   enableSorting?: boolean;
   enableColumnResize?: boolean;
   enableColumnVisibility?: boolean;
