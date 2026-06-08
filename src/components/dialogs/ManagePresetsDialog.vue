@@ -171,7 +171,7 @@ const dataTablePT = {
               </Column>
               <Column header-style="width: 14rem">
                 <template #header>
-                  <div class="w-full text-right">Actions</div>
+                  <div class="w-full pr-2 text-right">Actions</div>
                 </template>
                 <template #body="{ data }">
                   <div class="flex items-center justify-end gap-1">
@@ -242,7 +242,7 @@ const dataTablePT = {
               </Column>
               <Column header-style="width: 14rem">
                 <template #header>
-                  <div class="w-full text-right">Actions</div>
+                  <div class="w-full pr-2 text-right">Actions</div>
                 </template>
                 <template #body="{ data }">
                   <div class="flex items-center justify-end gap-1">
