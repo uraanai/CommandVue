@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Check, Plus, Star, Trash2 } from "@lucide/vue";
+import { Check, Pencil, Plus, Star, Trash2 } from "@lucide/vue";
 import Column from "primevue/column";
 import DataTable, { type DataTableRowEditSaveEvent } from "primevue/datatable";
 import { ref, watch } from "vue";
@@ -144,21 +144,30 @@ async function remove(id: string): Promise<void> {
         <Column header="Actions" header-style="width: 18rem">
           <template #body="{ data, editorInitCallback }">
             <div class="flex items-center justify-end gap-1">
-              <Button size="sm" variant="ghost" @click="editorInitCallback">
-                <Check class="size-3.5" />
-                Rename
+              <Button
+                size="sm"
+                variant="ghost"
+                title="Rename"
+                aria-label="Rename"
+                @click="editorInitCallback"
+              >
+                <Pencil class="size-3.5" />
               </Button>
               <Button
                 v-if="!data.isGlobalDefault"
                 size="sm"
                 variant="ghost"
+                title="Make default"
+                aria-label="Make default"
                 @click="makeDefault(data.id)"
               >
-                Make default
+                <Star class="size-3.5" />
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
+                title="Delete"
+                aria-label="Delete"
                 :disabled="workspace.workspaces.length <= 1"
                 @click="remove(data.id)"
               >

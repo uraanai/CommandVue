@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Check, Copy, Star, Trash2 } from "@lucide/vue";
+import { Check, Copy, Pencil, Star, Trash2 } from "@lucide/vue";
 import Column from "primevue/column";
 import DataTable, { type DataTableRowEditSaveEvent } from "primevue/datatable";
 import { ref, watch } from "vue";
@@ -112,24 +112,39 @@ async function remove(id: string): Promise<void> {
         <Column header="Actions" header-style="width: 22rem">
           <template #body="{ data, editorInitCallback }">
             <div class="flex items-center justify-end gap-1">
-              <Button size="sm" variant="ghost" @click="editorInitCallback">
-                <Check class="size-3.5" />
-                Rename
+              <Button
+                size="sm"
+                variant="ghost"
+                title="Rename"
+                aria-label="Rename"
+                @click="editorInitCallback"
+              >
+                <Pencil class="size-3.5" />
               </Button>
               <Button
                 v-if="workspace.currentWorkspace?.defaultLayoutId !== data.id"
                 size="sm"
                 variant="ghost"
+                title="Make default"
+                aria-label="Make default"
                 @click="makeDefault(data.id)"
               >
-                Make default
+                <Star class="size-3.5" />
               </Button>
-              <Button size="sm" variant="ghost" @click="duplicate(data.id)">
+              <Button
+                size="sm"
+                variant="ghost"
+                title="Duplicate"
+                aria-label="Duplicate"
+                @click="duplicate(data.id)"
+              >
                 <Copy class="size-3.5" />
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
+                title="Delete"
+                aria-label="Delete"
                 :disabled="layoutStore.layouts.length <= 1"
                 @click="remove(data.id)"
               >
