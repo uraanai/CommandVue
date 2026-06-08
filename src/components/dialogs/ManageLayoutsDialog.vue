@@ -9,6 +9,7 @@ import DataTable from "@/components/ui/DataTable.vue";
 import { createColumnHelper } from "@/components/ui/datatable/columnHelpers";
 import IconButton from "@/components/ui/IconButton.vue";
 import Input from "@/components/ui/Input.vue";
+import { useNotify } from "@/composables/useNotify";
 import { useLayoutStore } from "@/stores/layout";
 import { useThemeStore } from "@/stores/theme";
 import { useWorkspaceStore } from "@/stores/workspace";
@@ -24,6 +25,7 @@ const emit = defineEmits<{ "update:visible": [value: boolean] }>();
 const workspace = useWorkspaceStore();
 const layoutStore = useLayoutStore();
 const themeStore = useThemeStore();
+const notify = useNotify();
 const error = ref<string | null>(null);
 
 // Inline rename state. The default <DataTable> wrapper (TanStack, ADR 0001) has
@@ -87,26 +89,47 @@ async function saveRename(): Promise<void> {
   if (!id) return;
   const name = draftName.value.trim();
   if (!name) return;
-  await layoutStore.renameLayout(id, { name });
+  try {
+    const layout = await layoutStore.renameLayout(id, { name });
+    notify.success("Layout renamed", { detail: `Now “${layout.name}”.` });
+  } catch (e) {
+    notify.danger("Couldn’t rename layout", {
+      detail: e instanceof Error ? e.message : String(e),
+    });
+  }
   editingId.value = null;
 }
 
 async function makeDefault(id: string): Promise<void> {
   if (!workspace.currentWorkspaceId) return;
-  await layoutStore.setDefaultForWorkspace(workspace.currentWorkspaceId, id);
-  await layoutStore.loadForWorkspace(workspace.currentWorkspaceId);
+  try {
+    await layoutStore.setDefaultForWorkspace(workspace.currentWorkspaceId, id);
+    await layoutStore.loadForWorkspace(workspace.currentWorkspaceId);
+    notify.success("Default layout updated");
+  } catch (e) {
+    notify.danger("Couldn’t set default", { detail: e instanceof Error ? e.message : String(e) });
+  }
 }
 
 async function duplicate(id: string): Promise<void> {
-  await layoutStore.duplicateLayout(id);
+  try {
+    const dup = await layoutStore.duplicateLayout(id);
+    notify.success("Layout duplicated", { detail: `“${dup.name}” created.` });
+  } catch (e) {
+    notify.danger("Couldn’t duplicate layout", {
+      detail: e instanceof Error ? e.message : String(e),
+    });
+  }
 }
 
 async function remove(id: string): Promise<void> {
   error.value = null;
   try {
     await layoutStore.deleteLayout(id);
+    notify.success("Layout deleted");
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e);
+    notify.danger("Couldn’t delete layout", { detail: error.value });
   }
 }
 </script>
