@@ -53,7 +53,13 @@ const density = computed(() => themeStore.currentTheme?.density ?? "comfortable"
 // comfortable density. Sorting/resize/visibility are off — short management list.
 const helper = createColumnHelper<Workspace>();
 const workspaceColumns = [
-  helper.accessor("name", { id: "name", header: "Name", size: 200, enableSorting: false }),
+  helper.accessor("name", {
+    id: "name",
+    header: "Name",
+    size: 200,
+    enableSorting: false,
+    meta: { grow: true },
+  }),
   helper.display({ id: "actions", header: "Actions", size: 184, enableSorting: false }),
 ];
 
@@ -166,6 +172,7 @@ async function remove(id: string): Promise<void> {
         :columns="workspaceColumns"
         row-key="id"
         :density="density"
+        fluid
         :enable-sorting="false"
         :enable-column-resize="false"
         :enable-column-visibility="false"

@@ -49,8 +49,14 @@ const density = computed(() => themeStore.currentTheme?.density ?? "comfortable"
 // comfortable density. Sorting/resize/visibility are off — short management list.
 const helper = createColumnHelper<Layout>();
 const layoutColumns = [
-  helper.accessor("name", { id: "name", header: "Name", size: 200, enableSorting: false }),
-  helper.display({ id: "actions", header: "Actions", size: 184, enableSorting: false }),
+  helper.accessor("name", {
+    id: "name",
+    header: "Name",
+    size: 200,
+    enableSorting: false,
+    meta: { grow: true },
+  }),
+  helper.display({ id: "actions", header: "Actions", size: 208, enableSorting: false }),
 ];
 
 function isDefault(layout: Layout): boolean {
@@ -127,6 +133,7 @@ async function remove(id: string): Promise<void> {
         :columns="layoutColumns"
         row-key="id"
         :density="density"
+        fluid
         :enable-sorting="false"
         :enable-column-resize="false"
         :enable-column-visibility="false"

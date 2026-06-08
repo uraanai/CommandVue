@@ -7,6 +7,7 @@ import {
   getFilteredRowModel,
   getSortedRowModel,
   useVueTable,
+  type Column,
   type ColumnFiltersState,
   type ColumnSizingState,
   type Row,
@@ -49,6 +50,7 @@ const props = withDefaults(defineProps<DataTableProps<TData>>(), {
   estimatedRowHeight: 36,
   containerHeight: "100%",
   globalFilter: "",
+  fluid: false,
 });
 
 const emit = defineEmits<{
@@ -186,8 +188,19 @@ const totalSize = computed(() => rowVirtualizer.value.getTotalSize());
 
 const totalWidth = computed(() => table.getTotalSize());
 
-function headerCellWidth(size: number): string {
-  return `${size}px`;
+/**
+ * Per-cell sizing. Fixed-width by default (the column's `size` in px). In
+ * `fluid` mode, `meta.grow` columns flex to absorb slack while the rest stay
+ * pinned to their `size` — so a right-hand actions column lands flush against
+ * the container edge with no trailing gap, at any density.
+ */
+function cellStyle(column: Column<TData, unknown>): Record<string, string> {
+  const size = column.getSize();
+  if (!props.fluid) return { width: `${size}px` };
+  const grow = column.columnDef.meta?.grow === true;
+  return grow
+    ? { flexGrow: "1", flexShrink: "1", flexBasis: "0%", minWidth: "0" }
+    : { flexGrow: "0", flexShrink: "0", flexBasis: `${size}px`, width: `${size}px` };
 }
 
 function onHeaderKeydown(
@@ -236,10 +249,11 @@ const containerClass = computed(() =>
   ),
 );
 
-const tableStyle = computed(() => ({
-  width: `${totalWidth.value}px`,
-  minWidth: "100%",
-}));
+const tableStyle = computed(() =>
+  props.fluid
+    ? { width: "100%", minWidth: "100%" }
+    : { width: `${totalWidth.value}px`, minWidth: "100%" },
+);
 </script>
 
 <template>
@@ -280,7 +294,7 @@ const tableStyle = computed(() => ({
                 'cv-dt-sortable': header.column.getCanSort(),
                 'cv-dt-sticky-col': stickyFirstColumn && headerIndex === 0,
               }"
-              :style="{ width: headerCellWidth(header.getSize()) }"
+              :style="cellStyle(header.column)"
               :aria-sort="ariaSortFor(header.column.getIsSorted())"
               :tabindex="header.column.getCanSort() ? 0 : -1"
               @click="header.column.getCanSort() && header.column.toggleSorting()"
@@ -368,7 +382,7 @@ const tableStyle = computed(() => ({
               role="cell"
               class="cv-dt-cell cv-dt-body-cell"
               :class="{ 'cv-dt-sticky-col': stickyFirstColumn && cellIndex === 0 }"
-              :style="{ width: headerCellWidth(cell.column.getSize()) }"
+              :style="cellStyle(cell.column)"
             >
               <slot
                 :name="`cell-${cell.column.id}`"
@@ -404,7 +418,7 @@ const tableStyle = computed(() => ({
               role="cell"
               class="cv-dt-cell cv-dt-body-cell"
               :class="{ 'cv-dt-sticky-col': stickyFirstColumn && cellIndex === 0 }"
-              :style="{ width: headerCellWidth(cell.column.getSize()) }"
+              :style="cellStyle(cell.column)"
             >
               <slot
                 :name="`cell-${cell.column.id}`"

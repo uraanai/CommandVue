@@ -54,8 +54,14 @@ const activeTab = ref<"global" | "workspace">("global");
 // these are short management lists, not data grids.
 const helper = createColumnHelper<Preset>();
 const presetColumns = [
-  helper.accessor("name", { id: "name", header: "Name", size: 200, enableSorting: false }),
-  helper.display({ id: "actions", header: "Actions", size: 184, enableSorting: false }),
+  helper.accessor("name", {
+    id: "name",
+    header: "Name",
+    size: 200,
+    enableSorting: false,
+    meta: { grow: true },
+  }),
+  helper.display({ id: "actions", header: "Actions", size: 208, enableSorting: false }),
 ];
 
 watch(
@@ -163,6 +169,7 @@ function typeLabel(preset: Preset): string {
               :columns="presetColumns"
               row-key="id"
               :density="density"
+              fluid
               :enable-sorting="false"
               :enable-column-resize="false"
               :enable-column-visibility="false"
@@ -243,6 +250,7 @@ function typeLabel(preset: Preset): string {
               :columns="presetColumns"
               row-key="id"
               :density="density"
+              fluid
               :enable-sorting="false"
               :enable-column-resize="false"
               :enable-column-visibility="false"
