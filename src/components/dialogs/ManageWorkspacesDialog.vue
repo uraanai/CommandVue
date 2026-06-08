@@ -5,6 +5,7 @@ import DataTable, { type DataTableRowEditSaveEvent } from "primevue/datatable";
 import { ref, watch } from "vue";
 
 import Button from "@/components/ui/Button.vue";
+import IconButton from "@/components/ui/IconButton.vue";
 import Input from "@/components/ui/Input.vue";
 import { useNotify } from "@/composables/useNotify";
 import { layoutRepo } from "@/modules/storage/layoutRepo";
@@ -100,7 +101,15 @@ async function remove(id: string): Promise<void> {
           <span class="text-faint text-[10px] tracking-[0.18em] uppercase">New workspace</span>
           <Input v-model="newName" placeholder="Workspace name" @keydown.enter="create" />
         </label>
-        <Button variant="primary" size="sm" :disabled="!newName.trim()" @click="create">
+        <!-- Pin to the input's height so the two read as one density-aware control
+             row (size="sm"'s height floor is ~6px short of --density-control-height). -->
+        <Button
+          variant="primary"
+          size="sm"
+          class="h-[var(--density-control-height)]"
+          :disabled="!newName.trim()"
+          @click="create"
+        >
           <Plus class="size-3.5" />
           Create
         </Button>
@@ -141,42 +150,34 @@ async function remove(id: string): Promise<void> {
             <Input v-model="data[field]" />
           </template>
         </Column>
-        <Column header="Actions" header-style="width: 18rem">
+        <Column header="Actions" header-style="width: 12rem">
           <template #body="{ data, editorInitCallback }">
-            <div class="flex items-center justify-end gap-1">
-              <Button
-                size="sm"
-                variant="ghost"
-                title="Rename"
-                aria-label="Rename"
-                @click="editorInitCallback"
-              >
-                <Pencil class="size-3.5" />
-              </Button>
-              <Button
+            <div class="flex items-center justify-start gap-1">
+              <IconButton label="Rename" size="sm" title="Rename" @click="editorInitCallback">
+                <Pencil />
+              </IconButton>
+              <IconButton
                 v-if="!data.isGlobalDefault"
+                label="Make default"
                 size="sm"
-                variant="ghost"
                 title="Make default"
-                aria-label="Make default"
                 @click="makeDefault(data.id)"
               >
-                <Star class="size-3.5" />
-              </Button>
-              <Button
+                <Star />
+              </IconButton>
+              <IconButton
+                label="Delete"
                 size="sm"
-                variant="ghost"
                 title="Delete"
-                aria-label="Delete"
                 :disabled="workspace.workspaces.length <= 1"
                 @click="remove(data.id)"
               >
-                <Trash2 class="size-3.5" />
-              </Button>
+                <Trash2 />
+              </IconButton>
             </div>
           </template>
           <template #editor="{ editorSaveCallback, editorCancelCallback }">
-            <div class="flex items-center justify-end gap-1">
+            <div class="flex items-center justify-start gap-1">
               <Button size="sm" variant="primary" @click="editorSaveCallback">
                 <Check class="size-3.5" />
                 Save

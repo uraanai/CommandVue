@@ -5,6 +5,7 @@ import DataTable, { type DataTableRowEditSaveEvent } from "primevue/datatable";
 import { ref, watch } from "vue";
 
 import Button from "@/components/ui/Button.vue";
+import IconButton from "@/components/ui/IconButton.vue";
 import Input from "@/components/ui/Input.vue";
 import { useLayoutStore } from "@/stores/layout";
 import { useWorkspaceStore } from "@/stores/workspace";
@@ -109,51 +110,37 @@ async function remove(id: string): Promise<void> {
             <Input v-model="data[field]" />
           </template>
         </Column>
-        <Column header="Actions" header-style="width: 22rem">
+        <Column header="Actions" header-style="width: 14rem">
           <template #body="{ data, editorInitCallback }">
-            <div class="flex items-center justify-end gap-1">
-              <Button
-                size="sm"
-                variant="ghost"
-                title="Rename"
-                aria-label="Rename"
-                @click="editorInitCallback"
-              >
-                <Pencil class="size-3.5" />
-              </Button>
-              <Button
+            <div class="flex items-center justify-start gap-1">
+              <IconButton label="Rename" size="sm" title="Rename" @click="editorInitCallback">
+                <Pencil />
+              </IconButton>
+              <IconButton
                 v-if="workspace.currentWorkspace?.defaultLayoutId !== data.id"
+                label="Make default"
                 size="sm"
-                variant="ghost"
                 title="Make default"
-                aria-label="Make default"
                 @click="makeDefault(data.id)"
               >
-                <Star class="size-3.5" />
-              </Button>
-              <Button
+                <Star />
+              </IconButton>
+              <IconButton label="Duplicate" size="sm" title="Duplicate" @click="duplicate(data.id)">
+                <Copy />
+              </IconButton>
+              <IconButton
+                label="Delete"
                 size="sm"
-                variant="ghost"
-                title="Duplicate"
-                aria-label="Duplicate"
-                @click="duplicate(data.id)"
-              >
-                <Copy class="size-3.5" />
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
                 title="Delete"
-                aria-label="Delete"
                 :disabled="layoutStore.layouts.length <= 1"
                 @click="remove(data.id)"
               >
-                <Trash2 class="size-3.5" />
-              </Button>
+                <Trash2 />
+              </IconButton>
             </div>
           </template>
           <template #editor="{ editorSaveCallback, editorCancelCallback }">
-            <div class="flex items-center justify-end gap-1">
+            <div class="flex items-center justify-start gap-1">
               <Button size="sm" variant="primary" @click="editorSaveCallback">
                 <Check class="size-3.5" />
                 Save
