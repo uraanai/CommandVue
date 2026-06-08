@@ -7,6 +7,7 @@ import DataTable from "primevue/datatable";
 import { ref, watch } from "vue";
 
 import Button from "@/components/ui/Button.vue";
+import IconButton from "@/components/ui/IconButton.vue";
 import Tabs from "@/components/ui/Tabs.vue";
 import { presetTypeRegistry } from "@/modules/presets/registry";
 import { usePresetStore } from "@/stores/preset";
@@ -116,6 +117,12 @@ const dataTablePT = {
     @update:visible="(v: boolean) => emit('update:visible', v)"
   >
     <div class="flex flex-col gap-3">
+      <p class="text-muted text-xs">
+        A preset is a reusable bundle of visual settings you apply to a panel (map style, overlay,
+        chart theme, panel appearance). Global presets are available in every workspace; Workspace
+        presets are scoped to the current one. Create, edit, duplicate, move between scopes, or
+        delete them.
+      </p>
       <Tabs v-model="activeTab" :tabs="tabs">
         <template #tab-global>
           <Globe class="size-3" />
@@ -162,27 +169,35 @@ const dataTablePT = {
                   </div>
                 </template>
               </Column>
-              <Column header="Actions" header-style="width: 14rem">
+              <Column header-style="width: 14rem">
+                <template #header>
+                  <div class="w-full text-right">Actions</div>
+                </template>
                 <template #body="{ data }">
                   <div class="flex items-center justify-end gap-1">
-                    <Button size="sm" variant="ghost" @click="startEdit(data)">
-                      <Pencil class="size-3.5" />
-                    </Button>
-                    <Button size="sm" variant="ghost" @click="duplicatePreset(data)">
-                      <Copy class="size-3.5" />
-                    </Button>
-                    <Button
-                      v-if="workspace.currentWorkspaceId"
+                    <IconButton label="Edit" size="sm" title="Edit" @click="startEdit(data)">
+                      <Pencil />
+                    </IconButton>
+                    <IconButton
+                      label="Duplicate"
                       size="sm"
-                      variant="ghost"
+                      title="Duplicate"
+                      @click="duplicatePreset(data)"
+                    >
+                      <Copy />
+                    </IconButton>
+                    <IconButton
+                      v-if="workspace.currentWorkspaceId"
+                      label="Copy to current workspace"
+                      size="sm"
                       title="Copy to current workspace"
                       @click="scope(data)"
                     >
-                      <ChevronRight class="size-3.5" />
-                    </Button>
-                    <Button size="sm" variant="ghost" @click="removePreset(data)">
-                      <Trash2 class="size-3.5" />
-                    </Button>
+                      <ChevronRight />
+                    </IconButton>
+                    <IconButton label="Delete" size="sm" title="Delete" @click="removePreset(data)">
+                      <Trash2 />
+                    </IconButton>
                   </div>
                 </template>
               </Column>
@@ -225,26 +240,34 @@ const dataTablePT = {
                   </div>
                 </template>
               </Column>
-              <Column header="Actions" header-style="width: 14rem">
+              <Column header-style="width: 14rem">
+                <template #header>
+                  <div class="w-full text-right">Actions</div>
+                </template>
                 <template #body="{ data }">
                   <div class="flex items-center justify-end gap-1">
-                    <Button size="sm" variant="ghost" @click="startEdit(data)">
-                      <Pencil class="size-3.5" />
-                    </Button>
-                    <Button size="sm" variant="ghost" @click="duplicatePreset(data)">
-                      <Copy class="size-3.5" />
-                    </Button>
-                    <Button
+                    <IconButton label="Edit" size="sm" title="Edit" @click="startEdit(data)">
+                      <Pencil />
+                    </IconButton>
+                    <IconButton
+                      label="Duplicate"
                       size="sm"
-                      variant="ghost"
+                      title="Duplicate"
+                      @click="duplicatePreset(data)"
+                    >
+                      <Copy />
+                    </IconButton>
+                    <IconButton
+                      label="Promote to global"
+                      size="sm"
                       title="Promote to global"
                       @click="promote(data)"
                     >
-                      <Globe class="size-3.5" />
-                    </Button>
-                    <Button size="sm" variant="ghost" @click="removePreset(data)">
-                      <Trash2 class="size-3.5" />
-                    </Button>
+                      <Globe />
+                    </IconButton>
+                    <IconButton label="Delete" size="sm" title="Delete" @click="removePreset(data)">
+                      <Trash2 />
+                    </IconButton>
                   </div>
                 </template>
               </Column>

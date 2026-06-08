@@ -69,10 +69,12 @@ async function remove(id: string): Promise<void> {
   >
     <div class="flex flex-col gap-3">
       <p class="text-muted text-xs">
-        Layouts in
+        A layout is a saved arrangement of panels in
         <span class="text-foreground font-medium">{{
           workspace.currentWorkspace?.name ?? "—"
-        }}</span>
+        }}</span
+        >. Rename a layout, set the one this workspace opens with (the default), duplicate it as a
+        starting point, or delete it.
       </p>
       <p v-if="error" class="text-danger text-xs">{{ error }}</p>
 
@@ -110,9 +112,12 @@ async function remove(id: string): Promise<void> {
             <Input v-model="data[field]" />
           </template>
         </Column>
-        <Column header="Actions" header-style="width: 14rem">
+        <Column header-style="width: 14rem">
+          <template #header>
+            <div class="w-full text-right">Actions</div>
+          </template>
           <template #body="{ data, editorInitCallback }">
-            <div class="flex items-center justify-start gap-1">
+            <div class="flex items-center justify-end gap-1">
               <IconButton label="Rename" size="sm" title="Rename" @click="editorInitCallback">
                 <Pencil />
               </IconButton>
@@ -140,7 +145,7 @@ async function remove(id: string): Promise<void> {
             </div>
           </template>
           <template #editor="{ editorSaveCallback, editorCancelCallback }">
-            <div class="flex items-center justify-start gap-1">
+            <div class="flex items-center justify-end gap-1">
               <Button size="sm" variant="primary" @click="editorSaveCallback">
                 <Check class="size-3.5" />
                 Save

@@ -96,23 +96,27 @@ async function remove(id: string): Promise<void> {
     @update:visible="(v: boolean) => emit('update:visible', v)"
   >
     <div class="flex flex-col gap-3">
-      <div class="flex items-end gap-2">
-        <label class="flex flex-1 flex-col gap-1">
-          <span class="text-faint text-[10px] tracking-[0.18em] uppercase">New workspace</span>
-          <Input v-model="newName" placeholder="Workspace name" @keydown.enter="create" />
-        </label>
-        <!-- Pin to the input's height so the two read as one density-aware control
-             row (size="sm"'s height floor is ~6px short of --density-control-height). -->
-        <Button
-          variant="primary"
-          size="sm"
-          class="h-[var(--density-control-height)]"
-          :disabled="!newName.trim()"
-          @click="create"
-        >
-          <Plus class="size-3.5" />
-          Create
-        </Button>
+      <p class="text-muted text-xs">
+        A workspace is an independent set of layouts with its own saved panels and theme. Create a
+        new one, rename it, set the default that opens at launch, or delete it.
+      </p>
+      <div class="flex flex-col gap-1">
+        <span class="text-faint text-[10px] tracking-[0.18em] uppercase">New workspace</span>
+        <!-- items-stretch makes the Create button match the input's height exactly at
+             every density; the eyebrow label is hoisted out of the row so it doesn't
+             stretch the button to the label's height too. -->
+        <div class="flex items-stretch gap-2">
+          <Input
+            v-model="newName"
+            placeholder="Workspace name"
+            class="flex-1"
+            @keydown.enter="create"
+          />
+          <Button variant="primary" size="sm" :disabled="!newName.trim()" @click="create">
+            <Plus class="size-3.5" />
+            Create
+          </Button>
+        </div>
       </div>
       <p v-if="error" class="text-danger text-xs">{{ error }}</p>
 
@@ -150,9 +154,12 @@ async function remove(id: string): Promise<void> {
             <Input v-model="data[field]" />
           </template>
         </Column>
-        <Column header="Actions" header-style="width: 12rem">
+        <Column header-style="width: 12rem">
+          <template #header>
+            <div class="w-full text-right">Actions</div>
+          </template>
           <template #body="{ data, editorInitCallback }">
-            <div class="flex items-center justify-start gap-1">
+            <div class="flex items-center justify-end gap-1">
               <IconButton label="Rename" size="sm" title="Rename" @click="editorInitCallback">
                 <Pencil />
               </IconButton>
@@ -177,7 +184,7 @@ async function remove(id: string): Promise<void> {
             </div>
           </template>
           <template #editor="{ editorSaveCallback, editorCancelCallback }">
-            <div class="flex items-center justify-start gap-1">
+            <div class="flex items-center justify-end gap-1">
               <Button size="sm" variant="primary" @click="editorSaveCallback">
                 <Check class="size-3.5" />
                 Save
