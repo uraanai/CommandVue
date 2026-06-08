@@ -1,7 +1,8 @@
 import type { DockviewApi } from "dockview-vue";
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { __resetNotifyForTests, __setNotifyHandleForTests } from "@/composables/useNotify";
 import { __unregisterBuiltinPanelsForTests, registerBuiltinPanels } from "@/modules/panels/builtin";
 import { floatWasHeaderless } from "@/modules/panels/float";
 import { isHeaderless } from "@/modules/panels/headerless";
@@ -373,6 +374,23 @@ async function seedWorkspace() {
   return { ws, layout, p1, p2 };
 }
 
+/**
+ * Install a recording notify handle and return the array its `add` calls push
+ * toast summaries into. The session store fires save toasts via `useNotify`
+ * (the module singleton), so a fake handle lets the save tests assert the
+ * "Layout saved" feedback without a DOM. Torn down via `__resetNotifyForTests`.
+ */
+function recordToastSummaries(): string[] {
+  const summaries: string[] = [];
+  __setNotifyHandleForTests({
+    add: (m) => summaries.push(m.summary),
+    remove: () => {},
+    removeGroup: () => {},
+    removeAllGroups: () => {},
+  });
+  return summaries;
+}
+
 describe("useSessionStore", () => {
   beforeEach(async () => {
     await resetForStoreTest();
@@ -380,6 +398,8 @@ describe("useSessionStore", () => {
     __unregisterBuiltinPanelsForTests();
     registerBuiltinPanels();
   });
+
+  afterEach(() => __resetNotifyForTests());
 
   it("loadLayout throws when Dockview API is not bound", async () => {
     const { layout } = await seedWorkspace();
@@ -492,6 +512,7 @@ describe("useSessionStore", () => {
     session.bindDockview(api);
     await session.loadLayout(layout.id);
     session.markDirty();
+    const toasts = recordToastSummaries();
     const updated = await session.updateCurrentLayout();
     const persisted = updated.dockviewState as {
       grid: { fake: boolean };
@@ -500,6 +521,7 @@ describe("useSessionStore", () => {
     expect(persisted.grid).toEqual({ fake: true });
     expect(Object.keys(persisted.panels).sort()).toEqual([p1.id, p2.id].sort());
     expect(session.dirty).toBe(false);
+    expect(toasts).toContain("Layout saved");
   });
 
   it("discardChanges re-runs loadLayout against the persisted state", async () => {
@@ -529,10 +551,12 @@ describe("useSessionStore", () => {
     session.bindDockview(api);
     await session.loadLayout(layout.id);
 
+    const toasts = recordToastSummaries();
     const created = await session.saveCurrentAsNewLayout({
       name: "Saved",
       setAsWorkspaceDefault: true,
     });
+    expect(toasts).toContain("Layout saved");
 
     expect(created.id).not.toBe(layout.id);
     expect(created.workspaceId).toBe(ws.id);
