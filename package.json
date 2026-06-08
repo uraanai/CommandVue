@@ -166,7 +166,7 @@
     "vite-plugin-static-copy": "^4.1.1",
     "vitepress": "^1.6.4",
     "vitest": "^4.1.8",
-    "vue-tsc": "^3.3.3"
+    "vue-tsc": "^3.3.4"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
