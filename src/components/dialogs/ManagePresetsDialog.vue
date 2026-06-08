@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Preset } from "@/types/preset";
 
-import { ChevronRight, Copy, Globe, Layers, Pencil, Plus, Trash2 } from "@lucide/vue";
+import { Copy, FolderInput, Globe, Layers, Pencil, Plus, Trash2 } from "@lucide/vue";
 import Column from "primevue/column";
 import DataTable from "primevue/datatable";
 import { ref, watch } from "vue";
@@ -102,10 +102,10 @@ const dataTablePT = {
   thead: { class: "bg-surface-sunken" },
   headerRow: { class: "border-b border-border" },
   headerCell: {
-    class: "text-faint px-3 py-2 text-[10px] tracking-[0.18em] uppercase text-left",
+    class: "text-faint pl-5 pr-3 py-2 text-[10px] tracking-[0.18em] uppercase text-left",
   },
   bodyRow: { class: "border-b border-border last:border-b-0" },
-  bodyCell: { class: "px-3 py-2 text-foreground" },
+  bodyCell: { class: "pl-5 pr-3 py-2 text-foreground" },
   emptyMessage: { class: "px-3 py-6 text-center text-sm text-muted" },
 };
 </script>
@@ -193,7 +193,7 @@ const dataTablePT = {
                       title="Copy to current workspace"
                       @click="scope(data)"
                     >
-                      <ChevronRight />
+                      <FolderInput />
                     </IconButton>
                     <IconButton label="Delete" size="sm" title="Delete" @click="removePreset(data)">
                       <Trash2 />
