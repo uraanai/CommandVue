@@ -191,7 +191,7 @@ async function remove(id: string): Promise<void> {
             v-focus
             class="w-full"
             @keydown.enter="saveRename"
-            @keydown.esc="cancelRename"
+            @keyup.esc="cancelRename"
           />
           <div v-else class="flex min-w-0 items-center gap-2">
             <span class="truncate">{{ (row as Workspace).name }}</span>
