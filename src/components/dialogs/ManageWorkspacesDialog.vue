@@ -132,10 +132,10 @@ async function remove(id: string): Promise<void> {
           thead: { class: 'bg-surface-sunken' },
           headerRow: { class: 'border-b border-border' },
           headerCell: {
-            class: 'text-faint pl-5 pr-3 py-2 text-[10px] tracking-[0.18em] uppercase text-left',
+            class: 'text-faint pl-6 pr-3 py-2 text-[10px] tracking-[0.18em] uppercase text-left',
           },
           bodyRow: { class: 'border-b border-border last:border-b-0' },
-          bodyCell: { class: 'pl-5 pr-3 py-2 text-foreground' },
+          bodyCell: { class: 'pl-6 pr-3 py-2 text-foreground' },
         }"
         @row-edit-save="onRowEditSave"
       >
@@ -145,7 +145,7 @@ async function remove(id: string): Promise<void> {
               <span>{{ data.name }}</span>
               <Star
                 v-if="data.isGlobalDefault"
-                class="text-accent-500 size-3.5"
+                class="text-accent-500 size-3.5 fill-current"
                 aria-label="Global default"
               />
             </div>
@@ -160,9 +160,6 @@ async function remove(id: string): Promise<void> {
           </template>
           <template #body="{ data, editorInitCallback }">
             <div class="flex items-center justify-end gap-1">
-              <IconButton label="Rename" size="sm" title="Rename" @click="editorInitCallback">
-                <Pencil />
-              </IconButton>
               <IconButton
                 v-if="!data.isGlobalDefault"
                 label="Make default"
@@ -171,6 +168,9 @@ async function remove(id: string): Promise<void> {
                 @click="makeDefault(data.id)"
               >
                 <Star />
+              </IconButton>
+              <IconButton label="Rename" size="sm" title="Rename" @click="editorInitCallback">
+                <Pencil />
               </IconButton>
               <IconButton
                 label="Delete"

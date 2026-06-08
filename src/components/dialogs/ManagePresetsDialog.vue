@@ -102,10 +102,10 @@ const dataTablePT = {
   thead: { class: "bg-surface-sunken" },
   headerRow: { class: "border-b border-border" },
   headerCell: {
-    class: "text-faint pl-5 pr-3 py-2 text-[10px] tracking-[0.18em] uppercase text-left",
+    class: "text-faint pl-6 pr-3 py-2 text-[10px] tracking-[0.18em] uppercase text-left",
   },
   bodyRow: { class: "border-b border-border last:border-b-0" },
-  bodyCell: { class: "pl-5 pr-3 py-2 text-foreground" },
+  bodyCell: { class: "pl-6 pr-3 py-2 text-foreground" },
   emptyMessage: { class: "px-3 py-6 text-center text-sm text-muted" },
 };
 </script>
