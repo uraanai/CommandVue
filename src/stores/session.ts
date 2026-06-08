@@ -5,6 +5,7 @@ import { nanoid } from "nanoid";
 import { defineStore } from "pinia";
 import { ref, shallowRef } from "vue";
 
+import { useNotify } from "@/composables/useNotify";
 import { trackPopoutWindow, untrackPopoutWindow } from "@/composables/usePopoutWindows";
 import {
   type FloatBox,
@@ -64,6 +65,14 @@ export const useSessionStore = defineStore("session", () => {
   const loadedLayoutId = ref<null | Ulid>(null);
   const dirty = ref(false);
   const restoring = ref(false);
+  // Toast producer. `useNotify` is the module singleton (no setup context
+  // needed) and no-ops until the outlet host installs the handle, so this is
+  // safe to resolve at store init and call from any save action. Save toasts
+  // live HERE (not at each caller) because both save actions fire from multiple
+  // surfaces — MenuBar (⌘S / menu) and the workspace-switch unsaved-changes flow
+  // — and a single store-level toast keeps that feedback consistent. Per-record
+  // CRUD feedback (rename/delete/…) stays at its single dialog call site.
+  const notify = useNotify();
 
   function getDockviewApi(): DockviewApi | null {
     return dockviewApi.value;
@@ -224,6 +233,7 @@ export const useSessionStore = defineStore("session", () => {
     const wsId = layoutStore.currentLayout?.workspaceId;
     if (wsId) await layoutStore.loadForWorkspace(wsId);
     dirty.value = false;
+    notify.success("Layout saved", { detail: `“${updated.name}” updated.` });
     return updated;
   }
 
@@ -309,6 +319,7 @@ export const useSessionStore = defineStore("session", () => {
     await layoutStore.loadForWorkspace(workspaceId);
     await layoutStore.setCurrentLayout(newLayout.id);
     await loadLayout(newLayout.id);
+    notify.success("Layout saved", { detail: `New layout “${newLayout.name}” created.` });
     return newLayout;
   }
 
