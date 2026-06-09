@@ -4,6 +4,8 @@ import { computed, ref, watch } from "vue";
 
 import IconButton from "@/components/ui/IconButton.vue";
 import Slider from "@/components/ui/Slider.vue";
+import { makeSetFloatAlphaCommand } from "@/modules/history/adapters";
+import { useHistoryStore } from "@/stores/history";
 import { useMinimizedStore } from "@/stores/minimized";
 import { useSessionStore } from "@/stores/session";
 
@@ -54,6 +56,7 @@ interface HeaderActionsParams {
 const props = defineProps<{ params?: HeaderActionsParams }>();
 const session = useSessionStore();
 const minimized = useMinimizedStore();
+const history = useHistoryStore();
 
 // `api.location` on the full props; `location` on the updateLocation fast-path.
 const isFloating = computed(
@@ -91,7 +94,10 @@ const panelId = computed(() => props.params?.activePanel?.id ?? cachedPanelId.va
 const pct = computed<number>({
   get: () => (panelId.value ? Math.round(session.getFloatAlpha(panelId.value) * 100) : 100),
   set: (next) => {
-    if (panelId.value) void session.setFloatAlpha(panelId.value, next / 100);
+    // Route through history so an opacity drag is one coalesced undo step.
+    if (panelId.value) {
+      void history.execute(makeSetFloatAlphaCommand(panelId.value, next / 100));
+    }
   },
 });
 

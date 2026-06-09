@@ -9,3 +9,4 @@ export {
   makeClearDrawingsCommand,
   makeRemoveDrawingCommand,
 } from "./drawings";
+export { makeSetFloatAlphaCommand, makeUpdatePanelStateCommand } from "./panelState";
