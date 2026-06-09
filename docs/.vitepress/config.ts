@@ -72,6 +72,7 @@ export default defineConfig({
           { text: "User guide", link: "/user-guide" },
           { text: "Windowing & dock panels", link: "/windowing" },
           { text: "Keyboard shortcuts", link: "/keyboard-shortcuts" },
+          { text: "Undo / Redo", link: "/undo-redo" },
         ],
       },
       {

@@ -6,17 +6,22 @@ No Vuex, no global event bus, no Redux-style middleware layer.
 
 ## Stores
 
-| Store                | Phase | Concern                                                          |
-| -------------------- | ----- | ---------------------------------------------------------------- |
-| `useUiStore`         | 4     | App mode (3d/2d/split), sidebar visibility, command-palette flag |
-| `useLayoutStore`     | 4     | Persisted Dockview layout JSON (round-trips through idb)         |
-| `useEntitiesStore`   | 6     | Mock entity list with NATO-SIDC codes (demo data)                |
-| `useTelemetryStore`  | 6     | Rolling buffer of WebSocket messages + synthetic chart signal    |
-| `useConnectionStore` | 6     | WS lifecycle status surfaced to StatusBar                        |
-| `useToolsStore`      | 7     | Active tool id + 10-entry MRU history                            |
-| `useDrawingsStore`   | 7     | Finalized features emitted by tools                              |
+| Store                | Phase | Concern                                                                      |
+| -------------------- | ----- | ---------------------------------------------------------------------------- |
+| `useUiStore`         | 4     | App mode (3d/2d/split), sidebar visibility, command-palette flag             |
+| `useLayoutStore`     | 4     | Persisted Dockview layout JSON (round-trips through idb)                     |
+| `useEntitiesStore`   | 6     | Mock entity list with NATO-SIDC codes (demo data)                            |
+| `useTelemetryStore`  | 6     | Rolling buffer of WebSocket messages + synthetic chart signal                |
+| `useConnectionStore` | 6     | WS lifecycle status surfaced to StatusBar                                    |
+| `useToolsStore`      | 7     | Active tool id + 10-entry MRU history                                        |
+| `useDrawingsStore`   | 7     | Finalized features emitted by tools                                          |
+| `useHistoryStore`    | —     | Per-workspace reversible command stack (undo/redo); in-memory, not persisted |
 
 Every store is in `src/stores/` and re-exported by `src/stores/index.ts`.
+
+`useHistoryStore` is the one deliberate exception to the "serializable state only"
+rule below: it holds non-serializable `Command` closures and is in-memory by
+design (cleared on reload and on workspace switch). See [Undo / Redo](./undo-redo).
 
 ## Composition API style
 

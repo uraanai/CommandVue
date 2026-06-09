@@ -6,13 +6,15 @@ The `mod` modifier is platform-conditional: **Cmd on macOS**, **Ctrl on Windows/
 
 ## Global
 
-| Combo         | Action                  | Wired in                              |
-| ------------- | ----------------------- | ------------------------------------- |
-| `mod+k`       | Open command palette    | `useUiStore.openCommandPalette`       |
-| `mod+s`       | Save Layout             | `useSessionStore.updateCurrentLayout` |
-| `mod+shift+s` | Save Layout As…         | Opens `SaveLayoutAsDialog`            |
-| `mod+b`       | Toggle Components Panel | `AppShell.toggleComponentsPanel`      |
-| `mod+/`       | Toggle minimized tray   | `useMinimizedStore.toggleCollapsed`   |
+| Combo                    | Action                  | Wired in                              |
+| ------------------------ | ----------------------- | ------------------------------------- |
+| `mod+k`                  | Open command palette    | `useUiStore.openCommandPalette`       |
+| `mod+s`                  | Save Layout             | `useSessionStore.updateCurrentLayout` |
+| `mod+shift+s`            | Save Layout As…         | Opens `SaveLayoutAsDialog`            |
+| `mod+b`                  | Toggle Components Panel | `AppShell.toggleComponentsPanel`      |
+| `mod+/`                  | Toggle minimized tray   | `useMinimizedStore.toggleCollapsed`   |
+| `mod+z`                  | Undo                    | `useHistoryStore.undo`                |
+| `mod+shift+z` / `ctrl+y` | Redo                    | `useHistoryStore.redo`                |
 
 ## Map tools
 

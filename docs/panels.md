@@ -126,6 +126,15 @@ authoring logic (inputs, generation, save/update) lives in the shared
 `useThemeAuthoring()` composable so the panel and the transitional
 `ThemeCustomizerDialog` don't fork it.
 
+## History
+
+`History` (id `history`, category `tools`, singleton) is a live view of the
+per-workspace undo/redo stack. It lists undo entries newest-first with the redo
+entries greyed above the cursor; each row shows the action's scope icon and
+label, and clicking a row jumps there (undoing or redoing the right number of
+steps). Open it from **View → Add Component → History**. See
+[Undo / Redo](./undo-redo) for the full system.
+
 ## Lifecycle
 
 Dockview-vue 6 calls your panel component with these props:

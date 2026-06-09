@@ -8,7 +8,7 @@ The full ruleset is split into focused modules under [`.agent/rules/`](./.agent/
 
 ## Agent skills
 
-Project-specific agent guidance lives in [`.agent/skills/`](./.agent/skills). Four skills cover the four workspace-system subsystems: `commandvue-workspace-system`, `commandvue-panel-development`, `commandvue-preset-development`, `commandvue-chrome-system`. Each skill bundles its subsystem's data model, invariants, common mistakes, and copy-paste templates. When working in one of those areas, the relevant skill is the canonical source — read it before making changes.
+Project-specific agent guidance lives in [`.agent/skills/`](./.agent/skills). Subsystem skills cover the workspace-system subsystems (`commandvue-workspace-system`, `commandvue-panel-development`, `commandvue-preset-development`, `commandvue-chrome-system`) plus the cross-cutting `commandvue-history-system` (undo/redo). Each skill bundles its subsystem's data model, invariants, common mistakes, and copy-paste templates. When working in one of those areas, the relevant skill is the canonical source — read it before making changes.
 
 ---
 
