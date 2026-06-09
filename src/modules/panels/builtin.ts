@@ -100,6 +100,15 @@ export const BUILTIN_PANELS: readonly PanelDefinition[] = [
     singleton: true,
     component: () => import("@/components/panels/ThemeStudioPanel.vue"),
   },
+  {
+    id: "history",
+    title: "History",
+    description: "Undo/redo timeline — jump to any point in the session's history.",
+    icon: "history",
+    category: "tools",
+    singleton: true,
+    component: () => import("@/components/panels/HistoryPanel.vue"),
+  },
 ] as const;
 
 /**

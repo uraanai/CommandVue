@@ -71,8 +71,8 @@ describe("panel-appearance preset", () => {
     expect(element.getAttribute("data-cv-appearance")).toBeNull();
   });
 
-  it("is applicable to all ten built-in panel types", () => {
-    expect(PANEL_APPEARANCE_APPLICABLE_TO).toHaveLength(10);
+  it("is applicable to all eleven built-in panel types", () => {
+    expect(PANEL_APPEARANCE_APPLICABLE_TO).toHaveLength(11);
     expect(PANEL_APPEARANCE_PRESET.id).toBe("panel-appearance");
     expect(PANEL_APPEARANCE_PRESET.defaultConfig).toEqual({ variant: "flat" });
   });

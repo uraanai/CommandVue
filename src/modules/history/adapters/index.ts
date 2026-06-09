@@ -28,3 +28,5 @@ export {
   makeDuplicatePresetCommand,
   makeUpdatePresetCommand,
 } from "./preset";
+export { makeDockviewLayoutCommand } from "./dockview";
+export { makeSetThemeCommand, makeSetWorkspaceThemeCommand } from "./theme";

@@ -4,7 +4,7 @@ import { computed, ref, watch } from "vue";
 
 import IconButton from "@/components/ui/IconButton.vue";
 import Slider from "@/components/ui/Slider.vue";
-import { makeSetFloatAlphaCommand } from "@/modules/history/adapters";
+import { makeDockviewLayoutCommand, makeSetFloatAlphaCommand } from "@/modules/history/adapters";
 import { useHistoryStore } from "@/stores/history";
 import { useMinimizedStore } from "@/stores/minimized";
 import { useSessionStore } from "@/stores/session";
@@ -110,7 +110,18 @@ function toggleMaximize() {
   if (panelId.value) void session.toggleFloatMaximize(panelId.value);
 }
 function closeWindow() {
-  if (panelId.value) void session.removePanelGuarded(panelId.value);
+  const id = panelId.value;
+  if (id) {
+    void history.execute(
+      makeDockviewLayoutCommand(
+        "Close window",
+        async () => void (await session.removePanelGuarded(id)),
+        {
+          category: "delete",
+        },
+      ),
+    );
+  }
 }
 
 // Minimize the whole group to the bottom-left tray (Phase 4c). Same action from
@@ -147,7 +158,18 @@ function confirmCloseAll() {
   // the group — and this confirm's Teleport target — is torn down in the same
   // tick; flipping `confirmOpen` first lets the overlay detach cleanly.
   confirmOpen.value = false;
-  if (panelId.value) void session.closeAllInGroup(panelId.value);
+  const id = panelId.value;
+  if (id) {
+    void history.execute(
+      makeDockviewLayoutCommand(
+        "Close all panels",
+        async () => void (await session.closeAllInGroup(id)),
+        {
+          category: "delete",
+        },
+      ),
+    );
+  }
 }
 function cancelCloseAll() {
   confirmOpen.value = false;

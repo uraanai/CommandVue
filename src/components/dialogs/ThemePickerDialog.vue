@@ -9,9 +9,11 @@ import ThemeImportDialog from "@/components/dialogs/ThemeImportDialog.vue";
 import Button from "@/components/ui/Button.vue";
 import { useConfirm } from "@/composables/useConfirm";
 import { useNotify } from "@/composables/useNotify";
+import { makeSetThemeCommand, makeSetWorkspaceThemeCommand } from "@/modules/history/adapters";
 import { themeRepo } from "@/modules/storage/themeRepo";
 import { downloadThemeFile } from "@/modules/themes/export";
 import { themeRegistry } from "@/modules/themes/registry";
+import { useHistoryStore } from "@/stores/history";
 import { useThemeStore } from "@/stores/theme";
 import { useWorkspaceStore } from "@/stores/workspace";
 import Checkbox from "@/volt/Checkbox.vue";
@@ -46,6 +48,7 @@ const emit = defineEmits<{ "update:visible": [value: boolean] }>();
 
 const themes = shallowRef<readonly Theme[]>([]);
 const themeStore = useThemeStore();
+const history = useHistoryStore();
 const notify = useNotify();
 const workspaceStore = useWorkspaceStore();
 const { confirmIf } = useConfirm();
@@ -141,13 +144,15 @@ function close(): void {
 
 async function apply(theme: Theme): Promise<void> {
   if (setAsWorkspaceDefault.value && workspaceStore.currentWorkspaceId) {
-    await themeStore.setWorkspaceTheme(
-      workspaceStore.currentWorkspaceId,
-      theme.id,
-      workspaceStore.currentWorkspaceId,
+    await history.execute(
+      makeSetWorkspaceThemeCommand(
+        workspaceStore.currentWorkspaceId,
+        theme.id,
+        workspaceStore.currentWorkspaceId,
+      ),
     );
   } else {
-    await themeStore.setTheme(theme.id, workspaceStore.currentWorkspaceId);
+    await history.execute(makeSetThemeCommand(theme.id, workspaceStore.currentWorkspaceId));
   }
   close();
 }
