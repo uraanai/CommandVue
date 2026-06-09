@@ -10,7 +10,13 @@ import { createColumnHelper } from "@/components/ui/datatable/columnHelpers";
 import IconButton from "@/components/ui/IconButton.vue";
 import Input from "@/components/ui/Input.vue";
 import { useNotify } from "@/composables/useNotify";
-import { layoutRepo } from "@/modules/storage/layoutRepo";
+import {
+  makeCreateWorkspaceCommand,
+  makeDeleteWorkspaceCommand,
+  makeRenameWorkspaceCommand,
+  makeSetGlobalDefaultWorkspaceCommand,
+} from "@/modules/history/adapters";
+import { useHistoryStore } from "@/stores/history";
 import { useThemeStore } from "@/stores/theme";
 import { useWorkspaceStore } from "@/stores/workspace";
 import Dialog from "@/volt/Dialog.vue";
@@ -24,6 +30,7 @@ const emit = defineEmits<{ "update:visible": [value: boolean] }>();
 
 const workspace = useWorkspaceStore();
 const themeStore = useThemeStore();
+const history = useHistoryStore();
 const notify = useNotify();
 const newName = ref("");
 const error = ref<string | null>(null);
@@ -75,15 +82,15 @@ watch(
 );
 
 async function create(): Promise<void> {
-  if (!newName.value.trim()) return;
+  const name = newName.value.trim();
+  if (!name) return;
   error.value = null;
   try {
-    const ws = await workspace.createWorkspace({ name: newName.value.trim() });
-    // Newly created workspaces need ≥1 layout (invariant 6) before the user
-    // can switch in — auto-create a "Default" layout.
-    await layoutRepo.create({ workspaceId: ws.id, name: "Default" });
+    // One undoable step: creates the workspace AND its mandatory first layout
+    // (undo deletes both).
+    await history.execute(makeCreateWorkspaceCommand(name));
     newName.value = "";
-    notify.success("Workspace created", { detail: `“${ws.name}” is ready.` });
+    notify.success("Workspace created", { detail: `“${name}” is ready.` });
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e);
     notify.danger("Couldn’t create workspace", { detail: error.value });
@@ -105,8 +112,8 @@ async function saveRename(): Promise<void> {
   const name = draftName.value.trim();
   if (!name) return;
   try {
-    const ws = await workspace.renameWorkspace(id, { name });
-    notify.success("Workspace renamed", { detail: `Now “${ws.name}”.` });
+    await history.execute(makeRenameWorkspaceCommand(id, name));
+    notify.success("Workspace renamed", { detail: `Now “${name}”.` });
   } catch (e) {
     notify.danger("Couldn’t rename workspace", {
       detail: e instanceof Error ? e.message : String(e),
@@ -117,7 +124,7 @@ async function saveRename(): Promise<void> {
 
 async function makeDefault(id: string): Promise<void> {
   try {
-    await workspace.setGlobalDefault(id);
+    await history.execute(makeSetGlobalDefaultWorkspaceCommand(id));
     notify.success("Default workspace updated");
   } catch (e) {
     notify.danger("Couldn’t set default", { detail: e instanceof Error ? e.message : String(e) });
@@ -127,7 +134,7 @@ async function makeDefault(id: string): Promise<void> {
 async function remove(id: string): Promise<void> {
   error.value = null;
   try {
-    await workspace.deleteWorkspace(id);
+    await history.execute(makeDeleteWorkspaceCommand(id));
     notify.success("Workspace deleted");
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e);

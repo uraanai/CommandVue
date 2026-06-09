@@ -10,6 +10,13 @@ import { createColumnHelper } from "@/components/ui/datatable/columnHelpers";
 import IconButton from "@/components/ui/IconButton.vue";
 import Input from "@/components/ui/Input.vue";
 import { useNotify } from "@/composables/useNotify";
+import {
+  makeDeleteLayoutCommand,
+  makeDuplicateLayoutCommand,
+  makeRenameLayoutCommand,
+  makeSetDefaultLayoutCommand,
+} from "@/modules/history/adapters";
+import { useHistoryStore } from "@/stores/history";
 import { useLayoutStore } from "@/stores/layout";
 import { useThemeStore } from "@/stores/theme";
 import { useWorkspaceStore } from "@/stores/workspace";
@@ -25,6 +32,7 @@ const emit = defineEmits<{ "update:visible": [value: boolean] }>();
 const workspace = useWorkspaceStore();
 const layoutStore = useLayoutStore();
 const themeStore = useThemeStore();
+const history = useHistoryStore();
 const notify = useNotify();
 const error = ref<string | null>(null);
 
@@ -90,8 +98,8 @@ async function saveRename(): Promise<void> {
   const name = draftName.value.trim();
   if (!name) return;
   try {
-    const layout = await layoutStore.renameLayout(id, { name });
-    notify.success("Layout renamed", { detail: `Now “${layout.name}”.` });
+    await history.execute(makeRenameLayoutCommand(id, name));
+    notify.success("Layout renamed", { detail: `Now “${name}”.` });
   } catch (e) {
     notify.danger("Couldn’t rename layout", {
       detail: e instanceof Error ? e.message : String(e),
@@ -103,8 +111,7 @@ async function saveRename(): Promise<void> {
 async function makeDefault(id: string): Promise<void> {
   if (!workspace.currentWorkspaceId) return;
   try {
-    await layoutStore.setDefaultForWorkspace(workspace.currentWorkspaceId, id);
-    await layoutStore.loadForWorkspace(workspace.currentWorkspaceId);
+    await history.execute(makeSetDefaultLayoutCommand(workspace.currentWorkspaceId, id));
     notify.success("Default layout updated");
   } catch (e) {
     notify.danger("Couldn’t set default", { detail: e instanceof Error ? e.message : String(e) });
@@ -113,8 +120,8 @@ async function makeDefault(id: string): Promise<void> {
 
 async function duplicate(id: string): Promise<void> {
   try {
-    const dup = await layoutStore.duplicateLayout(id);
-    notify.success("Layout duplicated", { detail: `“${dup.name}” created.` });
+    await history.execute(makeDuplicateLayoutCommand(id));
+    notify.success("Layout duplicated");
   } catch (e) {
     notify.danger("Couldn’t duplicate layout", {
       detail: e instanceof Error ? e.message : String(e),
@@ -125,7 +132,7 @@ async function duplicate(id: string): Promise<void> {
 async function remove(id: string): Promise<void> {
   error.value = null;
   try {
-    await layoutStore.deleteLayout(id);
+    await history.execute(makeDeleteLayoutCommand(id));
     notify.success("Layout deleted");
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e);

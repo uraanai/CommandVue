@@ -10,3 +10,21 @@ export {
   makeRemoveDrawingCommand,
 } from "./drawings";
 export { makeSetFloatAlphaCommand, makeUpdatePanelStateCommand } from "./panelState";
+export {
+  makeCreateWorkspaceCommand,
+  makeDeleteWorkspaceCommand,
+  makeRenameWorkspaceCommand,
+  makeSetGlobalDefaultWorkspaceCommand,
+} from "./workspace";
+export {
+  makeDeleteLayoutCommand,
+  makeDuplicateLayoutCommand,
+  makeRenameLayoutCommand,
+  makeSetDefaultLayoutCommand,
+} from "./layout";
+export {
+  makeCreatePresetCommand,
+  makeDeletePresetCommand,
+  makeDuplicatePresetCommand,
+  makeUpdatePresetCommand,
+} from "./preset";
