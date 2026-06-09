@@ -344,3 +344,7 @@ footgun
 
 # Input devices (Track A — Tabs wheel→horizontal scroll)
 trackpad
+
+# Undo/redo history engine (reversible command pattern)
+reentrancy
+undoable
