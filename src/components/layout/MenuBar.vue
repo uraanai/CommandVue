@@ -23,6 +23,7 @@ import {
   importWorkspace,
   type PortableWorkspace,
 } from "@/modules/workspaces/portable";
+import { useHistoryStore } from "@/stores/history";
 import { useLayoutStore } from "@/stores/layout";
 import { usePanelStateStore } from "@/stores/panelState";
 import { useSessionStore } from "@/stores/session";
@@ -30,6 +31,7 @@ import { useThemeStore } from "@/stores/theme";
 import { useWorkspaceStore } from "@/stores/workspace";
 
 const session = useSessionStore();
+const history = useHistoryStore();
 const layoutStore = useLayoutStore();
 const workspace = useWorkspaceStore();
 const panelStateStore = usePanelStateStore();
@@ -308,8 +310,18 @@ const menuItems = computed<MenuItem[]>(() => [
   {
     label: "Edit",
     items: [
-      { label: "Undo", disabled: true },
-      { label: "Redo", disabled: true },
+      {
+        label: "Undo",
+        command: () => void history.undo(),
+        disabled: !history.canUndo,
+        shortcut: formatCombo("mod+z", isMac),
+      },
+      {
+        label: "Redo",
+        command: () => void history.redo(),
+        disabled: !history.canRedo,
+        shortcut: formatCombo("mod+shift+z", isMac),
+      },
       { separator: true },
       { label: "Manage Layouts…", command: () => (manageLayoutsOpen.value = true) },
       { label: "Duplicate Layout", command: () => void duplicateCurrentLayout() },

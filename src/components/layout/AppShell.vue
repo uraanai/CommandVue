@@ -13,6 +13,7 @@ import { initPopoutThemeSync } from "@/composables/usePopoutThemeSync";
 import { useTheme } from "@/composables/useTheme";
 import { newId } from "@/modules/storage/ids";
 import { useChromeStore } from "@/stores/chrome";
+import { useHistoryStore } from "@/stores/history";
 import { useLayoutStore } from "@/stores/layout";
 import { useMinimizedStore } from "@/stores/minimized";
 import { usePanelStateStore } from "@/stores/panelState";
@@ -33,6 +34,7 @@ const session = useSessionStore();
 const layoutStore = useLayoutStore();
 const panelStateStore = usePanelStateStore();
 const chrome = useChromeStore();
+const history = useHistoryStore();
 const minimized = useMinimizedStore();
 
 const saveAsOpen = ref(false);
@@ -106,6 +108,14 @@ useKeyboardShortcuts({
     }
     if (action === "view.toggleMinimizedTray") {
       minimized.toggleCollapsed();
+      return;
+    }
+    if (action === "history.undo") {
+      void history.undo();
+      return;
+    }
+    if (action === "history.redo") {
+      void history.redo();
       return;
     }
     if (action.startsWith("tool.")) {

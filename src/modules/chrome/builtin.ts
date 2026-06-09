@@ -3,7 +3,7 @@ import type { ChromeItemDefinition } from "./types";
 import { chromeItemRegistry } from "./registry";
 
 /**
- * The nine built-in chrome items. Order matches the spec table.
+ * The built-in chrome items. Order matches the spec table.
  *
  * `removable: false` is set only on `app-icon` — the always-on fallback that
  * hosts the right-click File/Edit/View context menu when the menu bar is
@@ -125,6 +125,24 @@ export const BUILTIN_CHROME_ITEMS: readonly ChromeItemDefinition[] = [
     ],
     defaultSlot: "top-right",
     component: () => import("@/components/chrome/items/ThemeToggleItem.vue"),
+    removable: true,
+    singleton: true,
+  },
+  {
+    id: "undo-redo",
+    title: "Undo / Redo",
+    description: "Undo and redo the last action. Each button disables when there is nothing to do.",
+    icon: "undo-2",
+    allowedSlots: [
+      "top-left",
+      "top-center",
+      "top-right",
+      "status-left",
+      "status-center",
+      "status-right",
+    ],
+    defaultSlot: "top-left",
+    component: () => import("@/components/chrome/items/UndoRedoItem.vue"),
     removable: true,
     singleton: true,
   },

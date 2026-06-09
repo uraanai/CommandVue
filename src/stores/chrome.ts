@@ -45,6 +45,7 @@ export const useChromeStore = defineStore("chrome", () => {
     const def = profiles.value.find((p) => p.isDefault);
     currentProfileId.value = def?.id ?? profiles.value[0]?.id ?? null;
     await ensureItemPresent("theme-toggle", "top-right");
+    await ensureItemPresent("undo-redo", "top-left");
   }
 
   /**

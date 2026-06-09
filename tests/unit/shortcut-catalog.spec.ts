@@ -10,6 +10,15 @@ describe("shortcut catalog", () => {
     expect(findShortcutForAction("tool.draw-polygon")).toBeDefined();
   });
 
+  it("declares undo and redo shortcuts (global scope, redo on both z+shift and y)", () => {
+    const undo = findShortcutForAction("history.undo");
+    const redo = findShortcutForAction("history.redo");
+    expect(undo?.keys).toContain("mod+z");
+    expect(undo?.scope).toBe("global");
+    expect(redo?.keys).toContain("mod+shift+z");
+    expect(redo?.keys).toContain("mod+y");
+  });
+
   it("every entry has at least one key combo", () => {
     for (const s of SHORTCUTS) {
       expect(s.keys.length).toBeGreaterThan(0);
