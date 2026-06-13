@@ -39,7 +39,13 @@ watch(
     if (open && props.preset) {
       name.value = props.preset.name;
       description.value = props.preset.description ?? "";
-      config.value = structuredClone(props.preset.config);
+      // JSON round-trip (not `structuredClone`) because `props.preset.config`
+      // arrives as a Vue reactive proxy, which `structuredClone` rejects with
+      // DataCloneError. A JSON clone strips the proxy at every depth and yields a
+      // plain, detached copy the edit form can mutate without touching the stored
+      // record. Safe because preset configs are JSON-serializable by contract
+      // (they round-trip through idb).
+      config.value = JSON.parse(JSON.stringify(props.preset.config)) as Record<string, unknown>;
     }
   },
   { immediate: true },

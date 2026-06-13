@@ -6,6 +6,10 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 
 ## [Unreleased]
 
+### Fixed
+
+- **Preset editor crash** — opening the Edit Preset dialog (e.g. right after creating a preset) threw `DataCloneError: … structuredClone … could not be cloned` because it tried to `structuredClone` the preset's reactive proxy config, leaving the edit form unpopulated. It now clones the config via a JSON round-trip (configs are serializable by contract), so the editor opens and populates correctly.
+
 ### Added
 
 - **Undo / Redo** — an app-wide reversible-command undo/redo system: `mod+z` / `mod+shift+z` (or `ctrl+y`), an **Edit → Undo / Redo** menu (mirrored in the app-icon right-click menu as the menu-bar-hidden fallback), and a **History** panel. Covers map drawings, window opacity, Dockview panel close, and workspace / layout / preset CRUD (including a cascading workspace delete that stays undoable even when you delete the workspace you're in) plus theme commits. In-memory and per-workspace, with 400 ms coalescing and a 100-entry cap. See [`docs/undo-redo.md`](docs/undo-redo.md) and [ADR 0005](docs/decisions/0005-undo-redo-reversible-command-pattern.md) (#175).
