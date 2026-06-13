@@ -45,7 +45,11 @@ export const useChromeStore = defineStore("chrome", () => {
     const def = profiles.value.find((p) => p.isDefault);
     currentProfileId.value = def?.id ?? profiles.value[0]?.id ?? null;
     await ensureItemPresent("theme-toggle", "top-right");
-    await ensureItemPresent("undo-redo", "top-left");
+    // `undo-redo` was a built-in item in earlier builds; it has been retired in
+    // favour of the Edit menu / app-icon menu / keyboard shortcuts. Prune it
+    // from any profile that still persists it so no ghost entry lingers in a
+    // slot after the registry entry is gone.
+    await pruneItemEverywhere("undo-redo");
   }
 
   /**
@@ -65,6 +69,30 @@ export const useChromeStore = defineStore("chrome", () => {
       await chromeProfileRepo.update(profile.id, { slotAssignments: next });
     }
     profiles.value = await chromeProfileRepo.list();
+  }
+
+  /**
+   * One-shot migration helper — the inverse of {@link ensureItemPresent}. Strips
+   * a now-retired built-in item from every profile's slot assignments and hidden
+   * list. Idempotent: a profile that never had the item is left untouched (no
+   * write). Called from `loadProfiles` so retired built-ins disappear without
+   * requiring users to reset their chrome customization.
+   */
+  async function pruneItemEverywhere(itemId: ChromeItemId): Promise<void> {
+    let mutatedAny = false;
+    for (const profile of profiles.value) {
+      const inSlot = Object.values(profile.slotAssignments).some((list) => list.includes(itemId));
+      const inHidden = profile.hiddenItems.includes(itemId);
+      if (!inSlot && !inHidden) continue;
+      const slotAssignments = {} as typeof profile.slotAssignments;
+      for (const slot of CHROME_SLOTS) {
+        slotAssignments[slot] = (profile.slotAssignments[slot] ?? []).filter((id) => id !== itemId);
+      }
+      const hiddenItems = profile.hiddenItems.filter((id) => id !== itemId);
+      await chromeProfileRepo.update(profile.id, { slotAssignments, hiddenItems });
+      mutatedAny = true;
+    }
+    if (mutatedAny) profiles.value = await chromeProfileRepo.list();
   }
 
   async function setCurrentProfile(id: Ulid): Promise<void> {

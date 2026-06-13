@@ -111,17 +111,22 @@ function toggleMaximize() {
 }
 function closeWindow() {
   const id = panelId.value;
-  if (id) {
-    void history.execute(
-      makeDockviewLayoutCommand(
-        "Close window",
-        async () => void (await session.removePanelGuarded(id)),
-        {
-          category: "delete",
-        },
-      ),
-    );
-  }
+  if (!id) return;
+  // Mirror `removePanelGuarded`'s empty-workspace guard BEFORE recording: it
+  // refuses to remove the last pane (returns false without mutating). Routing a
+  // refused close through history would still snapshot an unchanged layout and
+  // record a do-nothing "Close window" undo step the user has to Ctrl+Z past.
+  const api = session.getDockviewApi();
+  if (!api || api.panels.length <= 1) return;
+  void history.execute(
+    makeDockviewLayoutCommand(
+      "Close window",
+      async () => void (await session.removePanelGuarded(id)),
+      {
+        category: "delete",
+      },
+    ),
+  );
 }
 
 // Minimize the whole group to the bottom-left tray (Phase 4c). Same action from

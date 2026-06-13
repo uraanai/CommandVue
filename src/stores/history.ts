@@ -116,7 +116,10 @@ export const useHistoryStore = defineStore("history", () => {
    */
   async function execute(cmd: Command): Promise<void> {
     await cmd.redo();
-    if (!isApplying) record(cmd);
+    // `record()` is the single authority on replay-suppression (it early-returns
+    // when `isApplying`) and on transaction routing — don't duplicate that guard
+    // here, or the rule lives in two places and can drift.
+    record(cmd);
   }
 
   /**

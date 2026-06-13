@@ -11,6 +11,7 @@ import Button from "@/components/ui/Button.vue";
 import ContextMenu from "@/components/ui/ContextMenu.vue";
 import { formatCombo } from "@/modules/shortcuts/catalog";
 import { useChromeStore } from "@/stores/chrome";
+import { useHistoryStore } from "@/stores/history";
 import { useLayoutStore } from "@/stores/layout";
 import { useSessionStore } from "@/stores/session";
 import { useWorkspaceStore } from "@/stores/workspace";
@@ -29,6 +30,7 @@ import { useWorkspaceStore } from "@/stores/workspace";
  */
 const chrome = useChromeStore();
 const session = useSessionStore();
+const history = useHistoryStore();
 const layoutStore = useLayoutStore();
 const workspace = useWorkspaceStore();
 
@@ -73,6 +75,21 @@ const menuItems = computed<MenuItem[]>(() => [
   {
     label: "Edit",
     items: [
+      // Mirrors the Menu Bar's Edit menu so undo/redo stay reachable by pointer
+      // when the menu bar is hidden (this app-icon menu is then the only path).
+      {
+        label: "Undo",
+        command: () => void history.undo(),
+        disabled: !history.canUndo,
+        shortcut: formatCombo("mod+z", isMac),
+      },
+      {
+        label: "Redo",
+        command: () => void history.redo(),
+        disabled: !history.canRedo,
+        shortcut: formatCombo("mod+shift+z", isMac),
+      },
+      { separator: true },
       { label: "Manage Layouts…", command: () => (manageLayoutsOpen.value = true) },
       {
         label: "Discard Changes",

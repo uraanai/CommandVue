@@ -6,6 +6,7 @@ import { appMetaRepo } from "@/modules/storage/appMetaRepo";
 import { getDb } from "@/modules/storage/db";
 import { layoutRepo } from "@/modules/storage/layoutRepo";
 import { workspaceRepo } from "@/modules/storage/workspaceRepo";
+import { useHistoryStore } from "@/stores/history";
 import { useLayoutStore } from "@/stores/layout";
 import { usePresetStore } from "@/stores/preset";
 import { useWorkspaceStore } from "@/stores/workspace";
@@ -80,7 +81,10 @@ async function reloadActiveWorkspaceCaches(): Promise<void> {
  */
 export function makeDeleteWorkspaceCommand(workspaceId: Ulid): Command {
   const ws = useWorkspaceStore();
+  const history = useHistoryStore();
   let snapshot: WorkspaceCascadeSnapshot | null = null;
+  // Guards the one-time history-scope realignment below to the INITIAL execute.
+  let scopeAligned = false;
   return makeCommand({
     label: "Delete workspace",
     scope: "workspace",
@@ -89,6 +93,25 @@ export function makeDeleteWorkspaceCommand(workspaceId: Ulid): Command {
       snapshot = await captureWorkspaceCascade(workspaceId);
       await ws.deleteWorkspace(workspaceId);
       await appMetaRepo.delete(`${WORKSPACE_THEME_KEY_PREFIX}${workspaceId}`);
+      // Deleting the ACTIVE workspace makes `deleteWorkspace` switch the active
+      // pointer to a survivor. The App.vue watcher mirrors that into the history
+      // scope on its next flush — but on the INITIAL execute, `execute()` records
+      // THIS command synchronously right after `redo()` returns, before that
+      // flush. Without intervention the delete lands on the doomed workspace's
+      // stack, which the watcher then drops (decision #3) — silently losing the
+      // only undo step for a destructive cascade. So align the scope to the
+      // survivor NOW, before the record. No-op for a non-active delete (pointer
+      // unchanged → setActiveWorkspace early-returns).
+      //
+      // ONLY on the initial execute: a redo-replay runs inside the engine's
+      // `redo()`, which has already captured the active `stack` in a local and
+      // suppresses recording (`isApplying`). Switching scope mid-replay would
+      // detach that captured stack and lose the pop/push. On a replay the user
+      // is in the survivor anyway, so no realignment is needed.
+      if (!scopeAligned) {
+        scopeAligned = true;
+        history.setActiveWorkspace(ws.currentWorkspaceId);
+      }
     },
     async undo() {
       if (!snapshot) return;

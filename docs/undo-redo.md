@@ -62,10 +62,11 @@ but the outer abstraction is always a `Command`.
 - **Keyboard:** `Ctrl/Cmd+Z` undo, `Ctrl/Cmd+Shift+Z` or `Ctrl+Y` redo. While a
   text field is focused, the browser's native text-undo wins — the global handler
   steps aside.
-- **Top bar:** the **Undo / Redo** chrome item (two icon buttons; the tooltip
-  names the next action, e.g. "Undo Add drawing").
 - **Edit menu:** **Edit → Undo / Redo**, reactively enabled/disabled with shortcut
   hints.
+- **App icon (menu-bar-hidden fallback):** right-click the app icon → **Edit →
+  Undo / Redo**. This mirror is the only pointer path once the menu bar is hidden
+  (**View → Hide Menu Bar**).
 - **History panel:** open from **View → Add Component → History**. It lists the
   undo stack newest-first with the redo stack greyed above; click any row to jump
   there.

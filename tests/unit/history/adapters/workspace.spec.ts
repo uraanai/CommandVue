@@ -11,6 +11,7 @@ import { panelStateRepo } from "@/modules/storage/panelStateRepo";
 import { presetRepo } from "@/modules/storage/presetRepo";
 import { workspaceRepo } from "@/modules/storage/workspaceRepo";
 import { useHistoryStore } from "@/stores/history";
+import { useWorkspaceStore } from "@/stores/workspace";
 
 import { resetForStoreTest } from "../../stores/helpers";
 
@@ -62,6 +63,62 @@ describe("workspace adapter — cascade delete", () => {
     expect(await db.get("presets", preset.id)).toMatchObject({ id: preset.id, name: "Scoped" });
     expect(history.canUndo).toBe(false);
     expect(history.canRedo).toBe(true);
+
+    // Redo re-deletes the whole cascade. `redo()` re-snapshots and re-deletes by
+    // the freshly-restored ids, so a SECOND undo must restore everything again —
+    // proving redo re-captured the restored ids rather than reusing a stale snapshot.
+    await history.redo();
+    expect(await db.get("workspaces", doomed.id)).toBeUndefined();
+    expect(await db.get("layouts", l2.id)).toBeUndefined();
+    expect(await db.get("panel-states", panel.id)).toBeUndefined();
+    expect(await db.get("presets", preset.id)).toBeUndefined();
+    expect(history.canUndo).toBe(true);
+
+    await history.undo();
+    expect(await db.get("workspaces", doomed.id)).toMatchObject({ id: doomed.id, name: "Doomed" });
+    expect(await db.get("layouts", l2.id)).toMatchObject({ id: l2.id, name: "L2" });
+    expect(await db.get("panel-states", panel.id)).toMatchObject({ id: panel.id, state: { a: 1 } });
+    expect(await db.get("presets", preset.id)).toMatchObject({ id: preset.id, name: "Scoped" });
+  });
+
+  it("deleting the ACTIVE workspace records on the survivor's stack so the cascade stays undoable", async () => {
+    // Regression for the data-loss bug: an active-workspace delete used to record
+    // its undo entry on the doomed workspace's stack, which the App.vue watcher
+    // dropped on the next flush (decision #3) — making the cascade un-undoable.
+    const history = useHistoryStore();
+    const ws = useWorkspaceStore();
+
+    const survivor = await workspaceRepo.create({ name: "Survivor", isGlobalDefault: true });
+    await layoutRepo.create({ workspaceId: survivor.id, name: "S1" });
+    const active = await workspaceRepo.create({ name: "Active" });
+    const activeLayout = await layoutRepo.create({ workspaceId: active.id, name: "A1" });
+
+    await ws.loadAll();
+    await ws.setCurrentWorkspace(active.id);
+    // Seed the history scope the way App.vue's `immediate` watcher does on boot.
+    history.setActiveWorkspace(ws.currentWorkspaceId);
+    expect(ws.currentWorkspaceId).toBe(active.id);
+
+    await history.execute(makeDeleteWorkspaceCommand(active.id));
+
+    // The store auto-switched the active pointer to the survivor.
+    expect(ws.currentWorkspaceId).toBe(survivor.id);
+    // Simulate the App.vue watcher firing on the next flush — the step that, pre-fix,
+    // dropped the doomed workspace's stack along with the just-recorded delete entry.
+    history.setActiveWorkspace(ws.currentWorkspaceId);
+
+    // The delete must STILL be undoable — recorded on the survivor's stack.
+    expect(history.canUndo).toBe(true);
+    expect(history.undoLabel).toBe("Delete workspace");
+
+    await history.undo();
+    const db = await getDb();
+    expect(await db.get("workspaces", active.id)).toMatchObject({ id: active.id, name: "Active" });
+    expect(await db.get("layouts", activeLayout.id)).toMatchObject({
+      id: activeLayout.id,
+      name: "A1",
+    });
+    expect(history.canUndo).toBe(false);
   });
 });
 

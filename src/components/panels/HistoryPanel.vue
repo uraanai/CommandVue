@@ -13,7 +13,7 @@ import {
   PenTool,
   SlidersHorizontal,
 } from "@lucide/vue";
-import { computed, type Component } from "vue";
+import { computed, ref, type Component } from "vue";
 
 import { useHistoryStore } from "@/stores/history";
 
@@ -54,14 +54,33 @@ function iconFor(entry: HistoryEntry): Component {
 const undoRows = computed(() => [...history.undoEntries].reverse());
 const redoRows = computed(() => history.redoEntries);
 
+// A jump is N awaited undo/redo calls in a loop. `history.undo()/redo()` await
+// real async store/idb work, so a second click landing mid-loop would interleave
+// two loops against the same stack with stale length/index assumptions and
+// over/under-shoot the target. Serialize: ignore clicks while a jump is in
+// flight, and reflect that in the rows (pointer-events-none) so the UI is honest.
+const isJumping = ref(false);
+
 async function jumpUndo(displayIndex: number): Promise<void> {
-  // Undo the newest entry down to and including the clicked one.
-  for (let i = 0; i <= displayIndex; i++) await history.undo();
+  if (isJumping.value) return;
+  isJumping.value = true;
+  try {
+    // Undo the newest entry down to and including the clicked one.
+    for (let i = 0; i <= displayIndex; i++) await history.undo();
+  } finally {
+    isJumping.value = false;
+  }
 }
 async function jumpRedo(displayIndex: number): Promise<void> {
-  // Redo from the next-to-redo up to and including the clicked one.
-  const count = redoRows.value.length - displayIndex;
-  for (let i = 0; i < count; i++) await history.redo();
+  if (isJumping.value) return;
+  isJumping.value = true;
+  try {
+    // Redo from the next-to-redo up to and including the clicked one.
+    const count = redoRows.value.length - displayIndex;
+    for (let i = 0; i < count; i++) await history.redo();
+  } finally {
+    isJumping.value = false;
+  }
 }
 </script>
 
@@ -87,6 +106,7 @@ async function jumpRedo(displayIndex: number): Promise<void> {
         role="button"
         tabindex="0"
         class="flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-left opacity-45 hover:bg-white/5 hover:opacity-80"
+        :class="{ 'pointer-events-none': isJumping }"
         @click="jumpRedo(i)"
         @keydown.enter="jumpRedo(i)"
         @keydown.space.prevent="jumpRedo(i)"
@@ -107,7 +127,7 @@ async function jumpRedo(displayIndex: number): Promise<void> {
         role="button"
         tabindex="0"
         class="flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-left hover:bg-white/5"
-        :class="i === 0 ? 'text-foreground' : 'text-muted'"
+        :class="[i === 0 ? 'text-foreground' : 'text-muted', { 'pointer-events-none': isJumping }]"
         @click="jumpUndo(i)"
         @keydown.enter="jumpUndo(i)"
         @keydown.space.prevent="jumpUndo(i)"

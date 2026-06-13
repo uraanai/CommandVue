@@ -128,24 +128,12 @@ export const BUILTIN_CHROME_ITEMS: readonly ChromeItemDefinition[] = [
     removable: true,
     singleton: true,
   },
-  {
-    id: "undo-redo",
-    title: "Undo / Redo",
-    description: "Undo and redo the last action. Each button disables when there is nothing to do.",
-    icon: "undo-2",
-    allowedSlots: [
-      "top-left",
-      "top-center",
-      "top-right",
-      "status-left",
-      "status-center",
-      "status-right",
-    ],
-    defaultSlot: "top-left",
-    component: () => import("@/components/chrome/items/UndoRedoItem.vue"),
-    removable: true,
-    singleton: true,
-  },
+  // NOTE: there is intentionally NO dedicated `undo-redo` chrome item. Undo/Redo
+  // live in the Menu Bar's Edit menu and the app-icon's right-click Edit submenu
+  // (the always-on fallback when the menu bar is hidden), plus the global
+  // Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y shortcuts — a separate top-bar button pair
+  // duplicated those entry points, so it was removed. `chrome.loadProfiles`
+  // prunes the legacy item from any profile that still persists it.
 ] as const;
 
 let registered = false;
