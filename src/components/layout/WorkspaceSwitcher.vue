@@ -2,9 +2,10 @@
 import type { Ulid } from "@/types/workspace";
 import type { MenuItem } from "primevue/menuitem";
 
-import { Check, ChevronDown, FolderCog, Plus } from "@lucide/vue";
+import { Check, ChevronDown, FolderCog, LayoutTemplate, Plus, Settings2 } from "@lucide/vue";
 import { computed, onMounted, ref, watch } from "vue";
 
+import ManageLayoutsDialog from "@/components/dialogs/ManageLayoutsDialog.vue";
 import ManageWorkspacesDialog from "@/components/dialogs/ManageWorkspacesDialog.vue";
 import SaveLayoutAsDialog from "@/components/dialogs/SaveLayoutAsDialog.vue";
 import UnsavedChangesDialog, {
@@ -18,6 +19,14 @@ import { useThemeStore } from "@/stores/theme";
 import { useWorkspaceStore } from "@/stores/workspace";
 import Menu from "@/volt/Menu.vue";
 
+/**
+ * The single top-bar switcher for BOTH workspaces and the active layout. The
+ * dropdown has two sections: the workspaces (switch / manage / new) and the
+ * current workspace's layouts (switch / new / manage). Keeping layouts inside
+ * this menu avoids a second top-bar control. Either kind of switch, when the
+ * current layout is dirty, routes through the shared `UnsavedChangesDialog` so
+ * an unsaved arrangement is never silently dropped.
+ */
 const workspace = useWorkspaceStore();
 const layoutStore = useLayoutStore();
 const session = useSessionStore();
@@ -25,9 +34,13 @@ const themeStore = useThemeStore();
 
 const menuRef = ref<InstanceType<typeof Menu> | null>(null);
 const manageOpen = ref(false);
+const manageLayoutsOpen = ref(false);
 const unsavedOpen = ref(false);
 const saveAsOpen = ref(false);
+// Exactly one of these is set while the unsaved-changes prompt is open — it
+// records which switch to perform once the user resolves the dirty layout.
 const pendingWorkspaceId = ref<null | Ulid>(null);
+const pendingLayoutId = ref<null | Ulid>(null);
 
 /**
  * The *effective* theme id each workspace displays — explicit binding if it
@@ -121,6 +134,12 @@ function themeTooltip(workspaceId: string): string {
   return theme ? `Theme: ${theme.name}` : `Theme: ${themeId}`;
 }
 
+const unsavedMessage = computed(() =>
+  pendingLayoutId.value
+    ? "The current layout has unsaved changes. What should we do before switching layouts?"
+    : "The current layout has unsaved changes. What should we do before switching workspaces?",
+);
+
 const menuItems = computed<MenuItem[]>(() => [
   {
     label: "Workspaces",
@@ -133,14 +152,22 @@ const menuItems = computed<MenuItem[]>(() => [
     })),
   },
   { separator: true },
+  { label: "Manage workspaces…", command: () => (manageOpen.value = true) },
+  { label: "New workspace…", command: () => (manageOpen.value = true) },
+  { separator: true },
   {
-    label: "Manage workspaces…",
-    command: () => (manageOpen.value = true),
+    label: "Layouts",
+    items: layoutStore.layouts.map((l): MenuItem & { layoutId: Ulid } => ({
+      label: l.name,
+      command: () => void pickLayout(l.id),
+      class: l.id === layoutStore.currentLayoutId ? "is-current" : undefined,
+      // Stash layout id so the #item slot can mark the current one.
+      layoutId: l.id,
+    })),
   },
-  {
-    label: "New workspace…",
-    command: () => (manageOpen.value = true),
-  },
+  { separator: true },
+  { label: "New layout", command: () => void newLayout() },
+  { label: "Manage layouts…", command: () => (manageLayoutsOpen.value = true) },
 ]);
 
 function toggle(event: MouseEvent): void {
@@ -149,31 +176,62 @@ function toggle(event: MouseEvent): void {
 
 async function pickWorkspace(id: Ulid): Promise<void> {
   if (id === workspace.currentWorkspaceId) return;
-
   if (session.dirty) {
     pendingWorkspaceId.value = id;
+    pendingLayoutId.value = null;
     unsavedOpen.value = true;
     return;
   }
   await session.switchWorkspace(id);
 }
 
-async function resolveUnsaved(choice: UnsavedChoice): Promise<void> {
-  const target = pendingWorkspaceId.value;
+async function pickLayout(id: Ulid): Promise<void> {
+  if (id === layoutStore.currentLayoutId) return;
+  if (session.dirty) {
+    pendingLayoutId.value = id;
+    pendingWorkspaceId.value = null;
+    unsavedOpen.value = true;
+    return;
+  }
+  await session.switchLayout(id);
+}
+
+async function newLayout(): Promise<void> {
+  const wsId = workspace.currentWorkspaceId;
+  if (!wsId) return;
+  const created = await layoutStore.createLayout({ workspaceId: wsId, name: "Untitled" });
+  // Reuse pickLayout so a dirty current layout still prompts before we leave it.
+  await pickLayout(created.id);
+}
+
+/** Perform the recorded pending switch (workspace OR layout), then clear it. */
+async function proceedPending(): Promise<void> {
+  const ws = pendingWorkspaceId.value;
+  const ly = pendingLayoutId.value;
   pendingWorkspaceId.value = null;
-  if (choice === "cancel" || !target) return;
+  pendingLayoutId.value = null;
+  if (ws) await session.switchWorkspace(ws);
+  else if (ly) await session.switchLayout(ly);
+}
+
+async function resolveUnsaved(choice: UnsavedChoice): Promise<void> {
+  if (choice === "cancel") {
+    pendingWorkspaceId.value = null;
+    pendingLayoutId.value = null;
+    return;
+  }
   if (choice === "save") {
     await session.updateCurrentLayout();
-    await session.switchWorkspace(target);
+    await proceedPending();
     return;
   }
   if (choice === "discard") {
     await session.discardChanges();
-    await session.switchWorkspace(target);
+    await proceedPending();
     return;
   }
   if (choice === "save-as") {
-    pendingWorkspaceId.value = target;
+    // Keep the pending target; SaveLayoutAsDialog's @save (onSaveAs) completes it.
     saveAsOpen.value = true;
   }
 }
@@ -184,9 +242,7 @@ async function onSaveAs(payload: {
   setAsWorkspaceDefault: boolean;
 }): Promise<void> {
   await session.saveCurrentAsNewLayout(payload);
-  const target = pendingWorkspaceId.value;
-  pendingWorkspaceId.value = null;
-  if (target) await session.switchWorkspace(target);
+  await proceedPending();
 }
 </script>
 
@@ -219,13 +275,24 @@ async function onSaveAs(payload: {
           class="flex w-full items-center gap-2 text-[length:var(--density-font-size)]"
         >
           <FolderCog v-if="(item as MenuItem).label === 'Manage workspaces…'" class="size-3.5" />
-          <Plus v-else-if="(item as MenuItem).label === 'New workspace…'" class="size-3.5" />
+          <Settings2 v-else-if="(item as MenuItem).label === 'Manage layouts…'" class="size-3.5" />
+          <Plus
+            v-else-if="
+              (item as MenuItem).label === 'New workspace…' ||
+              (item as MenuItem).label === 'New layout'
+            "
+            class="size-3.5"
+          />
           <span
             v-else-if="(item as MenuItem & { wsId?: string }).wsId"
             :title="themeTooltip((item as MenuItem & { wsId: string }).wsId)"
             class="border-border h-2 w-2 shrink-0 rounded-full border"
             :style="{ backgroundColor: dotColor((item as MenuItem & { wsId: string }).wsId) }"
             aria-hidden="true"
+          />
+          <LayoutTemplate
+            v-else-if="(item as MenuItem & { layoutId?: string }).layoutId"
+            class="text-muted size-3.5 shrink-0"
           />
           <span class="flex-1">{{ item.label }}</span>
           <Check
@@ -237,9 +304,10 @@ async function onSaveAs(payload: {
     </Menu>
 
     <ManageWorkspacesDialog v-model:visible="manageOpen" />
+    <ManageLayoutsDialog v-model:visible="manageLayoutsOpen" />
     <UnsavedChangesDialog
       v-model:visible="unsavedOpen"
-      message="The current layout has unsaved changes. What should we do before switching workspaces?"
+      :message="unsavedMessage"
       @choose="resolveUnsaved"
     />
     <SaveLayoutAsDialog
