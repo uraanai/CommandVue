@@ -12,7 +12,7 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 
 ### Added
 
-- **Layout switcher** — a dropdown in the top bar (next to the workspace switcher) to switch between the current workspace's layouts, create a new one, or open Manage Layouts. Switching while the current layout has unsaved changes routes through the shared save / discard / save-as prompt, mirroring the workspace switcher.
+- **Layout switching in the workspace switcher** — the workspace dropdown now has a **Layouts** section for the current workspace: switch the active layout, create a new one, or open Manage Layouts — without adding a second top-bar control. Switching layouts while the current one has unsaved changes routes through the shared save / discard / save-as prompt, just like switching workspaces.
 - **Undo / Redo** — an app-wide reversible-command undo/redo system: `mod+z` / `mod+shift+z` (or `ctrl+y`), an **Edit → Undo / Redo** menu (mirrored in the app-icon right-click menu as the menu-bar-hidden fallback), and a **History** panel. Covers map drawings, window opacity, Dockview panel close, and workspace / layout / preset CRUD (including a cascading workspace delete that stays undoable even when you delete the workspace you're in) plus theme commits. In-memory and per-workspace, with 400 ms coalescing and a 100-entry cap. See [`docs/undo-redo.md`](docs/undo-redo.md) and [ADR 0005](docs/decisions/0005-undo-redo-reversible-command-pattern.md) (#175).
 
 ## [0.3.0] - 2026-06-07

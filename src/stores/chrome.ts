@@ -45,12 +45,12 @@ export const useChromeStore = defineStore("chrome", () => {
     const def = profiles.value.find((p) => p.isDefault);
     currentProfileId.value = def?.id ?? profiles.value[0]?.id ?? null;
     await ensureItemPresent("theme-toggle", "top-right");
-    await ensureItemPresent("layout-switcher", "top-right");
-    // `undo-redo` was a built-in item in earlier builds; it has been retired in
-    // favour of the Edit menu / app-icon menu / keyboard shortcuts. Prune it
-    // from any profile that still persists it so no ghost entry lingers in a
-    // slot after the registry entry is gone.
+    // Retired built-in items that earlier builds may have persisted into a
+    // profile — prune them so no ghost entry lingers in a slot now that the
+    // registry no longer has them. (`undo-redo` → Edit menu / app-icon menu /
+    // shortcuts; `layout-switcher` → folded into the workspace switcher dropdown.)
     await pruneItemEverywhere("undo-redo");
+    await pruneItemEverywhere("layout-switcher");
   }
 
   /**

@@ -44,17 +44,6 @@ export const BUILTIN_CHROME_ITEMS: readonly ChromeItemDefinition[] = [
     singleton: true,
   },
   {
-    id: "layout-switcher",
-    title: "Layout Switcher",
-    description: "Dropdown to switch between layouts in the current workspace.",
-    icon: "layout-template",
-    allowedSlots: ["top-left", "top-center", "top-right"],
-    defaultSlot: "top-right",
-    component: () => import("@/components/chrome/items/LayoutSwitcherItem.vue"),
-    removable: true,
-    singleton: true,
-  },
-  {
     id: "current-workspace-label",
     title: "Current Workspace",
     description: "Shows the name of the active workspace.",
