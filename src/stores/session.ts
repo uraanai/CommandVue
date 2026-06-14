@@ -1242,6 +1242,18 @@ export const useSessionStore = defineStore("session", () => {
     if (target) await loadLayout(target);
   }
 
+  /**
+   * Switch the active layout WITHIN the current workspace: point the layout
+   * store at it (persists the current-layout pointer) and load its dock state.
+   * Like {@link switchWorkspace}, callers must resolve any dirty state (via the
+   * UnsavedChangesDialog) first — this action does not prompt.
+   */
+  async function switchLayout(layoutId: Ulid): Promise<void> {
+    if (layoutId === loadedLayoutId.value) return;
+    await useLayoutStore().setCurrentLayout(layoutId);
+    await loadLayout(layoutId);
+  }
+
   return {
     loadedLayoutId,
     dirty,
@@ -1278,6 +1290,7 @@ export const useSessionStore = defineStore("session", () => {
     splitCleanNeighbor,
     discardChanges,
     switchWorkspace,
+    switchLayout,
   };
 });
 

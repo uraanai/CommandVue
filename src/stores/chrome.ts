@@ -45,6 +45,7 @@ export const useChromeStore = defineStore("chrome", () => {
     const def = profiles.value.find((p) => p.isDefault);
     currentProfileId.value = def?.id ?? profiles.value[0]?.id ?? null;
     await ensureItemPresent("theme-toggle", "top-right");
+    await ensureItemPresent("layout-switcher", "top-right");
     // `undo-redo` was a built-in item in earlier builds; it has been retired in
     // favour of the Edit menu / app-icon menu / keyboard shortcuts. Prune it
     // from any profile that still persists it so no ghost entry lingers in a
