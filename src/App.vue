@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { onMounted } from "vue";
+import { onMounted, watch } from "vue";
 
 import LoadingSpinner from "@/components/common/LoadingSpinner.vue";
 import AppShell from "@/components/layout/AppShell.vue";
+import { useHistoryStore } from "@/stores/history";
 import { useLayoutStore } from "@/stores/layout";
 import { usePresetStore } from "@/stores/preset";
 import { useThemeStore } from "@/stores/theme";
@@ -21,6 +22,16 @@ const workspace = useWorkspaceStore();
 const layout = useLayoutStore();
 const presets = usePresetStore();
 const theme = useThemeStore();
+const history = useHistoryStore();
+
+// Scope undo/redo history per workspace: switching workspaces drops the stack
+// of the one we leave (in-memory, per-session). `immediate` seeds the active
+// scope on boot once `loadAll()` sets the pointer.
+watch(
+  () => workspace.currentWorkspaceId,
+  (id) => history.setActiveWorkspace(id),
+  { immediate: true },
+);
 
 onMounted(async () => {
   await workspace.loadAll();

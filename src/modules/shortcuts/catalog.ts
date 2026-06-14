@@ -11,6 +11,8 @@
 export type ShortcutScope = "global" | "map" | "palette";
 
 export type ShortcutAction =
+  | "history.redo"
+  | "history.undo"
   | "layout.save"
   | "layout.saveAs"
   | "palette.open"
@@ -48,6 +50,19 @@ export const SHORTCUTS: readonly ShortcutDef[] = [
     scope: "global",
     label: "Save layout as…",
     action: "layout.saveAs",
+  },
+  {
+    keys: ["mod+z"],
+    scope: "global",
+    label: "Undo",
+    action: "history.undo",
+  },
+  {
+    // Redo binds both the Z+Shift idiom and the Windows-style mod+y.
+    keys: ["mod+shift+z", "mod+y"],
+    scope: "global",
+    label: "Redo",
+    action: "history.redo",
   },
   {
     keys: ["mod+b"],

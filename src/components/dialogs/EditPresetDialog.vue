@@ -5,8 +5,9 @@ import { computed, defineAsyncComponent, ref, watch } from "vue";
 
 import Button from "@/components/ui/Button.vue";
 import Input from "@/components/ui/Input.vue";
+import { makeUpdatePresetCommand } from "@/modules/history/adapters";
 import { presetTypeRegistry } from "@/modules/presets/registry";
-import { usePresetStore } from "@/stores/preset";
+import { useHistoryStore } from "@/stores/history";
 import Dialog from "@/volt/Dialog.vue";
 
 interface Props {
@@ -17,7 +18,7 @@ interface Props {
 const props = defineProps<Props>();
 const emit = defineEmits<{ "update:visible": [value: boolean] }>();
 
-const presetStore = usePresetStore();
+const history = useHistoryStore();
 const name = ref("");
 const description = ref("");
 const config = ref<Record<string, unknown>>({});
@@ -38,7 +39,13 @@ watch(
     if (open && props.preset) {
       name.value = props.preset.name;
       description.value = props.preset.description ?? "";
-      config.value = structuredClone(props.preset.config);
+      // JSON round-trip (not `structuredClone`) because `props.preset.config`
+      // arrives as a Vue reactive proxy, which `structuredClone` rejects with
+      // DataCloneError. A JSON clone strips the proxy at every depth and yields a
+      // plain, detached copy the edit form can mutate without touching the stored
+      // record. Safe because preset configs are JSON-serializable by contract
+      // (they round-trip through idb).
+      config.value = JSON.parse(JSON.stringify(props.preset.config)) as Record<string, unknown>;
     }
   },
   { immediate: true },
@@ -50,11 +57,13 @@ function close(): void {
 
 async function save(): Promise<void> {
   if (!props.preset || !name.value.trim()) return;
-  await presetStore.updatePreset(props.preset.id, {
-    name: name.value.trim(),
-    description: description.value.trim() || undefined,
-    config: config.value,
-  });
+  await history.execute(
+    makeUpdatePresetCommand(props.preset.id, {
+      name: name.value.trim(),
+      description: description.value.trim() || undefined,
+      config: config.value,
+    }),
+  );
   close();
 }
 </script>

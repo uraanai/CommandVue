@@ -9,7 +9,13 @@ import DataTable from "@/components/ui/DataTable.vue";
 import { createColumnHelper } from "@/components/ui/datatable/columnHelpers";
 import IconButton from "@/components/ui/IconButton.vue";
 import Tabs from "@/components/ui/Tabs.vue";
+import {
+  makeCreatePresetCommand,
+  makeDeletePresetCommand,
+  makeDuplicatePresetCommand,
+} from "@/modules/history/adapters";
 import { presetTypeRegistry } from "@/modules/presets/registry";
+import { useHistoryStore } from "@/stores/history";
 import { usePresetStore } from "@/stores/preset";
 import { useThemeStore } from "@/stores/theme";
 import { useWorkspaceStore } from "@/stores/workspace";
@@ -37,6 +43,7 @@ const emit = defineEmits<{ "update:visible": [value: boolean] }>();
 const presetStore = usePresetStore();
 const workspace = useWorkspaceStore();
 const themeStore = useThemeStore();
+const history = useHistoryStore();
 
 // Table density follows the active theme — the same single source of truth the
 // EntityList panel uses (themeStore.currentTheme.density, mirrored to
@@ -81,14 +88,24 @@ async function createOfType(typeId: string): Promise<void> {
   const def = presetTypeRegistry.get(typeId);
   if (!def) return;
   const workspaceId = activeTab.value === "global" ? null : (workspace.currentWorkspaceId ?? null);
-  const preset = await presetStore.createPreset({
-    presetTypeId: typeId,
-    workspaceId,
-    name: `New ${def.title}`,
-    config: structuredClone(def.defaultConfig),
-  });
-  editTarget.value = preset;
-  editOpen.value = true;
+  let opened = false;
+  await history.execute(
+    makeCreatePresetCommand(
+      {
+        presetTypeId: typeId,
+        workspaceId,
+        name: `New ${def.title}`,
+        config: structuredClone(def.defaultConfig),
+      },
+      (preset) => {
+        // open the editor only on the initial create, never on a later redo
+        if (opened) return;
+        opened = true;
+        editTarget.value = preset;
+        editOpen.value = true;
+      },
+    ),
+  );
 }
 
 function startEdit(preset: Preset): void {
@@ -97,22 +114,24 @@ function startEdit(preset: Preset): void {
 }
 
 async function duplicatePreset(preset: Preset): Promise<void> {
-  await presetStore.duplicatePreset(preset.id);
+  await history.execute(makeDuplicatePresetCommand(preset.id));
 }
 
 async function promote(preset: Preset): Promise<void> {
-  await presetStore.duplicatePreset(preset.id, { workspaceId: null });
+  await history.execute(makeDuplicatePresetCommand(preset.id, { workspaceId: null }));
 }
 
 async function scope(preset: Preset): Promise<void> {
   if (!workspace.currentWorkspaceId) return;
-  await presetStore.duplicatePreset(preset.id, { workspaceId: workspace.currentWorkspaceId });
+  await history.execute(
+    makeDuplicatePresetCommand(preset.id, { workspaceId: workspace.currentWorkspaceId }),
+  );
 }
 
 async function removePreset(preset: Preset): Promise<void> {
   error.value = null;
   try {
-    await presetStore.deletePreset(preset.id);
+    await history.execute(makeDeletePresetCommand(preset.id));
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e);
   }

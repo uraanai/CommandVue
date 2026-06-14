@@ -4,6 +4,8 @@ import { computed, ref, watch } from "vue";
 
 import IconButton from "@/components/ui/IconButton.vue";
 import Slider from "@/components/ui/Slider.vue";
+import { makeDockviewLayoutCommand, makeSetFloatAlphaCommand } from "@/modules/history/adapters";
+import { useHistoryStore } from "@/stores/history";
 import { useMinimizedStore } from "@/stores/minimized";
 import { useSessionStore } from "@/stores/session";
 
@@ -54,6 +56,7 @@ interface HeaderActionsParams {
 const props = defineProps<{ params?: HeaderActionsParams }>();
 const session = useSessionStore();
 const minimized = useMinimizedStore();
+const history = useHistoryStore();
 
 // `api.location` on the full props; `location` on the updateLocation fast-path.
 const isFloating = computed(
@@ -91,7 +94,10 @@ const panelId = computed(() => props.params?.activePanel?.id ?? cachedPanelId.va
 const pct = computed<number>({
   get: () => (panelId.value ? Math.round(session.getFloatAlpha(panelId.value) * 100) : 100),
   set: (next) => {
-    if (panelId.value) void session.setFloatAlpha(panelId.value, next / 100);
+    // Route through history so an opacity drag is one coalesced undo step.
+    if (panelId.value) {
+      void history.execute(makeSetFloatAlphaCommand(panelId.value, next / 100));
+    }
   },
 });
 
@@ -104,7 +110,23 @@ function toggleMaximize() {
   if (panelId.value) void session.toggleFloatMaximize(panelId.value);
 }
 function closeWindow() {
-  if (panelId.value) void session.removePanelGuarded(panelId.value);
+  const id = panelId.value;
+  if (!id) return;
+  // Mirror `removePanelGuarded`'s empty-workspace guard BEFORE recording: it
+  // refuses to remove the last pane (returns false without mutating). Routing a
+  // refused close through history would still snapshot an unchanged layout and
+  // record a do-nothing "Close window" undo step the user has to Ctrl+Z past.
+  const api = session.getDockviewApi();
+  if (!api || api.panels.length <= 1) return;
+  void history.execute(
+    makeDockviewLayoutCommand(
+      "Close window",
+      async () => void (await session.removePanelGuarded(id)),
+      {
+        category: "delete",
+      },
+    ),
+  );
 }
 
 // Minimize the whole group to the bottom-left tray (Phase 4c). Same action from
@@ -141,7 +163,18 @@ function confirmCloseAll() {
   // the group — and this confirm's Teleport target — is torn down in the same
   // tick; flipping `confirmOpen` first lets the overlay detach cleanly.
   confirmOpen.value = false;
-  if (panelId.value) void session.closeAllInGroup(panelId.value);
+  const id = panelId.value;
+  if (id) {
+    void history.execute(
+      makeDockviewLayoutCommand(
+        "Close all panels",
+        async () => void (await session.closeAllInGroup(id)),
+        {
+          category: "delete",
+        },
+      ),
+    );
+  }
 }
 function cancelCloseAll() {
   confirmOpen.value = false;

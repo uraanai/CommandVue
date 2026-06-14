@@ -103,6 +103,7 @@ describe("registerBuiltinPanels", () => {
       "chart",
       "components-browser",
       "entities",
+      "history",
       "maplibre",
       "markdown",
       "showcase",

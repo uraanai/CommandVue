@@ -154,6 +154,10 @@ app.component(
   defineAsyncComponent(() => import("@/components/panels/ThemeStudioPanel.vue")),
 );
 app.component(
+  "history",
+  defineAsyncComponent(() => import("@/components/panels/HistoryPanel.vue")),
+);
+app.component(
   UNASSIGNED_PANEL_TYPE,
   defineAsyncComponent(() => import("@/components/panels/UnassignedPanel.vue")),
 );

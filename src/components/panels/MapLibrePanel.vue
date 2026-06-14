@@ -7,10 +7,11 @@ import { useMapLibre } from "@/composables/useMapLibre";
 import { usePanelApi } from "@/composables/usePanelApi";
 import { usePanelState } from "@/composables/usePanelState";
 import { useToolRegistry } from "@/composables/useToolRegistry";
+import { makeAddDrawingCommand } from "@/modules/history/adapters";
 import { registerPanelInstance, unregisterPanelInstance } from "@/modules/panels/instances";
 import { presetTypeRegistry } from "@/modules/presets/registry";
 import { TOOLS } from "@/modules/tools";
-import { useDrawingsStore } from "@/stores/drawings";
+import { useHistoryStore } from "@/stores/history";
 import { usePanelStateStore } from "@/stores/panelState";
 import { usePresetStore } from "@/stores/preset";
 
@@ -28,15 +29,14 @@ const { api } = usePanelApi(props);
 
 const container = ref<HTMLDivElement | null>(null);
 const { map, mount } = useMapLibre();
-const drawings = useDrawingsStore();
+const history = useHistoryStore();
 const panelStateStore = usePanelStateStore();
 const presetStore = usePresetStore();
 
 useToolRegistry(map, {
   tools: TOOLS,
-  onFinalize: (feature) => {
-    drawings.add(feature);
-  },
+  // Route tool output through history so every finalized drawing is undoable.
+  onFinalize: (feature) => void history.execute(makeAddDrawingCommand(feature)),
 });
 
 function applyAppliedPresets(): void {

@@ -3,7 +3,7 @@ import type { ChromeItemDefinition } from "./types";
 import { chromeItemRegistry } from "./registry";
 
 /**
- * The nine built-in chrome items. Order matches the spec table.
+ * The built-in chrome items. Order matches the spec table.
  *
  * `removable: false` is set only on `app-icon` — the always-on fallback that
  * hosts the right-click File/Edit/View context menu when the menu bar is
@@ -128,6 +128,12 @@ export const BUILTIN_CHROME_ITEMS: readonly ChromeItemDefinition[] = [
     removable: true,
     singleton: true,
   },
+  // NOTE: there is intentionally NO dedicated `undo-redo` chrome item. Undo/Redo
+  // live in the Menu Bar's Edit menu and the app-icon's right-click Edit submenu
+  // (the always-on fallback when the menu bar is hidden), plus the global
+  // Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y shortcuts — a separate top-bar button pair
+  // duplicated those entry points, so it was removed. `chrome.loadProfiles`
+  // prunes the legacy item from any profile that still persists it.
 ] as const;
 
 let registered = false;
