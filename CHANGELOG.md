@@ -8,6 +8,7 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 
 ### Fixed
 
+- **Pop-out windows restored onto the wrong monitor** — dockview serializes each pop-out's position as absolute screen coordinates but re-adds the main window's `screenX/screenY` on restore, double-offsetting the window whenever the main window isn't at the screen origin (a multi-monitor setup). `loadLayout` now pre-subtracts the main window's current origin before `fromJSON`, so restored pop-outs land at their true saved coordinates.
 - **Preset editor crash** — opening the Edit Preset dialog (e.g. right after creating a preset) threw `DataCloneError: … structuredClone … could not be cloned` because it tried to `structuredClone` the preset's reactive proxy config, leaving the edit form unpopulated. It now clones the config via a JSON round-trip (configs are serializable by contract), so the editor opens and populates correctly.
 
 ### Added

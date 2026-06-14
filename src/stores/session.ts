@@ -8,6 +8,10 @@ import { ref, shallowRef } from "vue";
 import { useNotify } from "@/composables/useNotify";
 import { trackPopoutWindow, untrackPopoutWindow } from "@/composables/usePopoutWindows";
 import {
+  correctPopoutRestoreOffset,
+  type DockviewStateLike,
+} from "@/modules/dockview/popoutOffset";
+import {
   type FloatBox,
   floatWasHeaderless,
   getFloatAlpha as getFloatAlphaFromState,
@@ -125,7 +129,16 @@ export const useSessionStore = defineStore("session", () => {
     api.clear();
     if (layout.dockviewState) {
       try {
-        api.fromJSON(layout.dockviewState as Parameters<DockviewApi["fromJSON"]>[0]);
+        // Correct dockview's pop-out restore double-offset before fromJSON: it
+        // re-opens each pop-out at `window.screenX + position.left`, but the
+        // saved `position` is already absolute screen coords — so pre-subtract
+        // the main window's current origin (see correctPopoutRestoreOffset).
+        const corrected = correctPopoutRestoreOffset(
+          layout.dockviewState as DockviewStateLike,
+          window.screenX,
+          window.screenY,
+        );
+        api.fromJSON(corrected as Parameters<DockviewApi["fromJSON"]>[0]);
       } catch {
         rebuildFromPanelStates(api, panelStates);
       }
