@@ -139,7 +139,7 @@
     "@types/geojson": "^7946.0.14",
     "@types/jsdom": "^28.0.3",
     "@types/markdown-it": "^14.1.2",
-    "@types/node": "^25.9.2",
+    "@types/node": "^25.9.3",
     "@vitejs/plugin-vue": "^6.0.7",
     "@vue/eslint-config-prettier": "^10.2.0",
     "@vue/eslint-config-typescript": "^14.8.0",
