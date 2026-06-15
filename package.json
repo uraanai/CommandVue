@@ -133,7 +133,7 @@
     "@commitlint/types": "^21.0.1",
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/typography": "^0.5.16",
-    "@tailwindcss/vite": "^4.0.0",
+    "@tailwindcss/vite": "^4.3.1",
     "@tsconfig/node22": "^22.0.0",
     "@types/culori": "^4.0.1",
     "@types/geojson": "^7946.0.14",
