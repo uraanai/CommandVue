@@ -79,7 +79,7 @@
     "@fontsource/source-sans-3": "^5.2.9",
     "@heroicons/vue": "^2.2.0",
     "@iconify-prerendered/vue-mdi": "^0.28.0",
-    "@lucide/vue": "^1.17.0",
+    "@lucide/vue": "^1.18.0",
     "@orbat-mapper/convert-symbology": "latest",
     "@primevue/icons": "^4.5.5",
     "@tanstack/vue-table": "^8.21.3",
